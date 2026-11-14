@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """CI-only project tweaks (run on the CI checkout, never committed back):
 - enable the NexoraLiveKit editor plugin (so its EditorExportPlugin ships the AAR + maven deps)
-- stamp version code (run number) / name (NX_VERSION = 3.0.<run>) and config/version
+- stamp version code (30000 + run number) / name (NX_VERSION = 3.0.<run>) and config/version
 - export hygiene: exclude tests/, shots/, plugin_src/, *.md; compress native libs
 - textures: lossy WebP (quality 0.75) instead of lossless for every 2D texture import
 - add two more presets cloned from "Android": "Android AAB" (export_format=1) and "Android arm64"
@@ -11,6 +11,8 @@ import glob, os, re
 run = os.environ.get("GITHUB_RUN_NUMBER", "1")
 # version name: NX_VERSION from the workflow (3.0.<run>), else 3.0.<run>
 ver = os.environ.get("NX_VERSION") or "3.0.%s" % run
+# version code: 30000 + run, so v3 builds (new repo, run numbers restart at 1) install over the v2 builds (codes 1..40)
+code = os.environ.get("NX_VERSION_CODE") or str(30000 + int(run))
 
 # ---- project.godot: editor plugin
 p = "project.godot"
@@ -58,7 +60,7 @@ def setopt(block, key, val):
 m = re.search(r'(?s)\[preset\.0\]\n(.*?)\n\[preset\.0\.options\]\n(.*?)(?=\n\[preset\.\d|\Z)', t)
 head, opts = m.group(1), m.group(2)
 head = setopt(head, "exclude_filter", '"tests/*, shots/*, plugin_src/*, *.md, android/keys/*"')
-opts = setopt(opts, "version/code", run)
+opts = setopt(opts, "version/code", code)
 opts = setopt(opts, "version/name", '"%s"' % ver)
 opts = setopt(opts, "gradle_build/compress_native_libraries", "true")
 opts = setopt(opts, "gradle_build/export_format", "0")

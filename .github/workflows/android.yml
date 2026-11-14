@@ -47,7 +47,10 @@ jobs:
           gradle-version: ${{ env.GRADLE_VERSION }}
 
       - id: ver
-        run: echo "version=3.0.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+        # version code 30000+N: above every v2 build (2.0.1..2.0.40, codes 1..40) so 3.0.N installs over them
+        run: |
+          echo "version=3.0.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          echo "code=$((30000 + GITHUB_RUN_NUMBER))" >> "$GITHUB_OUTPUT"
 
       # ------------------------------------------------------------------ 1. LiveKit plugin AAR
       - name: Build NexoraLiveKit plugin AAR
@@ -152,6 +155,7 @@ jobs:
       - name: CI project tweaks (plugin, version, presets, lossy textures, excludes)
         env:
           NX_VERSION: ${{ steps.ver.outputs.version }}
+          NX_VERSION_CODE: ${{ steps.ver.outputs.code }}
         run: python3 .github/scripts/ci_prepare.py
 
       # ------------------------------------------------------------------ 5. Import, test, export
