@@ -46,6 +46,8 @@ var lt: float = 0.0
 var soft: bool = false
 ## v3: the disc shot this turn (never turns soft while it is travelling)
 var shooter: bool = false
+## v3: the shot disc has struck the ball this turn (brakes harder: no chasing / re-hitting the ball)
+var follow: bool = false
 
 func _init(_x := 0.0, _y := 0.0, _team := 0, _r := 0.0, m := 1.0, _id := 0) -> void:
 	id = _id; team = _team; x = _x; y = _y; px = _x; py = _y; r = _r; im = 1.0 / m

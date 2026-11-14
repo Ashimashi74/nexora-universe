@@ -86,6 +86,7 @@ func _initialize() -> void:
 	_aim_case()
 	_pool_cases()
 	_struck_cases()
+	_ball_feel_cases()
 	quit(0)
 
 func _open(e) -> void:
@@ -433,3 +434,52 @@ func _struck_cases() -> void:
 			if o.vy != 0.0: last_vy = o.vy
 			if d.vx == 0 and d.vy == 0 and o.vx == 0 and o.vy == 0: break
 		print("STRUCK disc<-disc p=", pw, " struck disc moved ", snappedf(o0.distance_to(Vector2(o.x, o.y)), 0.1), "px, striker moved ", snappedf(Vector2(d.x, d.y).length(), 0.1), "px, rest after ", snappedf(t * e.STEP, 0.01), "s, struck-disc direction flips=", flips)
+
+## v3 hybrid ball feel (Soccer Stars glide + billiard side-spin): ball time-to-rest / distance after a centred disc hit,
+## and the curve a 30°/45° cut puts on the ball (heading change between the first frame after contact and rest)
+func _ball_feel_cases() -> void:
+	var cm: Dictionary = (EngineS as GDScript).get_script_constant_map()
+	print("--- BALL FEEL --- BALL_FRICTION=", cm.get("BALL_FRICTION", cm.get("FRICTION")), " BALL_DRAG=", cm.get("BALL_DRAG", 0), " BALL_V_STOP=", cm.get("BALL_V_STOP", cm.get("V_STOP")),
+		" E_CUSHION_BALL=", cm.get("E_CUSHION_BALL", cm.get("E_CUSHION")), " E_DISC_BALL=", cm.get("E_DISC_BALL"), " mass disc:ball=", cm.get("PM") / cm.get("BM"))
+	var L := 0.0
+	for pw in [1.0, 0.75, 0.5, 0.25]:
+		var e = _mk_engine()
+		L = e.Fb - e.Ft
+		var d = _first_disc(e)
+		_clear_except(e, [d, e.ball])
+		_open(e)
+		d.x = 0; d.y = 0
+		e.ball.x = 0; e.ball.y = -(d.r + e.ball.r + 30)
+		e.turn = 0; e.phase = "aim"
+		e.fire(d, 0.0, -pw * e.LMAX, pw * e.LMAX, true)
+		var t := 0
+		var t_hit := -1
+		var y0: float = e.ball.y
+		var v0 := 0.0
+		while t < 240 * 20:
+			e._sim(e.STEP); t += 1
+			if t_hit < 0 and e.ball.vy != 0.0: t_hit = t; v0 = absf(e.ball.vy)
+			if t_hit >= 0 and e.ball.vx == 0 and e.ball.vy == 0: break
+		print("BALL rest p=", pw, " ball_v0=", snappedf(v0, 1), " travel=", snappedf(absf(e.ball.y - y0), 1), "px = ", snappedf(absf(e.ball.y - y0) / L, 0.01), " L  time_to_rest=", snappedf((t - t_hit) * e.STEP, 0.01), "s")
+	for cut in [30.0, 45.0]:
+		var e = _mk_engine()
+		var d = _first_disc(e)
+		_clear_except(e, [d, e.ball])
+		_open(e)
+		d.x = 0; d.y = 0
+		var off: float = (d.r + e.ball.r) * sin(deg_to_rad(cut))
+		e.ball.x = off; e.ball.y = -(d.r + e.ball.r) * cos(deg_to_rad(cut)) - 40
+		e.turn = 0; e.phase = "aim"
+		e.fire(d, 0.0, -0.7 * e.LMAX, 0.7 * e.LMAX, true)
+		var t := 0
+		var h0 := INF
+		var sp0 := 0.0
+		var hl := 0.0
+		while t < 240 * 20:
+			e._sim(e.STEP); t += 1
+			if e.ball.vx != 0 or e.ball.vy != 0:
+				var hh := atan2(e.ball.vy, e.ball.vx)
+				if h0 == INF and t > 2: h0 = hh; sp0 = e.ball.spin
+				hl = hh
+			elif h0 != INF: break
+		print("CURVE cut=", cut, " spin_after_contact=", snappedf(sp0, 0.01), " rad/s  path curve=", snappedf(rad_to_deg(hl - h0), 0.1), " deg over the glide")

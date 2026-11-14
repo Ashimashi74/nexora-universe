@@ -18,6 +18,7 @@ Store="*res://src/core/store.gd"
 Sfx="*res://src/core/sfx.gd"
 Supa="*res://src/net/supa.gd"
 Voice="*res://src/net/voice.gd"
+Local="*res://src/net/local.gd"
 Nav="*res://src/core/nav.gd"
 
 [display]

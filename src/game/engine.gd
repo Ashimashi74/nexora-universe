@@ -75,13 +75,25 @@ const E_DISC_BALL := 0.55   # v3: .70 -> .55 (ball hops/bounces less off discs).
 const E_CUSHION := 0.85     # restitution off walls / goal frame for DISCS; tangential speed scaled the same -> angle in = angle out
 # --- v3 physics (user: discs clearly heavier, soft small push after a hit without jitter; ball shot with the same system but
 #     must not bounce/hop around: lower restitution off walls and discs, a little more damping, no vertical hop) ---
-const E_CUSHION_BALL := 0.62    # ball off walls / goal frame / posts (was E_CUSHION .85)
-const E_CUSHION_BALL_T := 0.92  # ball's speed ALONG a cushion is mostly kept (only the bounce off it is damped)
+## v3 ball feel = HYBRID: Soccer Stars glide (flat, weighty, strong linear friction, crisp stop, low-moderate cushion
+## bounce, no hop) + the billiard spin: off-centre contacts put side-spin on the ball, which curves its path subtly
+## (velocity is rotated, never sped up) and decays; the 3D ball keeps rolling with that spin.
+const E_CUSHION_BALL := 0.55    # ball off walls / goal frame / posts, normal component (was E_CUSHION .85)
+const E_CUSHION_BALL_T := 0.90  # ball's speed ALONG a cushion is mostly kept (only the bounce off it is damped)
 const E_CUSHION_SOFT := 0.45    # a struck (soft) disc off a wall: dies instead of rebounding
 const E_DISC_DISC := 0.30       # disc-disc restitution (was E_BODY .95): discs thud, they don't bounce like pool balls
-const BALL_FRICTION := 400.0    # ball cloth friction px/s^2 (was FRICTION 360)
-const BALL_DRAG := 0.30         # extra linear damping of the ball, 1/s (was 0)
+const BALL_FRICTION := 520.0    # ball linear (cloth) friction px/s^2 (was FRICTION 360)
+const BALL_DRAG := 0.45         # ball speed-proportional damping, 1/s (was 0): fast balls shed speed quicker (weighty glide)
+const BALL_V_STOP := 18.0       # ball snaps to rest below this (crisp stop; was V_STOP 6)
+const BALL_V_SETTLE := 70.0     # below this the ball's friction is x BALL_SETTLE_K (no long creep at the end)
+const BALL_SETTLE_K := 2.5
+const SPIN_FROM_HIT := 0.25     # side-spin gained per contact: SPIN_FROM_HIT * tangential sliding speed / ball radius (rad/s)
+const SPIN_FROM_CUSHION := 0.35 # side-spin from the speed a cushion takes off along the wall
+const SPIN_MAX := 24.0          # rad/s clamp
+const SPIN_DECAY := 1.6         # 1/s exponential decay of side-spin
+const CURVE_RATE := 0.03        # path turn rate (rad/s) per rad/s of spin -> a strong cut curves ~8-10 deg over its glide
 const DISC_HIT_FRICTION := 1100.0  # friction of a struck disc until it stops (shooter keeps FRICTION)
+const DISC_FOLLOW_FRICTION := 1000.0  # the shot disc after it has struck the ball (was FRICTION 360): crisp follow-through
 const STRUCK_MASS_K := 3.0     # disc-disc: the struck disc behaves 3x heavier (replaces the DISC_DISC_K impulse scaling)
 const DISC_V_STOP := 14.0       # discs below this speed snap to rest (was V_STOP 6) -> no creeping / jitter
 const SUB_PX := 4.0         # max travel per substep (px): substeps chosen so no body moves more than this per substep
@@ -321,7 +333,7 @@ func fire(b: NxBody, dx: float, dy: float, l: float, human := false) -> void:
 	var vx := ux * v
 	var vy := uy * v
 	if v4: b.tvx = vx * 1.02; b.tvy = vy * 1.02; b.ramp = 0.06; b.vx = vx * 0.5; b.vy = vy * 0.5; b.boost = 0.22
-	else: b.vx = vx; b.vy = vy; b.ramp = 0.0; b.boost = 0.0; b.tvx = 0.0; b.tvy = 0.0; b.spin = 0.0; b.soft = false
+	else: b.vx = vx; b.vy = vy; b.ramp = 0.0; b.boost = 0.0; b.tvx = 0.0; b.tvy = 0.0; b.spin = 0.0; b.soft = false; b.follow = false
 	if not v4:
 		for ob: NxBody in bodies: ob.shooter = false
 		b.shooter = true
@@ -551,6 +563,10 @@ func _hit8(a: NxBody, b: NxBody, h: float) -> void:
 			var sb2 := b.vx * b.vx + b.vy * b.vy
 			var hit_b: NxBody = a if sa2 < sb2 else b
 			if hit_b != ball and not hit_b.shooter: hit_b.soft = true
+			# the shooter brakes after it strikes the ball (follow-through), so it never chases and re-hits the ball
+			if isB:
+				var od: NxBody = a if b == ball else b
+				if od.shooter: od.follow = true
 			# light contacts thud instead of bouncing (less jiggle); real hits use E_DISC_BALL / E_DISC_DISC
 			var e_full := E_DISC_BALL if isB else E_DISC_DISC
 			var ee := e_full if -vn >= V_SOFT else lerpf(minf(E_SOFT, e_full), e_full, -vn / V_SOFT)
@@ -564,6 +580,10 @@ func _hit8(a: NxBody, b: NxBody, h: float) -> void:
 				else: imb /= STRUCK_MASS_K
 			var j := -(1.0 + ee) * vn / (ima + imb)
 			a.vx -= j * nx * ima; a.vy -= j * ny * ima; b.vx += j * nx * imb; b.vy += j * ny * imb
+			if isB:
+				# off-centre contact: the surfaces slide past each other -> side-spin on the ball (centred hits add none)
+				var vt := -ny * rvx + nx * rvy
+				ball.spin = clampf(ball.spin + (1.0 if ball == b else -1.0) * SPIN_FROM_HIT * vt / ball.r, -SPIN_MAX, SPIN_MAX)
 			_cap(a); _cap(b)
 		a.x += a.vx * s; a.y += a.vy * s; b.x += b.vx * s; b.y += b.vy * s
 	# any overlap left (bodies pushed together by a third body / a wall) is removed positionally, no velocity change
@@ -654,6 +674,10 @@ func _ec(b: NxBody) -> float:
 func _et(b: NxBody) -> float:
 	return E_CUSHION_BALL_T if b == ball else _ec(b)
 
+## the speed a cushion takes off along the wall becomes side-spin (english); existing spin is partly absorbed
+func _cushion_spin(b: NxBody, vt: float, side: float, sgn: float) -> void:
+	b.spin = clampf(b.spin * 0.6 + sgn * side * SPIN_FROM_CUSHION * vt * (1.0 - E_CUSHION_BALL_T) / b.r, -SPIN_MAX, SPIN_MAX)
+
 ## cushion bounce on an axis-aligned wall: normal component reversed, whole velocity scaled by E_CUSHION
 ## (so the reflection angle equals the incidence angle), overshoot mirrored back.
 func _cushion_x(b: NxBody, wall: float, side: float) -> void:
@@ -664,6 +688,7 @@ func _cushion_x(b: NxBody, wall: float, side: float) -> void:
 		var vs := sqrt(b.vx * b.vx + b.vy * b.vy)
 		if b == ball and vs > 200: events.append({"t": "wall", "power": vs / 1800})
 		var ec := _ec(b)
+		if b == ball: _cushion_spin(b, b.vy, side, 1.0)
 		b.vx = -b.vx * ec; b.vy *= _et(b)
 		b.x = wall + side * over * ec
 	else:
@@ -676,6 +701,7 @@ func _cushion_y(b: NxBody, wall: float, side: float, ev := true) -> void:
 		var vs := sqrt(b.vx * b.vx + b.vy * b.vy)
 		if ev and b == ball and vs > 200: events.append({"t": "wall", "power": vs / 1800})
 		var ec := _ec(b)
+		if b == ball: _cushion_spin(b, b.vx, side, -1.0)
 		b.vy = -b.vy * ec; b.vx *= _et(b)
 		b.y = wall + side * over * ec
 	else:
@@ -753,21 +779,36 @@ func _sub8(h: float) -> void:
 		if sp > 0:
 			# cloth rolling friction: constant deceleration along the current direction (straight line, linear speed decay)
 			var isb := b == ball
-			var fr := BALL_FRICTION if isb else (DISC_HIT_FRICTION if b.soft else FRICTION)
-			var ns := sp - fr * (SETTLE_K if sp < V_SETTLE else 1.0) * h
-			if isb: ns -= BALL_DRAG * sp * h
-			if ns < (V_STOP if isb else DISC_V_STOP):
-				b.vx = 0.0; b.vy = 0.0; b.soft = false
+			var ns: float
+			if isb:
+				ns = sp - BALL_FRICTION * (BALL_SETTLE_K if sp < BALL_V_SETTLE else 1.0) * h - BALL_DRAG * sp * h
+			else:
+				var fr := DISC_HIT_FRICTION if b.soft else (DISC_FOLLOW_FRICTION if b.follow else FRICTION)
+				ns = sp - fr * (SETTLE_K if sp < V_SETTLE else 1.0) * h
+			if ns < (BALL_V_STOP if isb else DISC_V_STOP):
+				b.vx = 0.0; b.vy = 0.0; b.soft = false; b.follow = false
 			else:
 				var k2 := minf(ns, V_SAFE) / sp
 				b.vx *= k2; b.vy *= k2
-		b.spin = 0.0
-		if b == ball:
+		if b != ball:
+			b.spin = 0.0
+		else:
 			b.sq *= 1 - 9 * h
-			# visual rolling only (pure roll about the axis perpendicular to travel, no side spin)
-			if b.vx != 0.0 or b.vy != 0.0:
+			# billiard side-spin: curves the path (rotates the velocity, speed unchanged) and decays
+			if b.spin != 0.0:
+				if b.vx != 0.0 or b.vy != 0.0:
+					var th := CURVE_RATE * b.spin * h
+					var c := cos(th)
+					var sn := sin(th)
+					var nvx := b.vx * c - b.vy * sn
+					b.vy = b.vx * sn + b.vy * c; b.vx = nvx
+				b.spin *= exp(-SPIN_DECAY * h)
+				if absf(b.spin) < 0.05: b.spin = 0.0
+			# 3D rolling (axis perpendicular to travel) + the side-spin about the vertical axis
+			if b.vx != 0.0 or b.vy != 0.0 or b.spin != 0.0:
 				var roll := ROLL_K / b.r
-				_rotate(b, -b.vy * roll, b.vx * roll, 0.0, h)
+				_rotate(b, -b.vy * roll, b.vx * roll, b.spin * 0.55, h)
+				b.ang += b.spin * h
 		_walls8(b)
 	var n := bodies.size()
 	for it in 2:
@@ -915,7 +956,7 @@ func _free_corner_ball() -> void:
 			if o == ball: continue
 			if (o.x - x) * (o.x - x) + (o.y - y) * (o.y - y) < (o.r + r + 4) * (o.r + r + 4): free = false; break
 		if free:
-			ball.x = x; ball.y = y; ball.px = x; ball.py = y; ball.vx = 0.0; ball.vy = 0.0
+			ball.x = x; ball.y = y; ball.px = x; ball.py = y; ball.vx = 0.0; ball.vy = 0.0; ball.spin = 0.0
 			events.append({"t": "corner"})
 			return
 
