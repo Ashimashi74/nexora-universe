@@ -1,0 +1,28 @@
+keys,fa,en
+m3.title,نکسورا,NEXORA
+m3.rooms,اتاق‌های آنلاین,Online rooms
+m3.cat_play,بازی,Play
+m3.cat_play_sub,بازی سریع، ربات، آرنا، تورنمنت,"Quick match, vs bot, arena, tournaments"
+m3.cat_online,آنلاین,Online
+m3.cat_online_sub,بازی سریع آنلاین، رده‌بندی، چالش‌ها، دوستان,"Online quick match, ranks, challenges, friends"
+m3.cat_team,تیم و فروشگاه,Team & Shop
+m3.cat_team_sub,مهره، توپ، ترکیب، فروشگاه، جایزه‌ی روزانه,"Disc, ball, formation, shop, daily reward"
+m3.cat_settings,تنظیمات,Settings
+m3.cat_settings_sub,صدا، زبان، حساب کاربری,"Sound, language, account"
+m3.quick_online,بازی سریع آنلاین,Online quick match
+m3.offline_hint,به سرور وصل نشدیم؛ از بخش «بازی» می‌توانی آفلاین بازی کنی.,"Couldn't reach the server — you can still play offline from Play."
+m3.loadout,ترکیب، توپ و مهره,"Formation, ball & disc"
+m3.loadout_next,ترکیب از شروع بعدی (بعد از گل) اعمال می‌شود؛ توپ و مهره همین حالا.,"Formation applies at the next kickoff (after a goal); ball and disc right away."
+m3.leave,خروج از اتاق,Leave room
+m3.my_team,تیم من,My team
+m3.profile,پروفایل و دستاوردها,Profile & achievements
+m3.friends,دوستان و پیام‌ها,Friends & messages
+m3.assistant,دستیار اوراکل,Oracle assistant
+m3.more_modes,حالت‌های دیگر,More modes
+m3.connecting,در حال اتصال…,Connecting…
+m3.not_connected,هنوز به سرور وصل نیستی,Not connected to the server yet
+m3.only_owned,فقط آیتم‌هایی که داری,Only items you own
+oui.first_to_3_goals,تا ۳ گل,First to 3
+oui.first_to_5_goals,تا ۵ گل,First to 5
+oui.3_minutes,۳ دقیقه,3 minutes
+m3.bots_fill,جاهای خالی را ربات بازی می‌کند,Empty seats are played by the bot

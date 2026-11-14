@@ -1,0 +1,36 @@
+# Godot
+.godot/
+*.translation
+export_credentials.cfg
+
+# Build outputs
+/build/
+*.apk
+*.aab
+*.idsig
+
+# Android gradle build template (installed by CI / "Project > Install Android Build Template")
+/android/build/
+/android/.build_version
+
+# NexoraLiveKit plugin: the AAR is built from plugin_src/livekit (CI does it)
+/android/plugins/nexora_livekit/*.aar
+/plugin_src/livekit/build/
+/plugin_src/livekit/.gradle/
+/plugin_src/livekit/local.properties
+.gradle/
+.kotlin/
+
+# Signing material — never commit
+*.keystore
+*.jks
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+
+# The sideload-testing release keystore IS committed on purpose (see README); other keystores are not.
+!android/keys/nexora-release.keystore

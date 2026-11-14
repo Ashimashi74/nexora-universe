@@ -1,0 +1,89 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+
+SCRIPT ERROR: Parse Error: Identifier "OracleScreen" not declared in the current scope.
+          at: GDScript::reload (res://src/oracle/coach.gd:449)
+          GDScript backtrace (most recent call first):
+              [0] _try_load (res://src/online/online_match.gd:1275)
+              [1] _ready (res://src/online/online_match.gd:110)
+              [2] _case (res://tests/net_match.gd:102)
+              [3] _run (res://tests/net_match.gd:65)
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+          at: GDScript::reload (res://src/online/oui.gd:0)
+          GDScript backtrace (most recent call first):
+              [0] _try_load (res://src/online/online_match.gd:1275)
+              [1] _ready (res://src/online/online_match.gd:110)
+              [2] _case (res://tests/net_match.gd:102)
+              [3] _run (res://tests/net_match.gd:65)
+SCRIPT ERROR: Compile Error: Failed to compile depended scripts.
+          at: GDScript::reload (res://src/online/ui_bits.gd:0)
+          GDScript backtrace (most recent call first):
+              [0] _try_load (res://src/online/online_match.gd:1275)
+              [1] _ready (res://src/online/online_match.gd:110)
+              [2] _case (res://tests/net_match.gd:102)
+              [3] _run (res://tests/net_match.gd:65)
+ERROR: Failed to load script "res://src/online/ui_bits.gd" with error "Compilation failed".
+   at: load (modules/gdscript/gdscript.cpp:3041)
+   GDScript backtrace (most recent call first):
+       [0] _try_load (res://src/online/online_match.gd:1275)
+       [1] _ready (res://src/online/online_match.gd:110)
+       [2] _case (res://tests/net_match.gd:102)
+       [3] _run (res://tests/net_match.gd:65)
+[toast] ثبت نتیجه ناموفق بود
+WARNING: Nav.go before main attached: online_result
+     at: push_warning (core/variant/variant_utility.cpp:1034)
+     GDScript backtrace (most recent call first):
+         [0] go (res://src/core/nav.gd:125)
+         [1] _finish (res://src/online/online_match.gd:740)
+         [2] _client_tick (res://src/online/online_match.gd:1060)
+         [3] _process (res://src/online/online_match.gd:982)
+WARNING: Nav.go before main attached: online_result
+     at: push_warning (core/variant/variant_utility.cpp:1034)
+     GDScript backtrace (most recent call first):
+         [0] go (res://src/core/nav.gd:125)
+         [1] _finish (res://src/online/online_match.gd:740)
+         [2] _host_report (res://src/online/online_match.gd:716)
+== online match loopback (spectators, bots play)
+  PASS  roles  
+  PASS  host sent snapshots  193
+  PASS  client received + applied snapshots  applied q=190
+  PASS  client bodies move (interpolation)  
+  PASS  client buffer bounded  7
+  PASS  host finished  finished
+  PASS  client finished  finished
+  PASS  scores agree  [1, 0] vs [1, 0]
+  PASS  client got result message  { "winner": 0, "rd": 0.0, "score": [1.0, 0.0], "ok": false }
+  PASS  stale-match snapshot dropped  
+  (13.6 s wall)
+[toast] ثبت نتیجه ناموفق بود
+WARNING: Nav.go before main attached: online_result
+     at: push_warning (core/variant/variant_utility.cpp:1034)
+     GDScript backtrace (most recent call first):
+         [0] go (res://src/core/nav.gd:125)
+         [1] _finish (res://src/online/online_match.gd:740)
+         [2] _client_tick (res://src/online/online_match.gd:1060)
+         [3] _process (res://src/online/online_match.gd:982)
+WARNING: Nav.go before main attached: online_result
+     at: push_warning (core/variant/variant_utility.cpp:1034)
+     GDScript backtrace (most recent call first):
+         [0] go (res://src/core/nav.gd:125)
+         [1] _finish (res://src/online/online_match.gd:740)
+         [2] _host_report (res://src/online/online_match.gd:716)
+== online match loopback (host vs client players)
+  PASS  roles  
+  PASS  host sent snapshots  483
+  PASS  client received + applied snapshots  applied q=481
+  PASS  client bodies move (interpolation)  
+  PASS  client buffer bounded  7
+  PASS  client shot requests accepted by host  12 sent, 12 fired
+  PASS  host shots  13
+  PASS  host finished  finished
+  PASS  client finished  finished
+  PASS  scores agree  [0, 1] vs [0, 1]
+  PASS  client got result message  { "winner": 1, "rd": 0.0, "score": [0.0, 1.0], "ok": false }
+  PASS  stale-match snapshot dropped  
+  (24.4 s wall)
+RESULT: OK
+WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
+     at: cleanup (core/object/object.cpp:2514)
+ERROR: 1 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:795)

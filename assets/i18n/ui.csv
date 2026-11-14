@@ -1,0 +1,763 @@
+keys,fa,en
+account.a_confirmation_link_was_sent,لینک تأیید به ایمیلت فرستاده شد. بعد از باز کردن لینک، حساب مهمانت با همه‌ی پیشرفت‌ها به ایمیل وصل می‌شود.,"A confirmation link was sent to your email. After opening it, your guest account and all its progress will be linked to the email."
+account.a_few_words_about_yourself,چند کلمه درباره‌ی خودت…,A few words about yourself…
+account.a_password_reset_link_was,لینک تغییر رمز به ایمیلت فرستاده شد. لینک را روی همین گوشی باز کن تا رمز جدید را این‌جا وارد کنی.,A password reset link was sent to your email. Open it on this phone to enter a new password here.
+account.add_bio,✎ افزودن بیو,✎ Add bio
+account.are_you_sure_tap_again,مطمئنی؟ دوباره بزن,Are you sure? Tap again
+account.avatar_updated,آواتار به‌روز شد,Avatar updated
+account.change_username,✎ تغییر نام کاربری,✎ Change username
+account.choose_avatar,انتخاب آواتار,Choose avatar
+account.choosing_a_photo_isn_t,انتخاب عکس روی این دستگاه ممکن نیست؛ یکی از نشان‌ها را به‌عنوان آواتار انتخاب کن.,Choosing a photo isn't possible on this device; pick one of the emblems as your avatar.
+account.continue_as_guest,ادامه به‌عنوان مهمان,Continue as guest
+account.couldn_t_connect,اتصال برقرار نشد,Couldn't connect
+account.create_account,ساخت حساب,Create account
+account.create_an_account_to_save,حساب بساز تا پیشرفتت روی سرور ذخیره شود.,Create an account to save your progress on the server.
+account.daily_challenge,چالش روزانه,Daily challenge
+account.enter_your_email_and_we,ایمیلت را وارد کن تا لینک تغییر رمز برایت ارسال شود.,Enter your email and we'll send you a password reset link.
+account.forgot_password,فراموشی رمز,Forgot password
+account.guest_progress_will_be_lost,پیشرفت مهمان از دست می‌رود! دوباره بزن,Guest progress will be lost! Tap again
+account.guest_x,مهمان · %s,Guest · %s
+account.invalid_email,ایمیل معتبر نیست,Invalid email
+account.later,بعداً,Later
+account.level_league_and_online_stats,سطح، لیگ و آمار آنلاین بعد از ورود نمایش داده می‌شود,"Level, league and online stats appear after signing in"
+account.new_password,رمز جدید,New password
+account.new_password_2,رمز عبور جدید,New password
+account.new_username_3_to_20,نام کاربری جدید (۳ تا ۲۰ کاراکتر),New username (3 to 20 characters)
+account.no_online_xp_yet_play,هنوز XP آنلاینی نگرفتی؛ یک مسابقه‌ی سریع بزن!,No online XP yet — play a quick match!
+account.not_signed_in,وارد نشده‌ای,Not signed in
+account.ok,باشه,OK
+account.online_account,حساب آنلاین,Online account
+account.online_match,مسابقه‌ی آنلاین,Online match
+account.online_play,بازی آنلاین,Online play
+account.online_profile,پروفایل آنلاین,Online profile
+account.password,رمز عبور,Password
+account.password_changed,رمز عبور تغییر کرد,Password changed
+account.password_must_be_at_least,رمز عبور حداقل ۶ کاراکتر,Password must be at least 6 characters
+account.passwords_don_t_match,تکرار رمز عبور یکسان نیست,Passwords don't match
+account.passwords_don_t_match_2,تکرار رمز یکسان نیست,Passwords don't match
+account.photo_removed_your_active_disc,عکس حذف شد؛ دیسک فعال نمایش داده می‌شود,Photo removed; your active disc is shown
+account.play_real_players_1v1_2v2,مسابقه با بازیکن‌های واقعی · ۱ به ۱، ۲ به ۲، ۳ به ۳,"Play real players · 1v1, 2v2, 3v3"
+account.please_wait,لطفاً صبر کن…,Please wait…
+account.profile_photo_updated,عکس پروفایل به‌روز شد,Profile photo updated
+account.rating_x_x,امتیاز %s · 💎 %s,Rating %s · 💎 %s
+account.register_an_email_to_keep,با ثبت ایمیل، پیشرفت حساب مهمان حفظ می‌شود و روی هر گوشی وارد می‌شوی.,Register an email to keep your guest progress and sign in on any phone.
+account.register_email,ثبت ایمیل,Register email
+account.register_email_keep_progress,ثبت ایمیل و حفظ پیشرفت,Register email & keep progress
+account.remove_photo,حذف عکس,Remove photo
+account.repeat_new_password,تکرار رمز جدید,Repeat new password
+account.repeat_password,تکرار رمز عبور,Repeat password
+account.resend,ارسال دوباره,Resend
+account.saved,ذخیره شد,Saved
+account.send_link,ارسال لینک,Send link
+account.sent_again,دوباره فرستاده شد,Sent again
+account.sign_in_with_email_and,با ایمیل و رمز وارد شو.,Sign in with email and password.
+account.sign_out,خروج از حساب,Sign out
+account.signed_in,وارد شدی,Signed in
+account.signing_in_to_another_account,ورود به حساب دیگر، حساب مهمان فعلی را کنار می‌گذارد.,Signing in to another account sets the current guest account aside.
+account.top_league,بالاترین لیگ!,Top league!
+account.tournament_prize,جایزه‌ی تورنمنت,Tournament prize
+account.username_changed,نام کاربری تغییر کرد,Username changed
+account.wins_vs_bot,برد مقابل ربات,Wins vs bot
+account.x_rating_to_x,%s امتیاز تا %s,%s rating to %s
+account.x_x_xp_to_level,%s / %s XP تا سطح %s,%s / %s XP to level %s
+account.xp_history,تاریخچه‌ی XP,XP history
+account.you_re_signed_in_as,به‌عنوان مهمان وارد شدی,You're signed in as a guest
+account.you_signed_out,از حساب خارج شدی,You signed out
+account.your_account_was_created_open,حسابت ساخته شد! لینک تأیید را در ایمیلت باز کن، سپس وارد شو.,"Your account was created! Open the confirmation link in your email, then sign in."
+arena.arena,آرنا,Arena
+arena.arena_ladder,نردبان آرنا,Arena ladder
+arena.arena_rating,امتیاز آرنا,Arena rating
+arena.be_the_first_to_win,اولین برد آرنا مال تو باشد!,Be the first to win in the Arena!
+arena.best_x,بهترین %s,Best %s
+arena.find_match,یافتن حریف,Find match
+arena.nfind_match,\nیافتن حریف,\nFind match
+arena.no_one_has_an_arena,هنوز کسی امتیاز آرنا ندارد,No one has an Arena rating yet
+arena.win_30_and_5_per,برد: ۳۰+ و ۵+ برای هر برد پیاپی · باخت: ۲۰−,Win: +30 and +5 per streak win · Loss: −20
+arena.win_streak,برد پیاپی,Win streak
+challenges.all,همه,All
+challenges.claim,دریافت,Claim
+challenges.claimed,✓ گرفتی,✓ Claimed
+challenges.daily_challenges,چالش‌های روزانه,Daily challenges
+challenges.in_progress,در جریان,In progress
+challenges.no_challenges_today,امروز چالشی نیست,No challenges today
+challenges.refreshes_in_x_x_x,تازه‌سازی تا %s:%s:%s,Refreshes in %s:%s:%s
+challenges.sign_in_first,اول وارد حساب شو,Sign in first
+challenges.today_s_challenges,چالش‌های امروز,Today's challenges
+challenges.x_gems_x_xp,+%s الماس · +%s XP,+%s gems · +%s XP
+challenges.x_x_done_refreshes_in,%s/%s انجام شد · تازه‌سازی %s ساعت دیگر,%s/%s done · refreshes in %s h
+chat.add,افزودن,Add
+chat.add_member,افزودن عضو,Add member
+chat.admin,مدیر,Admin
+chat.can_t_send_messages,امکان ارسال پیام نیست,Can't send messages
+chat.choosing_a_photo_isn_t,انتخاب عکس روی این دستگاه پشتیبانی نمی‌شود,Choosing a photo isn't supported on this device
+chat.delete_message,حذف پیام,Delete message
+chat.demote,برکناری,Demote
+chat.join,پیوستن,Join
+chat.leave_conversation,خروج از گفتگو,Leave conversation
+chat.make_admin,مدیر کن,Make admin
+chat.members_x,اعضا (%s),Members (%s)
+chat.message_deleted,پیام حذف شده,Message deleted
+chat.only_channel_admins_can_post,فقط مدیران کانال می‌توانند پیام بفرستند,Only channel admins can post
+chat.owner,مالک,Owner
+chat.photo,📷 عکس,📷 Photo
+chat.reply,پاسخ,Reply
+chat.replying_to_x,پاسخ به %s,Replying to %s
+chat.send_the_first_message,اولین پیام را بفرست!,Send the first message!
+chat.sym,، ,", "
+chat.this_message_was_deleted,🚫 این پیام حذف شد,🚫 This message was deleted
+chat.username,نام کاربری…,Username…
+chat.view_profile,مشاهده‌ی پروفایل,View profile
+chat.x_is_typing,%s در حال نوشتن…,%s is typing…
+chat.x_x_members,%s · %s عضو,%s · %s members
+chat.you_left,خارج شدی,You left
+chest.awesome,عالیه!,Awesome!
+chest.free_chest,صندوقچه‌ی رایگان,Free chest
+chest.new_item_unlocked,آیتم جدید باز شد!,New item unlocked!
+chest.opening,در حال باز شدن...,Opening...
+chest.royal_chest,صندوقچه‌ی سلطنتی,Royal chest
+chest.x_gems,+%s الماس,+%s gems
+chrome.home,خانه,Home
+chrome.tab_home,خانه,Home
+chrome.tab_play,بازی,Play
+chrome.tab_profile,پروفایل,Profile
+chrome.tab_shop,فروشگاه,Shop
+chrome.tab_team,تیم,Team
+club.accept_invite,پذیرفتن دعوت,Accept invite
+club.accepted,پذیرفته شد,Accepted
+club.are_you_sure,مطمئنی؟,Are you sure?
+club.club_chat,چت باشگاه,Club chat
+club.club_not_found,باشگاه پیدا نشد,Club not found
+club.invite,دعوت,Invite
+club.invite_player,دعوت بازیکن,Invite player
+club.invite_sent,دعوت فرستاده شد,Invite sent
+club.kicked,اخراج شد,Kicked
+club.leadership_transferred,رهبری منتقل شد,Leadership transferred
+club.leave_club,ترک باشگاه,Leave club
+club.member,عضو,Member
+club.members,اعضا,Members
+club.message_to_the_leader_optional,پیام برای رهبر (اختیاری),Message to the leader (optional)
+club.open,آزاد,Open
+club.recruiting,عضوگیری,Recruiting
+club.request,درخواست,Request
+club.request_sent,درخواستت ارسال شد,Request sent
+club.requests_x,درخواست‌ها (%s),Requests (%s)
+club.send_request,ارسال درخواست,Send request
+club.this_club_is_invite_only,این باشگاه فقط با دعوت عضو می‌گیرد,This club is invite only
+club.you_joined_the_club,به باشگاه پیوستی!,You joined the club!
+club.you_left_the_club,از باشگاه خارج شدی,You left the club
+club.you_re_already_in_another,تو عضو باشگاه دیگری هستی,You're already in another club
+club.your_membership_request_is_pending,درخواست عضویتت در انتظار بررسی است,Your membership request is pending
+coach.a_draw_we_were_just,مساوی! فقط یک ضربه تا برد فاصله داشتیم. 🤝,A draw! We were just one shot away from winning. 🤝
+coach.challenge_x_completed_claim_your,چالش «%s» کامل شد! جایزه‌ات رو بگیر 🎉,"Challenge ""%s"" completed! Claim your reward 🎉"
+coach.check_the_path_preview_before,قبل از شوت، پیش‌نمایش مسیر رو نگاه کن؛ دیسک‌های دقیق‌تر مسیر بلندتری نشون می‌دن.,Check the path preview before shooting; more accurate discs show a longer path.
+coach.congrats_you_ll_shine_with,مبارکت باشه! با این یکی حسابی می‌درخشی ✨,Congrats! You'll shine with this one ✨
+coach.finding_you_an_opponent,دارم حریف پیدا می‌کنم… 🔭,Finding you an opponent… 🔭
+coach.follow_the_path_preview_the,پیش‌نمایش مسیر رو دنبال کن؛ نقطه‌ها نشون می‌دن دیسک کجا می‌ره.,Follow the path preview; the dots show where the disc will go.
+coach.good_afternoon,روز بخیر,Good afternoon
+coach.good_evening,عصر بخیر,Good evening
+coach.good_morning,صبح بخیر,Good morning
+coach.good_night,شب بخیر,Good night
+coach.gooooal,گووووول! 🔥,GOOOOAL! 🔥
+coach.great_job_captain,عالی بود کاپیتان! 🏆,"Great job, captain! 🏆"
+coach.hi_i_m_the_oracle,سلام! من اوراکل‌ام 🤖 بذار در چند ثانیه ایستگاه NEXORA رو نشونت بدم.,Hi! I'm the Oracle 🤖 Let me show you around NEXORA station in a few seconds.
+coach.home_your_daily_reward_today,خانه: جایزه‌ی روزانه، چالش‌های امروز و ورود سریع به بخش آنلاین این‌جاست.,"Home: your daily reward, today's challenges and quick access to online play are here."
+coach.i_m_awake_how_can,بیدارم! 😄 چه کمکی از دستم برمیاد؟,I'm awake! 😄 How can I help?
+coach.if_turn_time_is_short,اگر زمان نوبت کمه، یک ضربه‌ی امن دفاعی بهتر از از دست دادن نوبته.,"If turn time is short, a safe defensive shot beats losing your turn."
+coach.keep_it_up_champ,همین‌طوری ادامه بده، قهرمان! 🔥,"Keep it up, champ! 🔥"
+coach.keep_one_disc_in_front,یک دیسک رو جلوی دروازه نگه دار تا ضدحمله‌ها رو خنثی کنه.,Keep one disc in front of your goal to stop counter-attacks.
+coach.level_x_you_re_getting,سطح %s! داری قوی‌تر می‌شی کاپیتان 🚀,"Level %s! You're getting stronger, captain 🚀"
+coach.new_level,سطح جدید! 🚀,New level! 🚀
+coach.new_message_from_x,پیام جدید از %s 💬,New message from %s 💬
+coach.next,بعدی,Next
+coach.no_worries_the_next_one,اشکالی نداره، دست بعدی مال ماست. 💙 نکته: %s,"No worries, the next one's ours. 💙 Tip: %s"
+coach.not_enough_gems_daily_challenges,الماس کافی نداری 🤔 چالش‌های روزانه (تا ۵)، جایزه‌ی فصل (تا ۳۰) و قهرمانی تورنمنت (تا ۳۰) الماس می‌دن.,"Not enough gems 🤔 Daily challenges (up to 5), the season reward (up to 30) and tournament wins (up to 30) give gems."
+coach.oops_x_don_t_worry,اوه! %s — نگران نباش، دوباره امتحان می‌کنیم.,"Oops! %s — don't worry, we'll try again."
+coach.pick_the_disc_with_the,دیسکی رو انتخاب کن که مسیر مستقیم‌تری تا توپ داره. 👀,Pick the disc with the most direct path to the ball. 👀
+coach.play_against_the_bot_or,بازی: مقابل ربات یا دو نفره روی یک گوشی، و آنلاین: مسابقه‌ی سریع، آرنا، اتاق‌ها، تورنمنت و لیگ.,"Play: against the bot or two players on one phone, and online: quick match, arena, rooms, tournaments and leagues."
+coach.profile_photo_level_league_and,پروفایل: عکس، سطح، لیگ و آمار. حساب مهمانت رو هم از تنظیمات به ایمیل وصل کن.,"Profile: photo, level, league and stats. Link your guest account to an email in Settings."
+coach.reward_received_x,جایزه رسید: %s 🎁,Reward received: %s 🎁
+coach.shop_discs_with_gems_balls,فروشگاه: دیسک‌ها با الماس، توپ و زمین با سکه. قدرت و دقت هر دیسک در بازی واقعاً اثر داره!,"Shop: discs with gems, balls and fields with coins. Each disc's power and accuracy really matter in play!"
+coach.skip,رد کردن,Skip
+coach.so_close_bank_it_off,نزدیک بود! از دیواره کمانه بزن؛ زاویه‌ی بهتری به توپ می‌رسه. 🎯,So close! Bank it off the wall for a better angle on the ball. 🎯
+coach.social_message_people_create_groups,اجتماعی: پیام بده، گروه و کانال بساز، دوست دنبال کن و به یک باشگاه بپیوند.,"Social: message people, create groups and channels, follow friends and join a club."
+coach.something_went_wrong,یه مشکلی پیش اومد,Something went wrong
+coach.sometimes_a_short_tap_to,گاهی یک ضربه‌ی کوتاه برای بستن مسیر حریف بهترین حرکته. 🛡,Sometimes a short tap to block your opponent's path is the best move. 🛡
+coach.start,شروع,Start
+coach.tap_me_whenever_you_have,هر وقت سؤال داشتی روی من بزن؛ من این گوشه منتظرم. بزن بریم! 🚀,Tap me whenever you have a question; I'll wait right here in the corner. Let's go! 🚀
+coach.tap_me_whenever_you_have_2,هر وقت سؤالی داشتی روی من بزن! 💙,Tap me whenever you have a question! 💙
+coach.that_shot_was_too_soft,ضربه خیلی آروم بود؛ کمی بیشتر بکش تا به توپ برسی. 💪,That shot was too soft; pull a bit more to reach the ball. 💪
+coach.the_net_is_shaking,تور دروازه لرزید! ⚡,The net is shaking! ⚡
+coach.too_much_power_pull_less,قدرت خیلی زیاد بود؛ با کشیدن کمتر ضربه کنترل‌شده‌تر می‌شه. 💡,Too much power; pull less for a more controlled shot. 💡
+coach.use_the_walls_for_bank,از دیواره‌ها برای ضربه‌ی کمانه‌ای استفاده کن؛ دروازه‌بان‌ها انتظارش رو ندارن.,Use the walls for bank shots; goalkeepers won't see it coming.
+coach.what_a_shot,چه ضربه‌ای! 😄,What a shot! 😄
+coach.what_a_win_the_galaxy,چه بردی! کهکشان به احترامت ایستاده. ✨,What a win! The galaxy salutes you. ✨
+coach.x_followed_you,%s دنبالت کرد! 👀,%s followed you! 👀
+coach.x_x_ready_for_a,%s %s! 👋 آماده‌ی یک مسابقه‌ی کهکشانی هستی؟,%s %s! 👋 Ready for a galactic match?
+coach.you_can_t_score_with,با ضربه‌ی اول نمی‌شه گل زد؛ اول توپ رو به موقعیت خوب برسون.,You can't score with the kick-off shot; get the ball into a good position first.
+coach.you_don_t_always_need,همیشه قدرت کامل لازم نیست؛ ضربه‌ی متوسط توپ رو کنترل‌شده‌تر می‌بره.,You don't always need full power; a medium shot moves the ball more precisely.
+coach.you_have_a_new_follower,یک دنبال‌کننده‌ی جدید داری 👀,You have a new follower 👀
+coach.you_have_a_new_message,پیام جدید داری 💬,You have a new message 💬
+coach.your_reward_is_here,جایزه‌ات رسید! 🎁,Your reward is here! 🎁
+coach.your_tournament_match_is_ready,مسابقه‌ی تورنمنتت آماده‌ست! ⚠️ زود وارد شو.,Your tournament match is ready! ⚠️ Join quickly.
+daily.check_in_every_day_the,هر روز سر بزن، جایزه‌ها بزرگ‌تر می‌شن,"Check in every day, the rewards keep growing"
+daily.claim_day_x_reward,دریافت جایزه‌ی روز %s,Claim day %s reward
+daily.daily_reward,جایزه‌ی روزانه,Daily reward
+daily.day_x,روز %s,Day %s
+daily.next_reward_xh_xm,جایزه‌ی بعدی: %sس %sد,Next reward: %sh %sm
+daily.x_x_gems,%s + %s الماس,%s + %s gems
+data.3_wins_in_a_row,۳ برد پشت سر هم,3 wins in a row
+data.bronze,برنز,Bronze
+data.cars,خودرو,Cars
+data.champion,قهرمان,Champion
+data.chrome,کروم,Chrome
+data.club,باشگاه,Club
+data.collector,کلکسیونر,Collector
+data.diamond,الماس,Diamond
+data.elite,الیت,Elite
+data.emblem,نشان,Emblem
+data.first_step,اولین قدم,First Step
+data.gold,طلا,Gold
+data.gold_league,لیگ طلا,Gold League
+data.league,لیگ,League
+data.legend,اسطوره,Legend
+data.legendary,افسانه,Legendary
+data.luxury,لوکس,Luxury
+data.master,استاد,Master
+data.national,ملی,National
+data.nexora,نکسورا,Nexora
+data.platinum,پلاتین,Platinum
+data.play_one_match,یک بازی انجام بده,Play one match
+data.player_2,بازیکن ۲,Player 2
+data.reach_800_trophies,به ۸۰۰ جام برس,Reach 800 trophies
+data.score_25_goals,۲۵ گل بزن,Score 25 goals
+data.scorer,گلزن,Scorer
+data.season,فصل,Season
+data.silver,نقره,Silver
+data.sports,ورزشی,Sports
+data.unbeatable,شکست‌ناپذیر,Unbeatable
+data.unlock_15_special_discs,۱۵ دیسک ویژه باز کن,Unlock 15 special discs
+data.win_25_matches,۲۵ بازی ببر,Win 25 matches
+data.win_5_matches,۵ بازی ببر,Win 5 matches
+data.win_the_nexora_cup,جام نکسورا را ببر,Win the Nexora Cup
+data.winner,برنده,Winner
+data.women,بانوان,Women
+home.1v1_2v2_3v3,۱ به ۱، ۲ به ۲، ۳ به ۳,"1v1, 2v2, 3v3"
+home.all,همه ›,All ›
+home.ball,توپ,Ball
+home.challenges,چالش‌ها ›,Challenges ›
+home.change,تغییر ›,Change ›
+home.chests_and_today_s_deal,صندوقچه و پیشنهاد روز,Chests and today's deal
+home.come_back_tomorrow,فردا دوباره سر بزن,Come back tomorrow
+home.command_deck,مرکز فرمان,Command deck
+home.daily_online_challenges_gem_rewards,چالش‌های روزانه‌ی آنلاین · الماس جایزه,Daily online challenges · gem rewards
+home.day_x_of_7,روز %s از ۷,Day %s of 7
+home.details,جزئیات,Details
+home.disc,دیسک,Disc
+home.free_coins_and_gems_bigger,سکه و الماس رایگان؛ هر روز بزرگ‌تر,Free coins and gems; bigger every day
+home.friends_clubs_chat,دوستان، کلاب، گفتگو,"Friends, clubs, chat"
+home.game_modes,حالت‌های بازی,Game modes
+home.hi_captain_ready_to_play,سلام کاپیتان! آماده‌ی بازی هستی؟,Hi captain! Ready to play?
+home.loadout,تجهیزات,Loadout
+home.missions,مأموریت‌ها,Missions
+home.nexora_cup,جام نکسورا,Nexora Cup
+home.nexora_s_best,بهترین‌های نکسورا,Nexora's best
+home.social,اجتماعی,Social
+home.today_s_reward_is_ready,جایزه‌ی امروز آماده‌ست!,Today's reward is ready!
+home.x_change_team,%s  ·  تغییر تیم ›,%s  ·  change team ›
+home.you_ve_completed_every_mission,همه‌ی مأموریت‌ها رو انجام دادی، اسطوره!,"You've completed every mission, legend!"
+hub.6_digit_code,کد ۶ رقمی,6-digit code
+hub.affects_rating_and_league,نتیجه روی امتیاز و لیگ اثر دارد,Affects rating and league
+hub.back,بازگشت,Back
+hub.challenges,چالش‌ها,Challenges
+hub.connecting_to_the_server,در حال اتصال به سرور…,Connecting to the server…
+hub.couldn_t_connect_to_the,اتصال به سرور برقرار نشد,Couldn't connect to the server
+hub.create_a_room_and_invite,یک اتاق بساز و دوستانت را با کد دعوت کن,Create a room and invite friends with the code
+hub.create_room,ساخت اتاق,Create room
+hub.creating,در حال ساخت…,Creating…
+hub.enter,ورود به بخش آنلاین,Enter online
+hub.e_g_galactic_final,مثلاً: فینال کهکشانی,e.g. Galactic Final
+hub.field,زمین,Field
+hub.find_the_closest_level_online,هم‌سطح‌ترین حریف آنلاین را پیدا کن,Find the closest-level online opponent
+hub.join,ورود,Join
+hub.join_only_with_the_room,فقط با کد اتاق می‌شود وارد شد,Join only with the room code
+hub.leaderboard,رده‌بندی,Leaderboard
+hub.level_x,سطح %s,Level %s
+hub.live,زنده,Live
+hub.mode,حالت,Mode
+hub.no_open_rooms_right_now,فعلاً اتاقی باز نیست,No open rooms right now
+hub.online,آنلاین,Online
+hub.open_rooms,اتاق‌های باز,Open rooms
+hub.players_can_talk_to_each,بازیکن‌ها می‌توانند صحبت کنند,Players can talk to each other
+hub.private,خصوصی,Private
+hub.quick_match,مسابقه‌ی سریع,Quick match
+hub.ranked,رتبه‌ای,Ranked
+hub.room_name,نام اتاق,Room name
+hub.rule,قانون,Rule
+hub.the_room_code_has_6,کد اتاق ۶ کاراکتر است,The room code has 6 characters
+hub.tournament,تورنمنت,Tournament
+hub.turn_time,زمان هر نوبت,Turn time
+hub.updated,به‌روز شد,Updated
+hub.voice_chat,چت صوتی,Voice chat
+hub.waiting,در انتظار,Waiting
+hub.watch,تماشا,Watch
+hub.x_level_x_x,%s · سطح %s · %s,%s · level %s · %s
+hub.x_rooms,%s اتاق,%s rooms
+hub.x_x_xp_rating_x,%s / %s XP · امتیاز %s,%s / %s XP · rating %s
+intro.skip,رد کردن ‹,Skip ›
+intro.tap_to_enter,برای ورود لمس کنید,Tap to enter
+kb.a_guest_sign_in_gets,با ورود مهمان سریع شروع می‌کنی، ولی پیشرفتت فقط روی همین گوشیه. از «تنظیمات ← حساب آنلاین ← ثبت ایمیل» ایمیل و رمز بذار تا همه‌چیز حفظ بشه و روی هر گوشی وارد بشی. فراموشی رمز هم همون‌جاست.,"A guest sign-in gets you started fast, but your progress lives only on this phone. In ""Settings → Online account → Register email"" add an email and password to keep everything and sign in on any phone. Password recovery is there too."
+kb.challenge,چالش,Challenge
+kb.channel,کانال,Channel
+kb.chest,صندوقچه,Chest
+kb.claim_my_rewards,جایزه‌هام رو بگیر,Claim my rewards
+kb.claim_reward,دریافت جایزه,Claim reward
+kb.clubs_are_permanent_teams_creating,باشگاه‌ها تیم‌های همیشگی‌اند 🛡: ساختنش ۵۰ الماس هزینه داره، تگ ۲ تا ۵ حرفی و نشان اختصاصی می‌گیره و یک چت گروهی خودکار داره. نقش‌ها: رهبر (همه‌کاره)، افسر (پذیرش درخواست، دعوت، اخراج عضو) و عضو. عضوگیری می‌تونه آزاد، با درخواست یا فقط با دعوت باشه.,"Clubs are permanent teams 🛡: creating one costs 50 gems, it gets a 2–5 letter tag, its own emblem and an automatic group chat. Roles: leader (can do everything), officer (accept requests, invite, kick members) and member. Joining can be open, by request or invite only."
+kb.coins,سکه,Coins
+kb.disc_suggestion,پیشنهاد دیسک,Disc suggestion
+kb.each_disc_has_two_stats,هر دیسک دو ویژگی ۱ تا ۱۰ داره:\n• قدرت: سرعت بیشینه‌ی ضربه رو از ۰٫۷۵ تا ۱٫۲۵ برابر تغییر می‌ده.\n• دقت: هرچی بیشتر، انحراف تصادفی ضربه کمتر (در ۱۰ صفر، در ۱ حدود ±۴ درجه) و پیش‌نمایش مسیر بلندتر.\nاین‌ها هم در بازی آفلاین و هم آنلاین واقعاً اعمال می‌شن.,"Each disc has two stats from 1 to 10:\n• Power: scales the maximum shot speed from 0.75× to 1.25×.\n• Accuracy: the higher, the less random deviation (0 at 10, about ±4° at 1) and the longer the path preview.\nThese really apply in both offline and online play."
+kb.email,ایمیل,Email
+kb.error,خطا,Error
+kb.find_me_a_quick_match,یه بازی سریع پیدا کن,Find me a quick match
+kb.formation,ترکیب,Formation
+kb.gems_only_come_from_real,الماس فقط از راه‌های واقعی بازی به دست میاد 💎:\n• چالش‌های روزانه: هر کدوم تا ۵ الماس\n• پایان هر فصل: بر اساس لیگت از ۳ تا ۳۰ الماس\n• قهرمانی تورنمنت: تا ۳۰ الماس (نایب‌قهرمان یک‌سوم)\nحساب‌های جدید هم ۱۵۰ الماس هدیه می‌گیرن.,Gems only come from real gameplay 💎:\n• Daily challenges: up to 5 gems each\n• End of each season: 3 to 30 gems based on your league\n• Tournament win: up to 30 gems (runner-up gets a third)\nNew accounts also get 150 gems as a gift.
+kb.go_to_the_arena,رفتن به آرنا,Go to the Arena
+kb.group,گروه,Group
+kb.guest,مهمان,Guest
+kb.hi_captain_i_m_the,سلام کاپیتان! 👋 من اوراکل‌ام، دستیار کهکشانی NEXORA. می‌تونم بازی پیدا کنم، جایزه‌هات رو بگیرم یا هر سؤالی درباره‌ی بازی داری جواب بدم.,"Hi captain! 👋 I'm the Oracle, NEXORA's galactic assistant. I can find you a match, claim your rewards or answer any question about the game."
+kb.how_do_i_shoot,چطور شوت بزنم؟,How do I shoot?
+kb.how_does_arena_rating_work,امتیاز آرنا چطوریه؟,How does Arena rating work?
+kb.i_m_the_oracle_the,من اوراکل‌ام، ربات راهنمای ایستگاه NEXORA 🤖✨. راهنمای بازی، مربی وسط مسابقه و دستیار کارهای سریعت!,"I'm the Oracle, the guide robot of NEXORA station 🤖✨. Your game guide, mid-match coach and quick-action assistant!"
+kb.if_the_host_disconnects_the,اگر میزبان قطع بشه بازی لغو می‌شه و به لابی برمی‌گردی؛ اگر بازیکن دیگری قطع بشه بازی ادامه پیدا می‌کنه و ربات یا هم‌تیمی جاش بازی می‌کنه. برای بهترین تجربه با اینترنت پایدار بازی کن. 📶,If the host disconnects the match is cancelled and you return to the lobby; if another player disconnects the match continues and the bot or a teammate plays for them. Play on a stable connection for the best experience. 📶
+kb.in_my_team_formation_you,در «تیم من ← ترکیب» شش آرایش داری: متعادل ۱-۲-۲، محتاط ۲-۲-۱، دیوار ۳-۱-۱، لوزی ۲-۱-۲، میانه ۱-۳-۱ و هجومی ۱-۱-۳. برای دفاع از دروازه «دیوار» و برای فشار «هجومی» رو امتحان کن.,"In ""My team → Formation"" you have six formations: Balanced 1-2-2, Cautious 2-2-1, Wall 3-1-1, Diamond 2-1-2, Midfield 1-3-1 and Attacking 1-1-3. Try ""Wall"" to defend your goal and ""Attacking"" to press."
+kb.in_settings_you_can_change,در تنظیمات می‌تونی صدا، موسیقی، بلندی صدا، لرزش، کیفیت گرافیک، سختی ربات و نمایش من (اوراکل) رو تغییر بدی. ⚙️,"In Settings you can change sound, music, volume, vibration, graphics quality, bot difficulty and whether I (the Oracle) am shown. ⚙️"
+kb.in_the_profile_tab_tap,در تب پروفایل روی دایره‌ی عکس بزن تا از گالری عکس انتخاب کنی 📷 (خودم کوچیکش می‌کنم و آپلود می‌کنم). اگر عکس نذاری، دیسک فعالت نمایش داده می‌شه. بیو هم همون‌جا قابل ویرایشه.,In the Profile tab tap the photo circle to pick a photo from your gallery 📷 (I'll shrink and upload it). Without a photo your active disc is shown. You can edit your bio there too.
+kb.in_the_room_list_tap,در لیست اتاق‌ها دکمه‌ی «تماشا» رو بزن تا هر بازی زنده رو ببینی 👀. تماشاگرها می‌تونن چت کنن و صدای بازیکن‌ها رو بشنون، ولی نمی‌تونن ضربه بزنن.,"In the room list tap ""Watch"" to see any live match 👀. Spectators can chat and hear the players, but can't shoot."
+kb.in_the_social_tab_you,در تب «اجتماعی» می‌تونی هر بازیکنی رو جستجو کنی و پیام خصوصی بدی، گروه (همه پیام می‌دن) یا کانال (فقط مدیرها) بسازی و گروه‌های عمومی رو کشف کنی. عکس بفرست، روی پیام نگه دار تا پاسخ بدی یا پیام خودت رو حذف کنی.,"In the ""Social"" tab you can search for any player and message them, create a group (everyone posts) or a channel (admins only), and discover public groups. Send photos, and long-press a message to reply or delete your own."
+kb.leader,رهبر,Leader
+kb.message,پیام,Message
+kb.messages,پیام‌ها,Messages
+kb.music,موسیقی,Music
+kb.my_stats,آمار من,My stats
+kb.my_team,تیم من,My team
+kb.officer,افسر,Officer
+kb.online_section,بخش آنلاین,Online section
+kb.open_clubs,باز کردن کلاب‌ها,Open clubs
+kb.open_shop,باز کردن فروشگاه,Open shop
+kb.open_tournaments,باز کردن تورنمنت‌ها,Open tournaments
+kb.oracle,اوراکل,Oracle
+kb.quick_match_automatically_finds_the,مسابقه‌ی سریع خودکار هم‌سطح‌ترین حریف رو پیدا می‌کنه و به محض پر شدن جایگاه‌ها با شمارش ۳-۲-۱ شروع می‌شه. لابی اتاق‌ها برای بازی با دوستاته: اتاق بساز، کد ۶ حرفی رو بفرست، تنظیمات (گل/زمان/زمین) رو انتخاب کن و وقتی همه آماده شدن شروع کن.,"Quick match automatically finds the closest-level opponent and starts with a 3-2-1 countdown as soon as the slots fill. The room lobby is for playing with friends: create a room, send the 6-character code, choose the settings (goals/time/field) and start when everyone is ready."
+kb.quick_play,بازی سریع,Quick play
+kb.rating_elo_goes_up_and,امتیاز (ELO) با هر مسابقه‌ی رتبه‌ای بالا و پایین می‌ره و لیگت رو تعیین می‌کنه: برنز، نقره، طلا، پلاتین، الماس، استاد و افسانه. هر فصل ۲۸ روزه و آخرش بر اساس لیگت تا ۳۰ الماس جایزه می‌گیری.,"Rating (ELO) goes up and down with every ranked match and decides your league: Bronze, Silver, Gold, Platinum, Diamond, Master and Legend. Each season lasts 28 days and at the end you get up to 30 gems based on your league."
+kb.settings,تنظیمات,Settings
+kb.shop,فروشگاه,Shop
+kb.tap_one_of_your_team,روی یکی از دیسک‌های تیمت بزن و انگشتت رو به عقب بکش، مثل تیرکمون! 🎯 جهت فلش، مسیر شوته و حلقه‌ی دور دیسک قدرت رو نشون می‌ده (سبز = ملایم، زرد = متوسط، قرمز = تمام‌قدرت). ضربه‌ی خیلی قوی همیشه بهتر نیست؛ برای کنترل توپ از قدرت متوسط و ضربه‌ی کمانه‌ای به دیواره استفاده کن. یادت باشه با ضربه‌ی اولِ شروع بازی نمی‌شه گل زد.,"Tap one of your team's discs and pull your finger back, like a slingshot! 🎯 The arrow shows the shot's direction and the ring around the disc shows power (green = soft, yellow = medium, red = full power). A very hard shot isn't always better; use medium power and wall bank shots to control the ball. Remember: you can't score with the kick-off shot."
+kb.the_arena_is_nexora_s,آرنا نردبان رقابتی NEXORA است 🏟: هر برد ۳۰+ امتیاز و برای هر برد پیاپی ۵+ اضافه (تا ۲۵+)، هر باخت ۲۰−. حریف‌ها بر اساس امتیاز آرنای نزدیک انتخاب می‌شن. حالت‌های ۱ به ۱، ۲ به ۲ و ۳ به ۳ داره.,"The Arena is NEXORA's competitive ladder 🏟: every win is +30 rating plus +5 per streak win (up to +25), every loss −20. Opponents are matched by similar Arena rating. It has 1v1, 2v2 and 3v3 modes."
+kb.tournament_formats_n_single_elimination,فرمت‌های تورنمنت:\n• حذفی تک: هر باخت = حذف.\n• حذفی دوگانه: با اولین باخت به جدول بازنده‌ها می‌ری؛ دو باخت = حذف.\n• دوره‌ای: همه با همه یک بار بازی می‌کنن.\n• سوئیسی: هر دور با هم‌امتیازها جفت می‌شی، بدون حذف.\n• لیگ: دوره‌ای رفت و برگشت (یا بیشتر).\nبرد ۳، مساوی ۱ امتیاز. در حذفی‌ها مساوی با گل طلایی تعیین می‌شه.,"Tournament formats:\n• Single elimination: every loss = out.\n• Double elimination: your first loss sends you to the losers bracket; two losses = out.\n• Round robin: everyone plays everyone once.\n• Swiss: each round you're paired with players on equal points, no elimination.\n• League: home-and-away round robin (or more).\nWin 3, draw 1 point. In eliminations a draw is decided by a golden goal."
+kb.turns_alternate_between_the_two,نوبت‌ها بین دو تیم عوض می‌شه. در ۲ به ۲ و ۳ به ۳ اعضای هر تیم به ترتیب جایگاه نوبتی بازی می‌کنن و کسی که نوبتشه می‌تونه هر دیسکی از تیم رو بزنه. بالای صفحه همیشه نوشته «نوبت: …». اگر هم‌تیمی‌ای قطع بشه نفر بعدی جاش بازی می‌کنه و اگر کسی نمونه ربات کنترل رو می‌گیره.,"Turns alternate between the two teams. In 2v2 and 3v3 each team's members take turns in slot order, and whoever's turn it is can shoot any disc of the team. The top of the screen always says ""Turn: …"". If a teammate disconnects the next one plays in their place, and if no one is left the bot takes over."
+kb.vibration,لرزش,Vibration
+kb.voice_chat_works_in_the,چت صوتی داخل لابی و بازی فعاله 🎙 ولی فقط در نسخه‌ی APK یا Development Build (در Expo Go غیرفعاله). بازیکن‌ها می‌تونن صحبت کنن و تماشاگرها فقط گوش می‌دن. میکروفون و بلندگو رو از نوار صدا قطع و وصل کن.,Voice chat works in the lobby and in matches 🎙 but only in the APK or a Development Build (disabled in Expo Go). Players can talk and spectators only listen. Toggle mic and speaker from the voice bar.
+kb.what_do_disc_power_and,قدرت و دقت دیسک یعنی چی؟,What do disc power and accuracy mean?
+kb.what_is_a_club,باشگاه چیه؟,What is a club?
+kb.what_tournament_formats_are_there,تورنمنت‌ها چه فرمت‌هایی دارن؟,What tournament formats are there?
+kb.where_do_i_get_gems,الماس از کجا بیارم؟,Where do I get gems?
+kb.you_earn_xp_from_online,XP رو از مسابقه‌های آنلاین، چالش‌ها و تورنمنت‌ها می‌گیری. فرمول سطح: هر سطح (سطح−۱)²×۱۰۰ XP لازم داره، پس سطح‌های بالاتر کمی بیشتر طول می‌کشه.,"You earn XP from online matches, challenges and tournaments. Level formula: each level needs (level−1)²×100 XP, so higher levels take a bit longer."
+kb.you_get_4_new_challenges,هر روز ۴ چالش جدید (ساعت ۰۰:۰۰ تهران) داری. پیشرفتشون خودکار از مسابقه‌هات حساب می‌شه و هر کدوم تا ۵ الماس و کلی XP می‌ده.,You get 4 new challenges every day (at 00:00 Tehran time). Progress is counted automatically from your matches and each one gives up to 5 gems and plenty of XP.
+kb.you_get_coins_from_offline,سکه‌ها رو با بازی آفلاین، جایزه‌ی روزانه و صندوقچه‌ی رایگان (هر ۴ ساعت) می‌گیری. باهاشون توپ و زمین جدید بخر یا صندوقچه‌ی سلطنتی رو باز کن. دیسک‌ها با الماس خریده می‌شن.,"You get coins from offline play, the daily reward and the free chest (every 4 hours). Use them to buy new balls and fields or open the royal chest. Discs are bought with gems."
+kb.you_re_welcome_whenever_you,خواهش می‌کنم! هر وقت کار داشتی فقط کافیه صدام کنی. 💙,"You're welcome! Whenever you need something, just call me. 💙"
+launch.2_rewards_20_champion_gems,۲ برابر جایزه + ۲۰ الماس قهرمانی,2× rewards + 20 champion gems
+launch.3_rewards,۳ برابر جایزه,3× rewards
+launch.an_instant_match_against_the,یک مسابقه‌ی فوری مقابل هوش مصنوعی,An instant match against the AI
+launch.coins_xp_and_trophies,سکه، XP و جام,"Coins, XP and trophies"
+launch.galactic_challenge,چالش کهکشانی,Galactic challenge
+launch.just_for_glory,فقط برای افتخار,Just for glory
+launch.low_xp_no_trophies,XP کم، بدون جام,"Low XP, no trophies"
+launch.no_timer_easy_bot_to,بدون تایمر، ربات آسان، برای گرم کردن دست,"No timer, easy bot, to warm up"
+launch.play_with_a_friend_on,با دوستت روی یک گوشی بازی کن,Play with a friend on one phone
+launch.practice,تمرین,Practice
+launch.three_opponents_in_a_row,سه حریف پشت سر هم تا فینال؛ هر مرحله سخت‌تر,Three opponents in a row to the final; each stage harder
+launch.two_minutes_vs_the_legendary,دو دقیقه مقابل ربات افسانه‌ای,Two minutes vs the legendary bot
+launch.two_players,دو نفره,Two players
+lobby.blue_team,تیم آبی,Blue team
+lobby.chat,گفتگو,Chat
+lobby.copy,کپی,Copy
+lobby.friendly,دوستانه,Friendly
+lobby.host,میزبان,Host
+lobby.i_m_ready,آماده‌ام ✓,I'm ready ✓
+lobby.in_game,در حال بازی,In game
+lobby.invite_text_copied_send_it,متن دعوت کپی شد؛ برای دوستت بفرست,Invite text copied — send it to your friend
+lobby.join_live_match,ورود به بازی زنده,Join live match
+lobby.leave_the_room,خروج از اتاق؟,Leave the room?
+lobby.let_s_play_nexora_nroom,بیا NEXORA بازی کنیم! 🚀\nکد اتاق: %s,Let's play NEXORA! 🚀\nRoom code: %s
+lobby.match_rule,قانون بازی,Match rule
+lobby.no_one_is_watching,کسی تماشا نمی‌کند,No one is watching
+lobby.not_ready,آماده نیست,Not ready
+lobby.player_kicked,بازیکن اخراج شد,Player kicked
+lobby.ready,آماده ✓,Ready ✓
+lobby.ready_to_start,آماده‌ی شروع…,Ready to start…
+lobby.ready_up,اعلام آمادگی,Ready up
+lobby.red_team,تیم قرمز,Red team
+lobby.room_chat,گفتگوی اتاق,Room chat
+lobby.room_code,کد اتاق,Room code
+lobby.room_code_copied,کد اتاق کپی شد,Room code copied
+lobby.room_settings,تنظیمات اتاق,Room settings
+lobby.save,ذخیره,Save
+lobby.saving,در حال ذخیره…,Saving…
+lobby.searching_for_opponents_x_x,در جستجوی حریف… (%s/%s),Searching for opponents… (%s/%s)
+lobby.settings_saved,تنظیمات ذخیره شد,Settings saved
+lobby.share,اشتراک,Share
+lobby.sit,نشستن,Sit
+lobby.spectate_only,فقط تماشا,Spectate only
+lobby.spectators_x,تماشاگرها (%s),Spectators (%s)
+lobby.start_match,شروع بازی,Start match
+lobby.starting,در حال شروع…,Starting…
+lobby.tap_an_empty_slot_to,برای بازی روی یک جایگاه خالی بزن,Tap an empty slot to play
+lobby.tap_to_type_a_message,برای نوشتن پیام لمس کن,Tap to type a message
+lobby.the_match_is_starting,بازی شروع می‌شود,The match is starting
+lobby.the_room_was_closed,اتاق بسته شد,The room was closed
+lobby.waiting_for_slots_to_fill,منتظر پر شدن جایگاه‌ها…,Waiting for slots to fill…
+lobby.waiting_for_x_player_s,منتظر آماده شدن %s بازیکن…,Waiting for %s player(s) to get ready…
+lobby.you_left_the_room,از اتاق خارج شدی,You left the room
+lobby.your_slot_will_be_freed,جایگاهت آزاد می‌شود و از لابی خارج می‌شوی.,Your slot will be freed and you'll leave the lobby.
+nav.cancel,انصراف,Cancel
+nav.coming_soon,به‌زودی,Coming soon
+nav.ok,تأیید,OK
+nav.quit,خروج,Quit
+nav.quit_nexora,از نکسورا خارج می‌شی؟,Quit Nexora?
+nav.stay,ماندن,Stay
+nav.the_free_chest_isn_t,صندوقچه‌ی رایگان هنوز آماده نیست,The free chest isn't ready yet
+nav.x_coins,+%s سکه,+%s coins
+nav.x_gems, · +%s الماس, · +%s gems
+nav.you_need_600_coins,۶۰۰ سکه لازمه,You need 600 coins
+online_result.0,+۰,+0
+online_result.back_to_lobby,بازگشت به لابی,Back to lobby
+online_result.collecting_rewards,در حال دریافت جوایز…,Collecting rewards…
+online_result.leave_room,خروج از اتاق,Leave room
+online_result.level_x,سطح %s!,Level %s!
+online_result.rating,امتیاز,Rating
+online_result.the_result_wasn_t_saved,نتیجه روی سرور ثبت نشد؛ جایزه‌ای اعمال نشد.,The result wasn't saved on the server; no rewards were applied.
+online_result.you_reached_a_new_level,به سطح جدید رسیدی,You reached a new level
+online_result.you_were_a_spectator_in,تو تماشاگر این بازی بودی,You were a spectator in this match
+oracle.and, و , and 
+oracle.and_it_s_active, و فعاله ✅, and it's active ✅
+oracle.ask_the_oracle,از اوراکل بپرس…,Ask the Oracle…
+oracle.clubs_are_in_the_social,باشگاه‌ها در تب «اجتماعی» هستن 🛡,"Clubs are in the ""Social"" tab 🛡"
+oracle.equip_it, — مجهزش کن!, — equip it!
+oracle.finding_you_an_opponent_at,دارم یک حریف هم‌سطح برات پیدا می‌کنم… 🔭,Finding you an opponent at your level… 🔭
+oracle.got_them_x_x_gemsx,گرفتمشون! 🎉 %s: +%s الماس%s,Got them! 🎉 %s: +%s gems%s
+oracle.hi_captain_ask_me_anything,سلام کاپیتان! 👋 هر سؤالی درباره‌ی بازی داری بپرس یا یکی از کارهای سریع رو انتخاب کن.,Hi captain! 👋 Ask me anything about the game or pick one of the quick actions.
+oracle.hmm_i_didn_t_get,هممم… این رو متوجه نشدم 🤔 می‌تونی دربار‌ه‌ی شوت، الماس، دیسک‌ها، تورنمنت، آرنا، باشگاه یا حساب بپرسی، یا یکی از این‌ها رو بزنی:,"Hmm… I didn't get that 🤔 You can ask about shooting, gems, discs, tournaments, the Arena, clubs or your account, or tap one of these:"
+oracle.leagues_and_season_rewards,لیگ‌ها و جایزه‌های فصل 🥇,Leagues and season rewards 🥇
+oracle.next_goal_x_for_x,هدف بعدی: «%s» با 💎%s؛ %s الماس دیگه لازم داری.,"Next goal: ""%s"" for 💎%s; you need %s more gems."
+oracle.no_rewards_ready_right_now,فعلاً جایزه‌ی آماده‌ای نداری. چالش‌های امروز رو کامل کن تا الماس بگیری! 💪,No rewards ready right now. Finish today's challenges to earn gems! 💪
+oracle.off_to_the_tournaments,بریم سراغ تورنمنت‌ها! 🏆,Off to the tournaments! 🏆
+oracle.offline_stats_n_level_x,📊 آمار آفلاین\n• سطح %s\n• %s بازی، درصد برد %s٪\n• بهترین برد پیاپی %s\nبرای آمار آنلاین وارد بخش آنلاین شو.,"📊 Offline stats\n• Level %s\n• %s matches, %s%% win rate\n• Best win streak %s\nOpen the online section for online stats."
+oracle.settings_opened,تنظیمات باز شد ⚙️,Settings opened ⚙️
+oracle.shop_opened,فروشگاه باز شد! 🛍,Shop opened! 🛍
+oracle.the_arena_awaits,آرنا منتظرته! ⚔️,The Arena awaits! ⚔️
+oracle.the_best_disc_you_own,بهترین دیسکی که الان داری «%s» است (قدرت %s، دقت %s)%s,"The best disc you own right now is ""%s"" (power %s, accuracy %s)%s"
+oracle.the_disc_catalogue_hasn_t,کاتالوگ دیسک‌ها هنوز بارگذاری نشده؛ یک لحظه بعد دوباره بپرس.,The disc catalogue hasn't loaded yet; ask again in a moment.
+oracle.today_s_challenges_n,چالش‌های امروز:\n,Today's challenges:\n
+oracle.top_league, — بالاترین لیگ!, — top league!
+oracle.welcome_to_online_play,به بخش آنلاین خوش اومدی! 🌐,Welcome to online play! 🌐
+oracle.with_your_x_gems_the,با %s الماست بهترین انتخاب «%s» است: قدرت %s، دقت %s به قیمت 💎%s.,"With your %s gems the best pick is ""%s"": power %s, accuracy %s for 💎%s."
+oracle.x_challenges,%s چالش,%s challenges
+oracle.x_n_level_x_x,📊 %s\n• سطح %s — %s XP تا سطح بعد\n• %s بازی آنلاین، درصد برد %s٪\n• برد پیاپی %s (رکورد %s)\n• امتیاز %s%s\n• آرنا %s · 💎 %s,"📊 %s\n• Level %s — %s XP to next level\n• %s online matches, %s%% win rate\n• Win streak %s (best %s)\n• Rating %s%s\n• Arena %s · 💎 %s"
+oracle.x_to_x_league, — %s تا لیگ %s, — %s to %s League
+oracle.you_need_to_be_online,برای چالش‌ها باید آنلاین باشی 📶,You need to be online for challenges 📶
+oracle.you_need_to_be_online_2,برای گرفتن جایزه باید آنلاین باشی 📶,You need to be online to claim rewards 📶
+oracle.you_own_every_disc_legend,همه‌ی دیسک‌ها رو داری، اسطوره! 🤯,"You own every disc, legend! 🤯"
+oracle.your_messages_are_here,پیام‌هات این‌جاست 💬,Your messages are here 💬
+oracle.your_team_and_discs_are,تیم و دیسک‌هات این‌جاست ⚽,Your team and discs are here ⚽
+oui.10s,۱۰ث,10s
+oui.15s,۱۵ث,15s
+oui.1_vs_1,تک به تک,1 vs 1
+oui.20s,۲۰ث,20s
+oui.2_vs_2,۲ به ۲,2 vs 2
+oui.3_goals,تا ۳ گل,3 goals
+oui.3_min,۳ دقیقه,3 min
+oui.3_vs_3,۳ به ۳,3 vs 3
+oui.5_goals,تا ۵ گل,5 goals
+oui.5_min,۵ دقیقه,5 min
+oui.accuracy,دقت,Accuracy
+oui.choose_photo,انتخاب عکس,Choose photo
+oui.choosing_or_uploading_the_photo,انتخاب یا آپلود عکس ناموفق بود,Choosing or uploading the photo failed
+oui.first_to_x_goals,تا %s گل,First to %s goals
+oui.none,بدون,None
+oui.now,الان,now
+oui.photo_processing_failed,پردازش عکس ناموفق بود,Photo processing failed
+oui.photo_upload_failed,آپلود عکس ناموفق بود,Photo upload failed
+oui.power,قدرت,Power
+oui.quick,سریع,Quick
+oui.something_went_wrong,مشکلی پیش اومد,Something went wrong
+oui.sym,٬,","
+oui.try_again,تلاش دوباره,Try again
+oui.unknown_error_try_again,خطای ناشناخته؛ دوباره امتحان کن,Unknown error; try again
+oui.x_d,%s روز,%s d
+oui.x_h,%s ساعت,%s h
+oui.x_min,%s دقیقه,%s min
+play.choose_a_game_mode,انتخاب حالت بازی,Choose a game mode
+play.enter_x,ورود به %s,Enter %s
+play.league_road,جاده‌ی لیگ,League road
+play.offline,آفلاین,Offline
+play.rating_x_gems_x,امتیاز %s · الماس %s,Rating %s · Gems %s
+profile.achievements,دستاوردها,Achievements
+profile.best_win_streak,بهترین رکورد برد پیاپی,Best win streak
+profile.claimed,✓ دریافت شد,✓ Claimed
+profile.cups_won,جام قهرمانی,Cups won
+profile.current_win_streak,برد پیاپی فعلی,Current win streak
+profile.discs_unlocked,دیسک‌های باز شده,Discs unlocked
+profile.draws,مساوی,Draws
+profile.goal_difference,تفاضل گل,Goal difference
+profile.goals_scored,گل زده,Goals scored
+profile.losses,باخت,Losses
+profile.offline_profile,پروفایل آفلاین,Offline profile
+profile.sign_in_or_register_for,ورود یا ثبت‌نام برای بازی آنلاین، رده‌بندی و دیسک‌های الماسی,"Sign in or register for online play, leaderboards and gem discs"
+profile.tap_to_change_name,برای تغییر نام لمس کن,Tap to change name
+profile.win_rate,درصد برد,Win rate
+profile.wins,برد,Wins
+profile.x,%s٪,%s%%
+profile.x_of_x_trophies,%s از %s جام,%s of %s trophies
+public_profile.active_disc,دیسک فعال,Active disc
+public_profile.block_this_user,مسدود کردن این کاربر,Block this user
+public_profile.club_x,باشگاه %s,Club %s
+public_profile.follow,دنبال کردن,Follow
+public_profile.followers,دنبال‌کننده,Followers
+public_profile.following,دنبال می‌کنی ✓,Following ✓
+public_profile.following_2,دنبال‌شده,Following
+public_profile.last_seen_x_ago,آخرین بازدید %s پیش,Last seen %s ago
+public_profile.like,لایک,Like
+public_profile.liked,لایک شده ✓,Liked ✓
+public_profile.likes,لایک,Likes
+public_profile.player_not_found,بازیکن پیدا نشد,Player not found
+public_profile.profile,پروفایل,Profile
+public_profile.trophies,جام,Trophies
+public_profile.unblock,رفع مسدودی,Unblock
+public_profile.unblocked,از مسدودی خارج شد,Unblocked
+public_profile.user_blocked,کاربر مسدود شد,User blocked
+ranks.at_the_end_of_each,در پایان هر فصل بر اساس لیگت الماس می‌گیری. جایزه‌ی فصل قبل را این‌جا دریافت کن.,At the end of each season you earn gems based on your league. Claim last season's reward here.
+ranks.claim_last_season_s_reward,دریافت جایزه‌ی فصل قبل,Claim last season's reward
+ranks.current_season,فصل جاری,Current season
+ranks.from_x_rating,از %s امتیاز,from %s rating
+ranks.league_ladder,نردبان لیگ‌ها,League ladder
+ranks.leagues,لیگ‌ها,Leagues
+ranks.leagues_season,لیگ‌ها و فصل,Leagues & season
+ranks.level_x_x_wins,سطح %s · %s برد,Level %s · %s wins
+ranks.no_one_is_on_the,هنوز کسی در رده‌بندی نیست,No one is on the leaderboard yet
+ranks.season_reward,جایزه‌ی فصل,Season reward
+ranks.top_players,برترین‌ها,Top players
+ranks.x_days_x_hours_until,%s روز و %s ساعت تا پایان فصل,%s days %s hours until season end
+ranks.x_gems,%s الماس,%s gems
+ranks.x_gems_season_reward,+%s الماس جایزه‌ی فصل,+%s gems season reward
+ranks.x_league,لیگ %s,%s League
+ranks.x_top_league,%s · بالاترین لیگ!,%s · top league!
+ranks.x_x_to_x_league,%s / %s تا لیگ %s,%s / %s to %s League
+ranks.you, (تو), (you)
+ranks.your_league,لیگ تو,Your league
+settings.100,۱۰۰٪,100%
+settings.25,۲۵٪,25%
+settings.50,۵۰٪,50%
+settings.75,۷۵٪,75%
+settings.account,حساب کاربری,Account
+settings.choose_smooth_on_low_end,روی گوشی‌های ضعیف «روان» را انتخاب کن,"Choose ""Smooth"" on low-end phones"
+settings.default_bot_difficulty,سختی پیش‌فرض ربات,Default bot difficulty
+settings.easy,آسان,Easy
+settings.floating_assistant_match_coach_and,دستیار شناور، مربی بازی و راهنما,"Floating assistant, match coach and guide"
+settings.graphics_quality,کیفیت گرافیک,Graphics quality
+settings.haptic_feedback_on_hits,بازخورد لمسی هنگام برخورد,Haptic feedback on hits
+settings.hard,سخت,Hard
+settings.high,بالا,High
+settings.lang_en,English,English
+settings.lang_fa,فارسی,فارسی
+settings.language,زبان,Language
+settings.language_sub,زبان رابط کاربری بازی,App interface language
+settings.menu_music,موسیقی منو,Menu music
+settings.normal,معمولی,Normal
+settings.progress_reset,پیشرفت پاک شد,Progress reset
+settings.replay_intro,پخش دوباره‌ی اینترو,Replay intro
+settings.reset_progress,پاک کردن پیشرفت,Reset progress
+settings.shots_goals_crowd,ضربه، گل، تماشاگر,"Shots, goals, crowd"
+settings.show_oracle,نمایش اوراکل,Show Oracle
+settings.sign_in_register_or_play,ورود، ثبت‌نام یا بازی به‌عنوان مهمان,"Sign in, register or play as a guest"
+settings.signed_in_x,وارد شده: %s,Signed in: %s
+settings.smooth,روان,Smooth
+settings.sounds,صداها,Sounds
+settings.volume,بلندی صدا,Volume
+setup.another_opponent,حریف دیگر ↻,Another opponent ↻
+setup.change_team,تغییر تیم,Change team
+setup.difficulty,سختی,Difficulty
+setup.formation_x_loadout,ترکیب %s · تجهیزات,Formation %s · loadout
+setup.off,خاموش,Off
+setup.start_cup,شروع جام,Start cup
+setup.turn_time,زمان نوبت,Turn time
+shop.30,-۳۰٪,-30%
+shop.600_coins,۶۰۰ سکه,600 coins
+shop.all_gear,همه‌ی تجهیزات,All gear
+shop.better_odds_of_a_rare,آیتم کمیاب تضمینی‌تر,Better odds of a rare item
+shop.chests,صندوقچه‌ها,Chests
+shop.convert_gems,تبدیل الماس,Convert gems
+shop.convert_x_gems_into_x,%s الماس به %s سکه تبدیل شود؟,Convert %s gems into %s coins?
+shop.discs_are_priced_in_gems,قیمت دیسک‌ها به الماس است؛ با ورود آنلاین (حتی مهمان) ۱۵۰ الماس هدیه می‌گیری.,Discs are priced in gems; sign in online (even as a guest) to get 150 gems as a gift.
+shop.every_4_hours,هر ۴ ساعت,Every 4 hours
+shop.high_power_and_accuracy_with,قدرت و دقت بالا · با الماس,High power and accuracy · with gems
+shop.legendary_discs,دیسک‌های افسانه‌ای,Legendary discs
+shop.limited,محدود,Limited
+shop.not_enough_coins,سکه کافی نداری,Not enough coins
+shop.open,باز کن,Open
+shop.owned,✓ داری,✓ Owned
+shop.today_s_deal,پیشنهاد امروز,Today's deal
+shop.x_unlocked,%s باز شد!,%s unlocked!
+shop.xh_xm,%sس %sد,%sh %sm
+shop.you_need_x_more_gems,%s الماس کم داری,You need %s more gems
+shop.you_own_everything_in_this,همه‌چیز این بخش رو داری، اسطوره!,"You own everything in this section, legend!"
+social.a_title_is_required,عنوان لازم است,A title is required
+social.by_request,با درخواست,By request
+social.club_created,باشگاه ساخته شد!,Club created!
+social.club_name,نام باشگاه,Club name
+social.club_name_must_be_3,نام باشگاه ۳ تا ۲۴ کاراکتر,Club name must be 3 to 24 characters
+social.clubs,باشگاه‌ها,Clubs
+social.create,ساختن,Create
+social.create_club,ساخت باشگاه,Create club
+social.create_club_50_gems,ساخت باشگاه (۵۰ الماس),Create club (50 gems)
+social.create_club_50_gems_2,ساخت باشگاه · ۵۰ الماس,Create club · 50 gems
+social.create_the_first_group_yourself,اولین گروه را خودت بساز,Create the first group yourself
+social.description,توضیح,Description
+social.description_optional,توضیح (اختیاری),Description (optional)
+social.discover_groups,کشف گروه‌ها,Discover groups
+social.discover_groups_and_channels,کشف گروه‌ها و کانال‌ها,Discover groups and channels
+social.find_players_from_the_leaderboard,از رده‌بندی یا جستجو بازیکن‌ها را پیدا کن,Find players from the leaderboard or search
+social.followers,دنبال‌کننده‌ها,Followers
+social.following,دنبال‌شده‌ها,Following
+social.friends,دوستان,Friends
+social.in_a_channel_only_the,در کانال فقط مالک و مدیرها پیام می‌فرستند.,In a channel only the owner and admins post.
+social.in_a_group_every_member,در گروه همه‌ی اعضا پیام می‌فرستند.,In a group every member can post.
+social.invite_only,فقط دعوت,Invite only
+social.my_club,باشگاه من,My club
+social.new_group_channel,گروه / کانال جدید,New group / channel
+social.new_group_or_channel,گروه یا کانال جدید,New group or channel
+social.no_clubs_found,باشگاهی پیدا نشد,No clubs found
+social.no_conversations_yet,هنوز گفتگویی نداری,No conversations yet
+social.no_messages,بدون پیام,No messages
+social.no_one_found,کسی پیدا نشد,No one found
+social.no_public_groups_yet,هنوز گروه عمومی‌ای نیست,No public groups yet
+social.open_the_online_section_for,برای پیام، باشگاه و دوستان وارد بخش آنلاین شو (مهمان هم می‌شود),"Open the online section for messages, clubs and friends (guests can too)"
+social.public,عمومی,Public
+social.search_club_name_or_tag,جستجوی نام یا تگ باشگاه…,Search club name or tag…
+social.search_for_a_player_or,یک بازیکن را جستجو کن یا به یک گروه بپیوند,Search for a player or join a group
+social.search_players_by_username,جستجوی بازیکن با نام کاربری…,Search players by username…
+social.show_in_discover_so_anyone,در بخش «کشف» دیده شود و همه بتوانند بپیوندند,"Show in ""Discover"" so anyone can join"
+social.sign_in_as_guest,ورود به‌عنوان مهمان,Sign in as guest
+social.tag_2_to_5_english,تگ (۲ تا ۵ حرف انگلیسی),Tag (2 to 5 English letters)
+social.tag_2_to_5_uppercase,تگ: ۲ تا ۵ حرف/عدد انگلیسی بزرگ,Tag: 2 to 5 uppercase English letters/digits
+social.title,عنوان,Title
+social.top_clubs,برترین باشگاه‌ها,Top clubs
+social.x_x_members_x,%s/%s عضو · %s,%s/%s members · %s
+social.x_x_membersx,%s · %s عضو%s,%s · %s members%s
+social.you_have_no_followers_yet,هنوز دنبال‌کننده‌ای نداری,You have no followers yet
+social.you_need_50_gems,۵۰ الماس لازم داری,You need 50 gems
+social.you_re_not_following_anyone,هنوز کسی را دنبال نمی‌کنی,You're not following anyone yet
+team.active,● فعال,● Active
+team.balance_x_gems,موجودی: %s الماس,Balance: %s gems
+team.ball_selected,توپ انتخاب شد,Ball selected
+team.ball_trail_colour,رنگ دنباله‌ی توپ,Ball trail colour
+team.buy_x,خرید · %d,Buy · %d
+team.buy_x_gems,خرید · %s الماس,Buy · %s gems
+team.field_selected,زمین انتخاب شد,Field selected
+team.new_ball_unlocked,توپ جدید باز شد!,New ball unlocked!
+team.new_field_unlocked,زمین جدید باز شد!,New field unlocked!
+team.power_max_shot_speed_accuracy,قدرت = سرعت بیشینه‌ی ضربه · دقت = انحراف کمتر و پیش‌نمایش مسیر بلندتر,Power = max shot speed · Accuracy = less deviation and a longer path preview
+team.select,انتخاب,Select
+team.select_this_disc,انتخاب این دیسک,Select this disc
+team.selected,انتخاب‌شده ✓,Selected ✓
+team.x_selected,%s انتخاب شد,%s selected
+tournaments.0,۰,0
+tournaments.1,۱,1
+tournaments.10,۱۰,10
+tournaments.16,۱۶,16
+tournaments.20,۲۰,20
+tournaments.3,۳,3
+tournaments.30,۳۰,30
+tournaments.32,۳۲,32
+tournaments.4,۴,4
+tournaments.5,۵,5
+tournaments.6,۶,6
+tournaments.64,۶۴,64
+tournaments.8,۸,8
+tournaments.bracket,براکت,Bracket
+tournaments.bye,استراحت,Bye
+tournaments.capacity,ظرفیت,Capacity
+tournaments.champion_prize_gems_runner_up,جایزه‌ی قهرمان (الماس) — نایب‌قهرمان یک‌سوم,Champion prize (gems) — runner-up gets a third
+tournaments.champion_x,قهرمان: %s,Champion: %s
+tournaments.create_the_first_tournament_yourself,اولین تورنمنت را خودت بساز!,Create the first tournament yourself!
+tournaments.create_tournament,ساخت تورنمنت,Create tournament
+tournaments.d,م,D
+tournaments.double_elimination,حذفی دوگانه,Double elimination
+tournaments.enter_match,ورود به مسابقه,Enter match
+tournaments.final,فینال,Final
+tournaments.finished,تمام‌شده,Finished
+tournaments.finished_2,پایان‌یافته,Finished
+tournaments.format,فرمت,Format
+tournaments.galaxy_cup,جام کهکشان,Galaxy Cup
+tournaments.goals,گل,Goals
+tournaments.grand_final,فینال بزرگ,Grand final
+tournaments.l,ش,L
+tournaments.league,لیگ,League
+tournaments.leave_tournament,انصراف از تورنمنت,Leave tournament
+tournaments.losers_bracket,جدول بازندگان,Losers bracket
+tournaments.match,بازی,Match
+tournaments.min_level_x,حداقل سطح %s,Min level %s
+tournaments.minimum_level,حداقل سطح,Minimum level
+tournaments.no_one_has_signed_up,هنوز کسی ثبت‌نام نکرده,No one has signed up yet
+tournaments.no_tournaments_in_this_section,تورنمنتی در این بخش نیست,No tournaments in this section
+tournaments.number_of_home_and_away,تعداد دور رفت و برگشت,Number of home-and-away rounds
+tournaments.number_of_rounds,تعداد دورها,Number of rounds
+tournaments.one,یک,One
+tournaments.open_tournaments,مسابقات باز,Open tournaments
+tournaments.out,حذف,Out
+tournaments.participants,شرکت‌کنندگان,Participants
+tournaments.quarter_final,یک‌چهارم,Quarter-final
+tournaments.result_entry_by_the_organizer,ثبت نتیجه توسط برگزارکننده,Result entry by the organizer
+tournaments.result_saved,نتیجه ثبت شد,Result saved
+tournaments.round_of_16,یک‌هشتم,Round of 16
+tournaments.round_of_32,یک‌شانزدهم,Round of 32
+tournaments.round_robin,دوره‌ای,Round robin
+tournaments.round_x,دور %s,Round %s
+tournaments.semi_final,نیمه‌نهایی,Semi-final
+tournaments.sign_up,ثبت‌نام,Sign up
+tournaments.single_elimination,حذفی تک,Single elimination
+tournaments.start_tournament_x_players,شروع تورنمنت (%s نفر),Start tournament (%s players)
+tournaments.submit,ثبت,Submit
+tournaments.swiss,سوئیسی,Swiss
+tournaments.sym,؟,?
+tournaments.table,جدول,Table
+tournaments.team,تیم,Team
+tournaments.team_name_optional,نام تیم (اختیاری),Team name (optional)
+tournaments.the_bracket_is_created_once,براکت بعد از شروع ساخته می‌شود,The bracket is created once it starts
+tournaments.the_organizer_starts_the_tournament,برگزارکننده تورنمنت را شروع می‌کند,The organizer starts the tournament
+tournaments.three,سه,Three
+tournaments.tournament_created,تورنمنت ساخته شد,Tournament created
+tournaments.tournament_is_full,ظرفیت تکمیل است,Tournament is full
+tournaments.tournament_name,نام تورنمنت,Tournament name
+tournaments.tournament_name_must_be_at,نام تورنمنت حداقل ۳ کاراکتر,Tournament name must be at least 3 characters
+tournaments.tournament_not_found,تورنمنت پیدا نشد,Tournament not found
+tournaments.tournament_started,تورنمنت شروع شد,Tournament started
+tournaments.tournaments,تورنمنت‌ها,Tournaments
+tournaments.two,دو,Two
+tournaments.w,ب,W
+tournaments.winners_bracket,جدول برندگان,Winners bracket
+tournaments.x_champion,💎 %s قهرمان,💎 %s champion
+tournaments.x_x_players,%s/%s شرکت‌کننده,%s/%s players
+tournaments.you_left_the_tournament,از تورنمنت خارج شدی,You left the tournament
+tournaments.you_re_signed_up,ثبت‌نام شدی!,You're signed up!
+tournaments.your_next_match,مسابقه‌ی بعدی تو,Your next match
+ud.x_coins_x_gems,+%s سکه · +%s الماس,+%s coins · +%s gems
+ud.you_need_to_be_online,برای خرید دیسک باید آنلاین باشی,You need to be online to buy discs
+ui_bits.join_voice_chat,🎙 ورود به چت صوتی,🎙 Join voice chat
+ui_bits.listener_only,فقط شنونده,Listener only
+ui_bits.message,پیام…,Message…
+ui_bits.mic_off,میکروفون خاموش,Mic off
+ui_bits.mic_on,میکروفون روشن,Mic on
+ui_bits.no_messages_yet_say_hi,هنوز پیامی نیست؛ سلام کن!,No messages yet — say hi!
+ui_bits.voice_chat_is_off_for,چت صوتی برای این اتاق خاموش است,Voice chat is off for this room
+ui_bits.voice_chat_only_works_in,چت صوتی فقط در نسخه‌ی اندروید فعال است,Voice chat only works in the Android app
+ui_bits.voice_chat_on,چت صوتی روشن است,Voice chat is on
+ui_bits.leave_voice,قطع چت صوتی,Leave voice chat

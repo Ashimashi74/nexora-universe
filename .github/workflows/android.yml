@@ -1,0 +1,308 @@
+name: Android APK + AAB (Godot)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-godot-${{ github.sha }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: "4.5.1"
+  GODOT_TAG: "4.5.1-stable"
+  GODOT_TEMPLATES_DIR_NAME: "4.5.1.stable"
+  GRADLE_VERSION: "8.11.1"
+  # Committed sideload-testing keystore (android/keys/nexora-release.keystore). Testing only:
+  # before publishing on Google Play, set the ANDROID_KEYSTORE_* repo secrets instead (they take precedence).
+  NX_KEYSTORE_PATH: android/keys/nexora-release.keystore
+  NX_KEYSTORE_ALIAS: nexora
+  NX_KEYSTORE_PASSWORD: "NexoraSideload2026!"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: "platform-tools platforms;android-35 build-tools;35.0.0"
+          log-accepted-android-sdk-licenses: false
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: ${{ env.GRADLE_VERSION }}
+
+      - id: ver
+        run: echo "version=2.0.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+
+      # ------------------------------------------------------------------ 1. LiveKit plugin AAR
+      - name: Build NexoraLiveKit plugin AAR
+        working-directory: plugin_src/livekit
+        run: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+          gradle assembleRelease --no-daemon --stacktrace
+          ls -la build/outputs/aar
+
+      - name: Copy AAR into the Godot plugin folder
+        run: |
+          mkdir -p android/plugins/nexora_livekit
+          cp plugin_src/livekit/build/outputs/aar/nexora-livekit-release.aar android/plugins/nexora_livekit/
+          ls -la android/plugins/nexora_livekit
+
+      # ------------------------------------------------------------------ 2. Godot + export templates
+      - name: Cache Godot editor + Android templates
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates/${{ env.GODOT_TEMPLATES_DIR_NAME }}
+          key: godot-${{ env.GODOT_TAG }}-android-v1
+
+      - name: Download Godot ${{ env.GODOT_VERSION }} + export templates
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_TAG}"
+          mkdir -p ~/godot
+          curl -fsSL --retry 3 -o /tmp/godot.zip "$base/Godot_v${GODOT_TAG}_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+          mv ~/godot/Godot_v${GODOT_TAG}_linux.x86_64 ~/godot/godot
+          chmod +x ~/godot/godot
+          rm /tmp/godot.zip
+          curl -fsSL --retry 3 -o /tmp/templates.tpz "$base/Godot_v${GODOT_TAG}_export_templates.tpz"
+          tdir=~/.local/share/godot/export_templates/${GODOT_TEMPLATES_DIR_NAME}
+          mkdir -p "$tdir"
+          unzip -q -j /tmp/templates.tpz \
+            templates/version.txt templates/android_source.zip \
+            templates/android_debug.apk templates/android_release.apk -d "$tdir"
+          rm /tmp/templates.tpz
+          ls -la "$tdir"
+
+      - name: Put godot on PATH
+        run: |
+          echo "$HOME/godot" >> "$GITHUB_PATH"
+          ~/godot/godot --version
+
+      # ------------------------------------------------------------------ 3. Signing (stable key) + editor settings
+      - name: Keystores (release = repo secrets if set, else the committed sideload key)
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_USER: ${{ secrets.ANDROID_KEYSTORE_USER }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/keys
+          keytool -genkeypair -keystore ~/keys/debug.keystore -storepass android \
+            -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US" -noprompt
+          if [ -n "${KS_B64:-}" ] && [ -n "${KS_USER:-}" ] && [ -n "${KS_PASS:-}" ]; then
+            echo "$KS_B64" | base64 -d > ~/keys/release.keystore
+            echo "Using the release keystore from repo secrets (ANDROID_KEYSTORE_*)"
+            KU="$KS_USER"; KP="$KS_PASS"
+          elif [ -f "$NX_KEYSTORE_PATH" ]; then
+            echo "::warning::No ANDROID_KEYSTORE_* secrets: signing with the committed sideload keystore ($NX_KEYSTORE_PATH). It is public; set the secrets and delete it."
+            cp "$NX_KEYSTORE_PATH" ~/keys/release.keystore
+            KU="$NX_KEYSTORE_ALIAS"; KP="$NX_KEYSTORE_PASSWORD"
+          else
+            echo "::error::No release keystore: set the ANDROID_KEYSTORE_BASE64 / _USER / _PASSWORD repo secrets"
+            exit 1
+          fi
+          keytool -list -v -keystore ~/keys/release.keystore -storepass "$KP" | grep -E "Alias|SHA256|Valid" | head -5
+          {
+            echo "GODOT_ANDROID_KEYSTORE_RELEASE_PATH=$HOME/keys/release.keystore"
+            echo "GODOT_ANDROID_KEYSTORE_RELEASE_USER=$KU"
+            echo "GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=$KP"
+            echo "GODOT_ANDROID_KEYSTORE_DEBUG_PATH=$HOME/keys/debug.keystore"
+            echo "GODOT_ANDROID_KEYSTORE_DEBUG_USER=androiddebugkey"
+            echo "GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD=android"
+          } >> "$GITHUB_ENV"
+
+      - name: Godot editor settings (Android SDK, Java, debug keystore)
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.config/godot
+          cat > ~/.config/godot/editor_settings-4.5.tres <<EOT
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "${ANDROID_SDK_ROOT}"
+          export/android/java_sdk_path = "${JAVA_HOME}"
+          export/android/debug_keystore = "${HOME}/keys/debug.keystore"
+          export/android/debug_keystore_user = "androiddebugkey"
+          export/android/debug_keystore_pass = "android"
+          export/android/shutdown_adb_on_exit = false
+          EOT
+
+      # ------------------------------------------------------------------ 4. Project tweaks (CI copy only)
+      - name: CI project tweaks (plugin, version, presets, lossy textures, excludes)
+        run: python3 .github/scripts/ci_prepare.py
+
+      # ------------------------------------------------------------------ 5. Import, test, export
+      - name: Import project
+        run: |
+          timeout 900 godot --headless --import 2>&1 | tail -n 40 || echo "import exited with $? (continuing)"
+
+      - name: Headless tests (non-blocking)
+        continue-on-error: true
+        run: |
+          if [ -f tests/bot_match.gd ]; then timeout 600 godot --headless -s res://tests/bot_match.gd; fi
+          if [ -f tests/voice_smoke.gd ]; then timeout 120 godot --headless -s res://tests/voice_smoke.gd; fi
+
+      - name: Export universal APK (armeabi-v7a, arm64-v8a, x86, x86_64)
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          godot --headless --install-android-build-template --export-release "Android" build/NEXORA.apk 2>&1 | tee build/export.log
+          test -s build/NEXORA.apk || { echo "::error::APK not produced"; exit 1; }
+
+      - name: Export arm64-only APK
+        run: |
+          set -euo pipefail
+          godot --headless --export-release "Android arm64" build/NEXORA-arm64.apk 2>&1 | tee build/export-arm64.log
+          test -s build/NEXORA-arm64.apk || { echo "::error::arm64 APK not produced"; exit 1; }
+
+      - name: Export AAB
+        run: |
+          set -euo pipefail
+          godot --headless --export-release "Android AAB" build/NEXORA.aab 2>&1 | tee build/export-aab.log
+          test -s build/NEXORA.aab || { echo "::error::AAB not produced"; exit 1; }
+
+      - name: Inspect outputs (sizes, ABIs, manifest flags, signatures)
+        run: |
+          set -uo pipefail
+          bt="$ANDROID_SDK_ROOT/build-tools/35.0.0"
+          V="${{ steps.ver.outputs.version }}"
+          ls -la build/*.apk build/*.aab
+          for a in build/NEXORA.apk build/NEXORA-arm64.apk; do
+            echo "=== $a"
+            unzip -l "$a" | grep -E " lib/" | awk '{print $1, $4}'
+            "$bt/aapt2" dump badging "$a" | grep -E "^package|sdkVersion|native-code|application-debuggable|testOnly" || true
+            "$bt/aapt2" dump xmltree --file AndroidManifest.xml "$a" | grep -E -i "debuggable|testOnly|extractNativeLibs|minSdk|targetSdk|uses-permission|meta-data" -A1 | grep -v "^--" | head -60
+            "$bt/apksigner" verify --print-certs -v "$a" | grep -E "Verified|Signer #1 certificate (DN|SHA-256)|v[1-4] scheme" || exit 1
+            if "$bt/aapt2" dump xmltree --file AndroidManifest.xml "$a" | grep -E -q "debuggable.*=(true|0xffffffff)|testOnly.*=(true|0xffffffff)"; then echo "::error::$a is debuggable or testOnly"; exit 1; fi
+            echo "--- permissions:"; "$bt/aapt2" dump permissions "$a" || true
+            echo "--- services/receivers:"; "$bt/aapt2" dump xmltree --file AndroidManifest.xml "$a" | grep -E -A2 "E: (service|receiver)" | grep -E "E: |name" || true
+            if "$bt/aapt2" dump permissions "$a" | grep -E -q "CAMERA|FOREGROUND_SERVICE|POST_NOTIFICATIONS|SYSTEM_ALERT_WINDOW"; then echo "::error::$a still declares camera/foreground-service/notification permissions"; exit 1; fi
+            if "$bt/aapt2" dump xmltree --file AndroidManifest.xml "$a" | grep -q "android.permission.DUMP"; then echo "::error::$a manifest still mentions android.permission.DUMP"; exit 1; fi
+            "$bt/aapt2" dump badging "$a" | grep -E -q "^package: name='com.nexora.nx'" || { echo "::error::$a package is not com.nexora.nx"; exit 1; }
+            if "$bt/aapt2" dump permissions "$a" | grep -E -q "BLUETOOTH_CONNECT|BLUETOOTH_SCAN"; then echo "::error::$a still declares bluetooth runtime permissions"; exit 1; fi
+            if "$bt/aapt2" dump permissions "$a" | grep -E -q "READ_PHONE_STATE|ACCESS_FINE_LOCATION|ACCESS_COARSE_LOCATION|READ_EXTERNAL_STORAGE|WRITE_EXTERNAL_STORAGE"; then echo "::warning::$a declares a dangerous permission beyond RECORD_AUDIO (see list above)"; fi
+            "$bt/aapt2" dump badging "$a" | grep -E -q "targetSdkVersion:'35'" || { echo "::error::$a targetSdk is not 35"; exit 1; }
+            "$bt/apksigner" verify --print-certs "$a" | grep -q "CN=Android Debug" && { echo "::error::$a is signed with a debug key"; exit 1; } || true
+          done
+          echo "=== AAB"; unzip -l build/NEXORA.aab | grep -E "/lib/" | awk '{print $1, $4}'
+          jarsigner -verify build/NEXORA.aab | tail -2 || true
+          keytool -printcert -jarfile build/NEXORA.aab | grep -E "SHA256|Owner" || true
+          mkdir -p dist
+          cp build/NEXORA.apk "dist/NEXORA-v${V}-universal.apk"
+          cp build/NEXORA-arm64.apk "dist/NEXORA-v${V}-arm64.apk"
+          cp build/NEXORA.aab "dist/NEXORA-v${V}.aab"
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: NEXORA-builds
+          path: dist/*
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Upload export logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: export-log
+          path: |
+            build/*.log
+            android/build/build/reports/**
+          if-no-files-found: ignore
+
+  emulator:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # gating: API 30 with ANGLE-on-SwiftShader (the plain SwiftShader GLES translator rejects Godot's
+          # canvas shader: "active uniforms exceed GL_MAX_FRAGMENT_UNIFORM_VECTORS (261)", an emulator-only limit)
+          - api: 30
+            target: google_apis
+            gpu: swangle_indirect
+            gate: true
+          - api: 30
+            target: google_apis
+            gpu: swiftshader_indirect
+            gate: false
+          - api: 24
+            target: default
+            gpu: swiftshader_indirect
+            gate: false
+    continue-on-error: ${{ !matrix.gate }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: NEXORA-builds
+          path: dist
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install, launch, menu, quick match (API ${{ matrix.api }}, ${{ matrix.gpu }})
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api }}
+          target: ${{ matrix.target }}
+          arch: x86_64
+          force-avd-creation: false
+          emulator-options: -no-window -gpu ${{ matrix.gpu }} -noaudio -no-boot-anim -no-snapshot -camera-back none
+          disable-animations: true
+          script: bash .github/scripts/emu_test.sh "$(ls dist/*-universal.apk | head -1)" emu-out
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: emulator-api${{ matrix.api }}-${{ matrix.gpu }}
+          path: emu-out/
+          if-no-files-found: warn
+
+  release:
+    needs: [build, emulator]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: NEXORA-builds
+          path: dist
+      - run: ls -la dist
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.build.outputs.version }}
+          name: NEXORA v${{ needs.build.outputs.version }} (build ${{ github.run_number }})
+          body: |
+            NEXORA v${{ needs.build.outputs.version }} — Godot ${{ env.GODOT_VERSION }}, Android 7.0+ (API 24), OpenGL ES 3 (compatibility renderer).
+            - `*-universal.apk`: all phones (armeabi-v7a, arm64-v8a, x86, x86_64). Pick this if unsure.
+            - `*-arm64.apk`: smaller, for modern 64-bit phones.
+            - `*.aab`: Android App Bundle (for Google Play).
+            Every build is signed with the same key, so a newer build installs over an older one (from build 2 on).
+            Smoke-tested on an Android emulator (API 30): installs, launches, stays alive.
+            Commit: ${{ github.sha }}
+          files: dist/*
+          make_latest: true

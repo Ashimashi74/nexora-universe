@@ -1,0 +1,31 @@
+keys,fa,en
+hud.your_turn,نوبت توئه,Your turn
+hud.opp_turn,نوبت حریف,Opponent's turn
+hud.golden_goal,گل طلایی,Golden goal
+hud.golden_sub,گل بعدی برنده‌ست,Next goal wins
+hud.first_to,تا %d گل,First to %d
+hud.goal,گل!,GOAL!
+hud.no_goal,گل مردود,No goal
+hud.no_goal_sub,با ضربه‌ی اول نمی‌شه گل زد,You can't score with the first shot
+hud.pause,توقف,Paused
+hud.resume,ادامه,Resume
+hud.restart,شروع دوباره,Restart
+hud.quit,خروج,Quit
+hud.quality,کیفیت گرافیک,Graphics quality
+hud.quality_high,بالا,High
+hud.quality_smooth,روان,Smooth
+hud.time_warn,۵ ثانیه وقت داری! ⏱ یک ضربه بزن.,5 seconds left! ⏱ Take your shot.
+form.title,ترکیب,Formation
+form.subtitle,چیدمان تیمت را انتخاب کن,Pick your team's formation
+form.select,انتخاب,Select
+form.selected,انتخاب شده,Selected
+form.open,انتخاب ترکیب,Choose formation
+form.n0,الماس,Diamond
+form.n1,عقاب,Eagle
+form.n2,موج,Wave
+form.n3,ماه,Moon
+form.n4,دیوانه,Crazy
+form.n5,لبه,Edge
+form.n6,نیش,Sting
+form.n7,بازو,Arm
+form.n8,حمله همه جانبه,All-out Attack

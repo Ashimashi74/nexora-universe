@@ -1,0 +1,56 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+
+== auth
+  PASS  anonymous session  2afacffd
+  PASS  OUI.profile synced from Supa.profile
+  PASS  OUI.ebus() not null
+== sample data
+  tournament=93ce52d4-84d9-4c5b-b937-11a0d62a6a8f club= conv= player=cfc3a517-df48-4968-948e-464bb5cfc61b
+== screens
+  PASS  open hub  ["entry"]
+  PASS  hub.on_back -> false
+  PASS  open ranks  ["entry"]
+  PASS  ranks entry=leagues opens leagues tab
+  PASS  ranks.on_back -> false
+  PASS  open ranks  ["tab"]
+  PASS  open tournaments  []
+  PASS  tournaments.on_back -> false
+  PASS  open tournaments  ["id"]
+  PASS  open challenges  []
+  PASS  challenges.on_back -> false
+  PASS  open arena  []
+  PASS  arena.on_back -> false
+  PASS  open social  ["tab"]
+  PASS  open social  ["tab"]
+  PASS  open social  ["tab"]
+  PASS  open public_profile  ["id"]
+  PASS  public_profile.on_back -> false
+  PASS  open account  []
+  PASS  account.on_back -> false
+  PASS  open oracle  ["ask"]
+  PASS  oracle.on_back -> false
+  PASS  oracle action stats
+  PASS  oracle action disc
+  PASS  oracle action challenges  چالش‌های امروز:
+▫️ یک بازیکن را دنبال کن
+  PASS  oracle data actions stay on oracle
+== sheet / toast
+  PASS  OUI.open_sheet -> Nav.sheet
+== room: create -> lobby -> online_result -> lobby -> leave
+  PASS  create_room
+  PASS  lobby opened with link
+  PASS  RoomLink parented itself
+  PASS  lobby.on_back -> true (leave dialog)
+  PASS  lobby stays while dialog open
+  PASS  open online_result  ["o", "before", "room_id", "link"]
+  PASS  online_result.on_back -> true
+  PASS  online_result back -> lobby
+  PASS  leave_room -> hub, link dropped
+  PASS  RoomLink freed after destroy()
+== back from hub (Nav.back, no recursion)
+  PASS  Nav.back from hub navigates away  oracle
+RESULT: 41 passed, 0 failed
+WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
+     at: cleanup (core/object/object.cpp:2514)
+ERROR: 1 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:795)

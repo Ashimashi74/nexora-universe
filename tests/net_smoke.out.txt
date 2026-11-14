@@ -1,0 +1,45 @@
+Godot Engine v4.5.1.stable.official.f62fdbde1 - https://godotengine.org
+== errFa
+  PASS  err_fa invalid login
+  PASS  err_fa network
+  PASS  err_fa \bfull\b
+  PASS  err_fa empty
+  PASS  err_fa fallback
+== auth: anonymous sign-in
+  PASS  sign_in_anon
+  PASS  uid  dbba790c-be11-4cfa-83c3-7a1905a3f52e
+  PASS  is_guest
+  PASS  session persisted
+== REST / RPC
+  PASS  select leagues  7 rows
+  PASS  select own profile (maybeSingle)  { "id": "dbba790c-be11-4cfa-83c3-7a1905a3f52e", "username": "Pilot30964", "is_guest": true, "rating": 1000.0 }
+  PASS  rpc level_for_xp(2500) == 6 (via Supa.rpc)  6.0
+  PASS  rpc league_for_rating(1300) == gold (parallel)  gold
+  PASS  missing rpc → ok=false, no crash  404 خطا: Could not find the function public.this_function_does_not_exist without paramete
+  PASS  embedded select room_players + profiles
+== token refresh
+  PASS  refresh_session  token changed
+== realtime
+  PASS  both channels SUBSCRIBED (2 sockets)  SUBSCRIBED / SUBSCRIBED 
+  PASS  postgres_changes binding id from phx_reply  126158949
+  PASS  presence sync sees both sockets  ["B-dbba790c-be11-4cfa-83c3-7a1905a3f52e", "A-dbba790c-be11-4cfa-83c3-7a1905a3f52e"]
+  PASS  presence meta shape like presenceState()  [{ "name": "two", "presence_ref": "GOdY27-Iyuc5pUTG" }]
+  PASS  broadcast socket2 → socket1  [{ "from": "two", "x": 1.0 }]
+  PASS  broadcast socket1 → socket2  [{ "x": 2.0 }]
+  PASS  self:false (no echo of own broadcast)  1
+  PASS  update own profiles.online_at
+  PASS  postgres_changes UPDATE received  UPDATE
+  PASS  channels still joined after access_token push
+  PASS  presence leave after untrack  ["A-dbba790c-be11-4cfa-83c3-7a1905a3f52e"]
+  PASS  socket drop → CHANNEL_ERROR → auto reconnect + rejoin → SUBSCRIBED  SUBSCRIBED
+  PASS  broadcast after reconnect  [{ "from": "two", "x": 1.0 }, { "x": 3.0 }]
+  PASS  remove_channel → CLOSED
+== RoomLink (no room row: expects gone=true, no crash)
+  PASS  RoomLink.refresh on unknown room → loaded, gone
+  PASS  RoomLink channel connected
+  PASS  RoomLink.send_chat local echo
+== sign out
+  PASS  sign_out clears session
+RESULT: 34 passed, 0 failed
+WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
+     at: cleanup (core/object/object.cpp:2514)
