@@ -3,7 +3,7 @@ extends Node2D
 ## Renders an NxEngine — port + upgrade of src/game/render.ts (Skia).
 ## Layers (back -> front): blurred stadium bg · field (feathered) + neon outline · shadows · additive glows/disc trails ·
 ## discs (team skin, round AA mask, gloss) · ball trail (additive strip) · ball (lit 3D sphere shader, R matrix) ·
-## goals (the user's goal art from assets/g/goals/<gs>.webp only — no code-drawn posts/nets) · goal ripple light ·
+## goals (v3: code-drawn 3D nets behind the bodies + shaded crossbar/round posts in front, RN 6514a8f) · goal ripple light ·
 ## aim arrow (3-slice art from assets/g/arrow) + power ring + accuracy dots · particles · CPUParticles2D sparks/confetti · flash.
 ## Interpolates prev -> current with engine.alpha(). Quality "high" | "low" (Store.p.quality) toggles every costly extra.
 ##
@@ -55,8 +55,9 @@ var _aim_on := false
 var _aim_ux := 0.0
 var _aim_uy := -1.0
 var _aim_p := 0.0
-const AIM_MAX_K := 4.0   # drawn aim-arrow length beyond the disc rim at full power, in disc radii (was 2.2)
-const AIM_MIN_K := 0.35  # ... at the lowest power (short stub), grows linearly in between (user: short -> long)
+## aim arrow length (RN a87f1c9, user-approved): L = r + AIM_BASE + power * AIM_GROW  -> max = the old "medium"
+const AIM_BASE := 70.0
+const AIM_GROW := 110.0
 
 # nodes
 var bg: Layer
@@ -258,6 +259,7 @@ func _build() -> void:
 	var fm := ShaderMaterial.new(); fm.shader = FIELD_SHADER
 	field_l = _layer(world, _draw_field, false, fm)
 	_layer(world, _draw_outline)
+	_layer(world, _draw_goal_nets)
 	shadow_l = _layer(world, _draw_shadows)
 	glow_l = _layer(world, _draw_glows, true)
 	ring_l = _layer(world, _draw_turn_ring)
@@ -466,8 +468,7 @@ func _draw_field(c: Layer) -> void:
 func _draw_outline(c: Layer) -> void:
 	if hq: c.draw_polyline(_outline, Color(120 / 255.0, 220 / 255.0, 1.0, 0.12), 9.0, true)
 	c.draw_polyline(_outline, Color(120 / 255.0, 220 / 255.0, 1.0, 0.35), 3.0, true)
-	for arc in _corner_arcs:
-		c.draw_polyline(arc, Color(1, 1, 1, 0.55), 3.0, true)
+	# v3: no code-drawn decorative corner arcs (RN draws none; the field art carries its own markings)
 
 # ------------------------------------------------------------------ draw: dynamic
 func _shadow(c: Layer, x: float, y: float, r: float, a: float) -> void:
@@ -628,21 +629,88 @@ func _draw_ball(c: Layer) -> void:
 	if tex_ball: c.draw_texture_rect(tex_ball, Rect2(p.x - r, p.y - r, 2 * r, 2 * r), false)
 	else: c.draw_circle(p, r, Color.WHITE)
 
+## 3D goals (RN 6514a8f), drawn in two layers: the NET (behind the bodies) and the FRAME (in front of the ball).
+## Top-down camera: the net floor recedes from the goal line to the back bar (physics back wall = e.DEPTH); the crossbar
+## sits over the goal line and the posts are round and lit from the top-left, so a ball inside reads as under the bar.
+func _draw_goal_nets(c: Layer) -> void:
+	var PRr := NxEngine.POST_R
+	for gi in 2:
+		var g: NxEngine.Goal = e.goals[gi]
+		var d := float(g.d)
+		var x1 := g.x1 - PRr
+		var x2 := g.x2 + PRr
+		var Dp: float = e.DEPTH + 6.0
+		var y0 := g.y
+		var yb := g.y + d * Dp
+		var inset := (x2 - x1) * 0.045
+		var bx1 := x1 + inset
+		var bx2 := x2 - inset
+		var sx: float = sin(t * 40) * 6 * e.shake[gi]
+		var rp: float = e.ripple[gi]
+		var rx: float = e.ripple_x[gi]
+		c.draw_set_transform(Vector2(sx, 0), 0.0, Vector2.ONE)
+		# net floor: darker toward the back (shadow inside the goal)
+		c.draw_polygon(PackedVector2Array([Vector2(x1, y0), Vector2(x2, y0), Vector2(bx2, yb), Vector2(bx1, yb)]),
+			PackedColorArray([Color(0, 0, 0, 0.18), Color(0, 0, 0, 0.18), Color(0, 0, 0, 0.5), Color(0, 0, 0, 0.5)]))
+		var n := maxi(8, int(roundf((x2 - x1) / 18.0)))
+		var nc := Color(1, 1, 1, 0.26)
+		# mesh: longitudinal strings converging to the back bar (bulge where the ball hit on a goal)
+		for k in n + 1:
+			var uu := float(k) / n
+			var fx := x1 + (x2 - x1) * uu
+			var bx := bx1 + (bx2 - bx1) * uu
+			var pts := PackedVector2Array([Vector2(fx, y0)])
+			for jj in range(1, 7):
+				var v := jj / 6.0
+				var x := fx + (bx - fx) * v
+				pts.append(Vector2(x, y0 + d * Dp * v + _bulge(x, sin(v * PI), rp, rx, d)))
+			c.draw_polyline(pts, nc, 1.3, true)
+		# transverse strings (closer together toward the back = perspective)
+		for jj in range(1, 8):
+			var v := pow(jj / 7.0, 0.85)
+			var xa := x1 + (bx1 - x1) * v
+			var xb := x2 + (bx2 - x2) * v
+			var y := y0 + d * Dp * v
+			var pts := PackedVector2Array()
+			for k in 13:
+				var x := xa + (xb - xa) * k / 12.0
+				pts.append(Vector2(x, y + _bulge(x, sin(v * PI), rp, rx, d)))
+			c.draw_polyline(pts, nc, 1.3, true)
+		# side nets + back bar
+		c.draw_line(Vector2(x1, y0), Vector2(bx1, yb), Color(1, 1, 1, 0.5), 3.0, true)
+		c.draw_line(Vector2(x2, y0), Vector2(bx2, yb), Color(1, 1, 1, 0.5), 3.0, true)
+		c.draw_line(Vector2(bx1, yb), Vector2(bx2, yb), Color("#e8edf5", 0.7), 4.5, true)
+		c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+func _bulge(x: float, k: float, rp: float, rx: float, d: float) -> float:
+	if rp <= 0: return 0.0
+	return d * rp * 16 * k * exp(-pow((x - rx) / 70.0, 2)) * (1 + 0.35 * sin(t * 22))
+
 func _draw_goals(c: Layer) -> void:
-	if tex_goal == null: return
-	var gw: float = e.GG.w
-	var gh: float = e.GG.h
-	var gx: float = e.GG.x
-	for i in 2:
-		var g: NxEngine.Goal = e.goals[i]
-		var sx: float = sin(t * 40) * 6 * e.shake[i]
-		if g.d < 0:
-			c.draw_texture_rect(tex_goal, Rect2(gx + sx, g.y - gh, gw, gh), false)
-		else:
-			# bottom goal: same art mirrored about its goal line (feet on the line, net toward the back)
-			c.draw_set_transform(Vector2(0, 2 * g.y), 0.0, Vector2(1, -1))
-			c.draw_texture_rect(tex_goal, Rect2(gx + sx, g.y - gh, gw, gh), false)
-			c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	var PRr := NxEngine.POST_R
+	var Wb := PRr * 1.6
+	for gi in 2:
+		var g: NxEngine.Goal = e.goals[gi]
+		var sx: float = sin(t * 40) * 6 * e.shake[gi]
+		var y := g.y
+		var x1 := g.x1 + sx
+		var x2 := g.x2 + sx
+		# soft cast shadow (light from top-left -> shadow down-right on screen)
+		var lf := -1.0 if flipped else 1.0
+		c.draw_line(Vector2(x1 + 5 * lf, y + 7 * lf), Vector2(x2 + 5 * lf, y + 7 * lf), Color(0, 0, 0, 0.32), Wb + 6, true)
+		c.draw_line(Vector2(x1 + 5 * lf, y + 7 * lf), Vector2(x2 + 5 * lf, y + 7 * lf), Color(0, 0, 0, 0.4), Wb, true)
+		# crossbar: cylindrical shading across its width (4 stacked bands)
+		var bands := [[Color("#8d96a6"), -0.5, -0.15], [Color("#ffffff"), -0.15, 0.1], [Color("#dfe5ee"), 0.1, 0.32], [Color("#6c7484"), 0.32, 0.5]]
+		for bd in bands:
+			var ya: float = y + float(bd[1]) * Wb * lf
+			var yb2: float = y + float(bd[2]) * Wb * lf
+			c.draw_rect(Rect2(x1, minf(ya, yb2), x2 - x1, absf(yb2 - ya)), bd[0])
+		# posts: round, lit from the top-left
+		for px in [x1, x2]:
+			var pp := Vector2(px, y)
+			c.draw_circle(pp, PRr + 1, Color("#5d6575"), true, -1.0, true)
+			c.draw_circle(pp - Vector2(PRr * 0.12, PRr * 0.14) * lf, PRr * 0.78, Color("#d5dbe5"), true, -1.0, true)
+			c.draw_circle(pp - Vector2(PRr * 0.35, PRr * 0.4) * lf, PRr * 0.38, Color("#ffffff"), true, -1.0, true)
 
 func _draw_lights(c: Layer) -> void:
 	# goal ripple: an additive light pulse inside the net where the ball went in
@@ -679,13 +747,9 @@ func _draw_turn_ring(c: Layer) -> void:
 		var on := b == sel
 		var k := 1.0 if on else 0.55
 		var rr := b.r * (1 + b.sq * 0.07)
-		# halo
-		var R := rr * (1.55 + 0.06 * pulse)
-		c.draw_texture_rect(tex_dot, Rect2(p.x - R, p.y - R, 2 * R, 2 * R), false, Color(tc.r, tc.g, tc.b, (0.30 + 0.12 * pulse) * k))
-		# outer soft band + crisp ring
-		c.draw_arc(p, rr + 8.0, 0, TAU, 56, Color(tc.r, tc.g, tc.b, (0.28 + 0.14 * pulse) * k), 12.0, true)
-		c.draw_arc(p, rr + 4.0, 0, TAU, 56, Color(tc.r, tc.g, tc.b, (0.80 + 0.20 * pulse) * k), 5.0, true)
-		if on: c.draw_arc(p, rr + 4.0, 0, TAU, 56, Color(1, 1, 1, 0.35 + 0.2 * pulse), 1.6, true)
+		# v3 (RN 9c699c5): no decorative halo/band circles — one thin, soft breathing ring hugging the selectable disc
+		c.draw_arc(p, rr + 2.5, 0, TAU, 56, Color(tc.r, tc.g, tc.b, (0.45 + 0.3 * pulse) * k), 4.0, true)
+		if on: c.draw_arc(p, rr + 2.5, 0, TAU, 56, Color(1, 1, 1, 0.3 + 0.2 * pulse), 1.4, true)
 
 static func _sstep(a: float, b: float, v: float) -> float:
 	var k := clampf((v - a) / (b - a), 0, 1)
@@ -772,9 +836,10 @@ static func _ray_room(p: Vector2, u: Vector2, r: Rect2) -> float:
 	elif u.y < -1e-4: tmax = minf(tmax, (r.position.y - p.y) / u.y)
 	return maxf(0.0, tmax)
 
-## Aim arrow — user's design, drawn in code: gradient (orange/yellow tail -> red tip) arrow head on a wide shaft,
-## with two rounded dash segments behind it (bigger one nearer the shaft). Length and opacity scale with power.
-## The whole arrow is fitted inside the visible screen so it is never clipped at pitch edges or corners.
+## Aim arrow — the user's arrow ART (assets/g/arrow, RN a87f1c9 / 36e684d): the head keeps its size at the tip and the shaft
+## stretches only its middle, so the arrow grows with power without distortion (the tail cap stays on the disc edge).
+## Slim art for low/mid power, electric art fades in on top at high power. Max length = the old "medium"
+## (RN: L = r + 70 + pw * 110), clamped to the visible screen so it is never clipped at pitch edges or corners.
 func _draw_aim(c: Layer) -> void:
 	var a = e.aim_info()
 	if a == null or a.p <= 0:
@@ -791,60 +856,34 @@ func _draw_aim(c: Layer) -> void:
 	var i := e.bodies.find(b)
 	var p := pos[i] if i >= 0 else Vector2(b.x, b.y)
 	var r := b.r
-	var d0 := r + 4.0
-	# arrow length beyond the rim grows LINEARLY with power from AIM_MIN_K (short stub) up to
-	# AIM_MAX_K x disc radius (~17 px -> ~196 px); power mapping itself (LMAX) is unchanged
-	var want := r * (AIM_MIN_K + (AIM_MAX_K - AIM_MIN_K) * pw)
-	var room := _ray_room(p, u, _vis_rect(10.0 / maxf(0.01, s))) - d0
-	var T := clampf(minf(want, room), minf(16.0, want), want)
-	var sc := clampf(T / want, 0.55, 1.0) if room < want else 1.0
-	var hw := r * (0.62 + 0.3 * pw) * sc          # head width
-	var hl := minf(hw * 1.08, T * 0.62)          # head length (never longer than ~60% of the arrow)
-	var sw := hw * 0.64                          # shaft / dash width
-	var al := 0.55 + 0.45 * pw
-	var rest := maxf(0.0, T - hl)
-	# design proportions behind the head: dash2 205 · gap 155 · dash1 310 · gap 175 · shaft 310
-	var k := rest / 1155.0
-	var x := d0
-	var segs := []
-	if rest > sw * 3.2:
-		segs.append([x, x + 205 * k]); x += 360 * k
-		segs.append([x, x + 310 * k]); x += 485 * k
-		segs.append([x, x + 310 * k]); x += 310 * k
-	else:
-		segs.append([x, x + rest]); x += rest
-	var xn := x
-	var xt := xn + hl
-	var hs := sw * 0.5
-	c.draw_set_transform(p, u.angle(), Vector2.ONE)
-	for pass_i in 2:
-		var shadow := pass_i == 0
-		var off := Vector2(3.0, 4.0).rotated(-u.angle()) * (1.0 if not flipped else -1.0) if shadow else Vector2.ZERO
-		var aa := al * 0.28 if shadow else al
-		# dashes (all but the last segment)
-		for si in segs.size() - 1:
-			var sg: Array = segs[si]
-			var rr := minf(sw * 0.22, (sg[1] - sg[0]) * 0.3)
-			var q := PackedVector2Array([Vector2(sg[0], -hs), Vector2(sg[1], -hs), Vector2(sg[1], hs), Vector2(sg[0], hs)])
-			for qi in q.size(): q[qi] += off
-			_arw_poly(c, _fillet(q, PackedFloat32Array([rr, rr, rr, rr])), d0, xt, hs, aa, shadow)
-		# shaft + head as one rounded outline
-		var sx: float = segs[segs.size() - 1][0]
-		var hh := hw * 0.5
-		var body := PackedVector2Array([Vector2(sx, -hs), Vector2(xn, -hs), Vector2(xn, -hh), Vector2(xt, 0), Vector2(xn, hh), Vector2(xn, hs), Vector2(sx, hs)])
-		for qi in body.size(): body[qi] += off
-		var br := sw * 0.12
-		_arw_poly(c, _fillet(body, PackedFloat32Array([br, br * 0.6, hw * 0.08, hw * 0.07, hw * 0.08, br * 0.6, br])), d0, xt, hh, aa, shadow)
-	# soft highlight along the upper edge of the shaft/head (3D sheen)
-	c.draw_line(Vector2(segs[segs.size() - 1][0] + 4, -hs * 0.55), Vector2(xn - 2, -hs * 0.55), Color(1, 1, 1, 0.16 * al), maxf(1.5, sw * 0.12), true)
+	var L0 := r + 3.0
+	var want := r + AIM_BASE + pw * AIM_GROW
+	var room := _ray_room(p, u, _vis_rect(10.0 / maxf(0.01, s)))
+	var L := clampf(minf(want, room), L0 + 40.0, want)
+	var pc := _power_col(pw)
+	# power ring around the disc
+	c.draw_arc(p, r + 9.0, -PI / 2, -PI / 2 + TAU * pw, 48, Color(pc.r, pc.g, pc.b, 0.9), 4.0, true)
+	# faint pull-back tether toward the finger
+	c.draw_line(p - u * r, p - u * (r + 18 + pw * 60), Color(1, 1, 1, 0.18), 2.5, true)
+	# art slices in the arrow's local frame (art points to -y)
+	c.draw_set_transform(p, u.angle() + PI / 2, Vector2.ONE)
+	var ae := _sstep(0.66, 0.72, pw)
+	var as_ := 1.0 - _sstep(0.7, 0.75, pw)
+	if as_ > 0 and tex_arrow.get("head_s") and tex_arrow.get("shaft_s"):
+		_slices(c, tex_arrow.head_s, tex_arrow.shaft_s, ART.s, L0, L, Color(1, 1, 1, as_))
+	if ae > 0 and tex_arrow.get("head_e") and tex_arrow.get("shaft_e"):
+		_slices(c, tex_arrow.head_e, tex_arrow.shaft_e, ART.e, L0, L, Color(1, 1, 1, ae))
+		# subtle charged pulse, stronger near full power
+		var pulse := 0.5 + 0.5 * sin(t * (6 + pw * 8))
+		_slices(c, tex_arrow.head_e, tex_arrow.shaft_e, ART.e, L0, L, Color(1.6, 1.6, 1.6, ae * (0.06 + 0.16 * pulse) * pw))
 	c.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
-	# accuracy preview dots beyond the tip, only where they stay on screen
-	var steps := maxi(2, int(roundf((3 + pw * 4) * (NxEngine.aim_preview(float(e.stats_of(b.team).accuracy)) if e.c_stats != null else 1.0))))
+	# accuracy preview: dotted continuation, longer for accurate discs (only where it stays on screen)
+	var steps := maxi(2, int(roundf((5 + pw * 6) * (NxEngine.aim_preview(float(e.stats_of(b.team).accuracy)) if e.c_stats != null else 1.0))))
 	for kk in range(1, steps + 1):
-		var d := xt + 8 + kk * 12
-		if d > room + d0 or d > xt + r * 0.7: break
+		var d := L + 8 + kk * 22
+		if d > room: break
 		var f := 1.0 - float(kk) / (steps + 1)
-		c.draw_circle(p + u * d, 2.0 + 2.0 * f, Color(ARW_TIP.r, ARW_TIP.g, ARW_TIP.b, 0.55 * f * al), true, -1.0, true)
+		c.draw_circle(p + u * d, 2.2 + 2.0 * f, Color(pc.r, pc.g, pc.b, 0.6 * f), true, -1.0, true)
 
 func _draw_parts(c: Layer) -> void:
 	var ps := e.parts
