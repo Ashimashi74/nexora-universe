@@ -5,40 +5,46 @@ extends Node
 const FS := 1.12
 const DEFAULT_FIELD := 0
 const FIELDS_VERSION := 2
+## v3.0 (2026-11-14): every pitch's play area (T..B) is FIELD_LEN_K = 8 % longer than in v2 (width, goals, disc and
+## ball radii unchanged). FIELDS below already carry the stretched values: B = T + (B_v2 - T) * K, H = H_v2 + (B - B_v2),
+## cs = T + (cs_v2 - T) * K. The field art is drawn 3-slice (match_view._draw_field): the strips above T / below B
+## (behind the goals) keep their v2 scale and only the play area is stretched. The match view keeps the v2 scale
+## (discs do not shrink) and pans vertically when the longer pitch no longer fits.
+const FIELD_LEN_K := 1.08
 const CHEST_EVERY := 4 * 3600 * 1000  # ms
 
 const GS := {"white": [840.0, 307.0, 0.0491, 0.9522], "wood": [840.0, 306.0, 0.0474, 0.9519], "ice": [840.0, 305.0, 0.0535, 0.9429], "black": [840.0, 235.0, 0.0521, 0.9527], "rope": [840.0, 246.0, 0.0493, 0.9528], "gold": [840.0, 237.0, 0.0431, 0.9521], "red": [840.0, 233.0, 0.0502, 0.9509], "blue": [840.0, 236.0, 0.0452, 0.9526]}
 const FIELDS := [
-	{"id": "pitch", "name": "NEXORA Pitch", "W": 837.0, "H": 1935.3, "L": 30.0, "R": 805.0, "T": 101.0, "B": 1831.3, "cs": 768.0, "g": 128.0, "gs": "white"},
-	{"id": "forest", "name": "Forest", "W": 1216.0, "H": 2019.8, "L": 218.0, "R": 997.0, "T": 142.0, "B": 1865.8, "cs": 786.0, "g": 135.0, "gs": "wood"},
-	{"id": "ice", "name": "Ice", "W": 1216.0, "H": 2016.5, "L": 213.0, "R": 1002.0, "T": 150.0, "B": 1859.5, "cs": 784.0, "g": 137.0, "gs": "ice"},
-	{"id": "ocean", "name": "Ocean", "W": 1216.0, "H": 2027.0, "L": 214.0, "R": 1005.0, "T": 121.0, "B": 1876.0, "cs": 785.0, "g": 137.0, "gs": "blue"},
-	{"id": "street", "name": "Street", "W": 1216.0, "H": 2010.5, "L": 204.0, "R": 1010.0, "T": 176.0, "B": 1859.5, "cs": 791.0, "g": 139.0, "gs": "gold"},
-	{"id": "streetarena", "name": "Street Arena", "W": 1216.0, "H": 2022.5, "L": 217.0, "R": 995.0, "T": 131.0, "B": 1866.5, "cs": 786.0, "g": 135.0, "gs": "rope"},
-	{"id": "lava", "name": "Lava", "W": 1216.0, "H": 2018.0, "L": 224.0, "R": 990.0, "T": 142.0, "B": 1858.0, "cs": 783.0, "g": 133.0, "gs": "black"},
-	{"id": "stadium", "name": "Stadium", "W": 1216.0, "H": 2023.7, "L": 220.0, "R": 995.0, "T": 129.0, "B": 1869.7, "cs": 785.0, "g": 134.0, "gs": "white"},
-	{"id": "checker", "name": "Checker", "W": 1216.0, "H": 2042.3, "L": 216.0, "R": 997.0, "T": 114.0, "B": 1935.3, "cs": 788.0, "g": 135.0, "gs": "red"},
-	{"id": "futsal", "name": "Futsal", "W": 1216.0, "H": 2030.0, "L": 213.0, "R": 1002.0, "T": 116.0, "B": 1884.0, "cs": 781.0, "g": 137.0, "gs": "gold"},
-	{"id": "arena", "name": "Arena", "W": 1216.0, "H": 2023.7, "L": 223.0, "R": 990.0, "T": 132.0, "B": 1872.7, "cs": 777.0, "g": 133.0, "gs": "red"},
-	{"id": "arena2", "name": "Grand Arena", "W": 1216.0, "H": 2014.1, "L": 184.0, "R": 1032.0, "T": 151.0, "B": 1850.1, "cs": 787.0, "g": 139.0, "gs": "gold"},
-	{"id": "desert", "name": "Desert", "W": 1216.0, "H": 2035.7, "L": 183.0, "R": 1030.0, "T": 94.0, "B": 1886.7, "cs": 777.0, "g": 139.0, "gs": "black"},
-	{"id": "grove", "name": "Grove", "W": 1216.0, "H": 2029.1, "L": 193.0, "R": 1028.0, "T": 121.0, "B": 1885.1, "cs": 778.0, "g": 139.0, "gs": "rope"},
-	{"id": "pool", "name": "Pool", "W": 1216.0, "H": 2029.7, "L": 179.0, "R": 1036.0, "T": 110.0, "B": 1876.7, "cs": 781.0, "g": 139.0, "gs": "white"},
-	{"id": "neon", "name": "Neon Tech", "W": 1147.0, "H": 2141.2, "L": 158.0, "R": 989.0, "T": 147.0, "B": 1972.2, "cs": 834.0, "g": 145.0, "gs": "black"},
-	{"id": "royal", "name": "Royal", "W": 1147.0, "H": 2124.1, "L": 166.0, "R": 982.0, "T": 165.0, "B": 1916.1, "cs": 818.0, "g": 141.0, "gs": "gold"},
-	{"id": "mahogany", "name": "Mahogany", "W": 1147.0, "H": 2157.7, "L": 109.0, "R": 1036.0, "T": 101.0, "B": 1997.7, "cs": 816.0, "g": 161.0, "gs": "wood"},
-	{"id": "leather", "name": "Leather", "W": 1147.0, "H": 2158.9, "L": 111.0, "R": 1036.0, "T": 111.0, "B": 2012.9, "cs": 818.0, "g": 160.0, "gs": "gold"},
-	{"id": "aqua", "name": "Aquarium", "W": 1147.0, "H": 2146.0, "L": 137.0, "R": 1014.0, "T": 137.0, "B": 1983.0, "cs": 831.0, "g": 152.0, "gs": "blue"},
-	{"id": "asphalt", "name": "Asphalt", "W": 1147.0, "H": 2158.0, "L": 109.0, "R": 1036.0, "T": 127.0, "B": 2025.0, "cs": 831.0, "g": 161.0, "gs": "rope"},
-	{"id": "court", "name": "Court", "W": 1147.0, "H": 2143.9, "L": 132.0, "R": 1016.0, "T": 129.0, "B": 1965.9, "cs": 801.0, "g": 154.0, "gs": "white"},
-	{"id": "cyberbox", "name": "Cyber Box", "W": 1147.0, "H": 2146.6, "L": 132.0, "R": 1015.0, "T": 121.0, "B": 1969.6, "cs": 791.0, "g": 153.0, "gs": "black"},
-	{"id": "realmadrid", "name": "Real Madrid", "W": 1216.0, "H": 2035.4, "L": 218.0, "R": 996.0, "T": 112.0, "B": 1903.4, "cs": 809.0, "g": 135.0, "gs": "black"},
-	{"id": "psg", "name": "Paris SG", "W": 1216.0, "H": 2018.9, "L": 228.0, "R": 987.0, "T": 129.0, "B": 1848.9, "cs": 746.0, "g": 135.0, "gs": "red"},
-	{"id": "acmilan", "name": "AC Milan", "W": 1216.0, "H": 2035.4, "L": 218.0, "R": 996.0, "T": 112.0, "B": 1903.4, "cs": 809.0, "g": 135.0, "gs": "white"},
-	{"id": "barcelona", "name": "FC Barcelona", "W": 1216.0, "H": 2034.5, "L": 217.0, "R": 996.0, "T": 113.0, "B": 1900.5, "cs": 808.0, "g": 135.0, "gs": "gold"},
-	{"id": "persepolis", "name": "Persepolis", "W": 1290.0, "H": 2148.4, "L": 232.0, "R": 1056.0, "T": 151.0, "B": 2007.4, "cs": 862.0, "g": 135.0, "gs": "white"},
-	{"id": "esteghlal", "name": "Esteghlal", "W": 1216.0, "H": 2032.7, "L": 218.0, "R": 997.0, "T": 112.0, "B": 1891.7, "cs": 773.0, "g": 135.0, "gs": "gold"},
-	{"id": "mancity", "name": "Man City", "W": 1216.0, "H": 2034.2, "L": 218.0, "R": 996.0, "T": 114.0, "B": 1900.2, "cs": 805.0, "g": 135.0, "gs": "red"}
+	{"id": "pitch", "name": "NEXORA Pitch", "W": 837.0, "H": 2073.7, "L": 30.0, "R": 805.0, "T": 101.0, "B": 1969.7, "cs": 821.4, "g": 128.0, "gs": "white"},
+	{"id": "forest", "name": "Forest", "W": 1216.0, "H": 2157.7, "L": 218.0, "R": 997.0, "T": 142.0, "B": 2003.7, "cs": 837.5, "g": 135.0, "gs": "wood"},
+	{"id": "ice", "name": "Ice", "W": 1216.0, "H": 2153.3, "L": 213.0, "R": 1002.0, "T": 150.0, "B": 1996.3, "cs": 834.7, "g": 137.0, "gs": "ice"},
+	{"id": "ocean", "name": "Ocean", "W": 1216.0, "H": 2167.4, "L": 214.0, "R": 1005.0, "T": 121.0, "B": 2016.4, "cs": 838.1, "g": 137.0, "gs": "blue"},
+	{"id": "street", "name": "Street", "W": 1216.0, "H": 2145.2, "L": 204.0, "R": 1010.0, "T": 176.0, "B": 1994.2, "cs": 840.2, "g": 139.0, "gs": "gold"},
+	{"id": "streetarena", "name": "Street Arena", "W": 1216.0, "H": 2161.3, "L": 217.0, "R": 995.0, "T": 131.0, "B": 2005.3, "cs": 838.4, "g": 135.0, "gs": "rope"},
+	{"id": "lava", "name": "Lava", "W": 1216.0, "H": 2155.3, "L": 224.0, "R": 990.0, "T": 142.0, "B": 1995.3, "cs": 834.3, "g": 133.0, "gs": "black"},
+	{"id": "stadium", "name": "Stadium", "W": 1216.0, "H": 2163.0, "L": 220.0, "R": 995.0, "T": 129.0, "B": 2009.0, "cs": 837.5, "g": 134.0, "gs": "white"},
+	{"id": "checker", "name": "Checker", "W": 1216.0, "H": 2188.0, "L": 216.0, "R": 997.0, "T": 114.0, "B": 2081.0, "cs": 841.9, "g": 135.0, "gs": "red"},
+	{"id": "futsal", "name": "Futsal", "W": 1216.0, "H": 2171.4, "L": 213.0, "R": 1002.0, "T": 116.0, "B": 2025.4, "cs": 834.2, "g": 137.0, "gs": "gold"},
+	{"id": "arena", "name": "Arena", "W": 1216.0, "H": 2163.0, "L": 223.0, "R": 990.0, "T": 132.0, "B": 2012.0, "cs": 828.6, "g": 133.0, "gs": "red"},
+	{"id": "arena2", "name": "Grand Arena", "W": 1216.0, "H": 2150.0, "L": 184.0, "R": 1032.0, "T": 151.0, "B": 1986.0, "cs": 837.9, "g": 139.0, "gs": "gold"},
+	{"id": "desert", "name": "Desert", "W": 1216.0, "H": 2179.1, "L": 183.0, "R": 1030.0, "T": 94.0, "B": 2030.1, "cs": 831.6, "g": 139.0, "gs": "black"},
+	{"id": "grove", "name": "Grove", "W": 1216.0, "H": 2170.2, "L": 193.0, "R": 1028.0, "T": 121.0, "B": 2026.2, "cs": 830.6, "g": 139.0, "gs": "rope"},
+	{"id": "pool", "name": "Pool", "W": 1216.0, "H": 2171.0, "L": 179.0, "R": 1036.0, "T": 110.0, "B": 2018.0, "cs": 834.7, "g": 139.0, "gs": "white"},
+	{"id": "neon", "name": "Neon Tech", "W": 1147.0, "H": 2287.2, "L": 158.0, "R": 989.0, "T": 147.0, "B": 2118.2, "cs": 889.0, "g": 145.0, "gs": "black"},
+	{"id": "royal", "name": "Royal", "W": 1147.0, "H": 2264.2, "L": 166.0, "R": 982.0, "T": 165.0, "B": 2056.2, "cs": 870.2, "g": 141.0, "gs": "gold"},
+	{"id": "mahogany", "name": "Mahogany", "W": 1147.0, "H": 2309.4, "L": 109.0, "R": 1036.0, "T": 101.0, "B": 2149.4, "cs": 873.2, "g": 161.0, "gs": "wood"},
+	{"id": "leather", "name": "Leather", "W": 1147.0, "H": 2311.1, "L": 111.0, "R": 1036.0, "T": 111.0, "B": 2165.1, "cs": 874.6, "g": 160.0, "gs": "gold"},
+	{"id": "aqua", "name": "Aquarium", "W": 1147.0, "H": 2293.7, "L": 137.0, "R": 1014.0, "T": 137.0, "B": 2130.7, "cs": 886.5, "g": 152.0, "gs": "blue"},
+	{"id": "asphalt", "name": "Asphalt", "W": 1147.0, "H": 2309.8, "L": 109.0, "R": 1036.0, "T": 127.0, "B": 2176.8, "cs": 887.3, "g": 161.0, "gs": "rope"},
+	{"id": "court", "name": "Court", "W": 1147.0, "H": 2290.9, "L": 132.0, "R": 1016.0, "T": 129.0, "B": 2112.9, "cs": 854.8, "g": 154.0, "gs": "white"},
+	{"id": "cyberbox", "name": "Cyber Box", "W": 1147.0, "H": 2294.5, "L": 132.0, "R": 1015.0, "T": 121.0, "B": 2117.5, "cs": 844.6, "g": 153.0, "gs": "black"},
+	{"id": "realmadrid", "name": "Real Madrid", "W": 1216.0, "H": 2178.7, "L": 218.0, "R": 996.0, "T": 112.0, "B": 2046.7, "cs": 864.8, "g": 135.0, "gs": "black"},
+	{"id": "psg", "name": "Paris SG", "W": 1216.0, "H": 2156.5, "L": 228.0, "R": 987.0, "T": 129.0, "B": 1986.5, "cs": 795.4, "g": 135.0, "gs": "red"},
+	{"id": "acmilan", "name": "AC Milan", "W": 1216.0, "H": 2178.7, "L": 218.0, "R": 996.0, "T": 112.0, "B": 2046.7, "cs": 864.8, "g": 135.0, "gs": "white"},
+	{"id": "barcelona", "name": "FC Barcelona", "W": 1216.0, "H": 2177.5, "L": 217.0, "R": 996.0, "T": 113.0, "B": 2043.5, "cs": 863.6, "g": 135.0, "gs": "gold"},
+	{"id": "persepolis", "name": "Persepolis", "W": 1290.0, "H": 2296.9, "L": 232.0, "R": 1056.0, "T": 151.0, "B": 2155.9, "cs": 918.9, "g": 135.0, "gs": "white"},
+	{"id": "esteghlal", "name": "Esteghlal", "W": 1216.0, "H": 2175.1, "L": 218.0, "R": 997.0, "T": 112.0, "B": 2034.1, "cs": 825.9, "g": 135.0, "gs": "gold"},
+	{"id": "mancity", "name": "Man City", "W": 1216.0, "H": 2177.1, "L": 218.0, "R": 996.0, "T": 114.0, "B": 2043.1, "cs": 860.3, "g": 135.0, "gs": "red"}
 ]
 ## Piece catalog: the NX8 build's groups/order/names first (index_v4_backup.html: lux, club, nat, spt, gal; art res://assets/nx8/teams),
 ## then the v4 categories NX8 lacks (vip, car, elite, emb, leg, chrome; art res://assets/g/teams).

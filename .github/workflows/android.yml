@@ -2,7 +2,7 @@ name: Android APK + AAB (Godot)
 
 on:
   push:
-    branches: [main]
+    branches: [main, godot-v3]
   workflow_dispatch:
 
 permissions:
@@ -47,7 +47,7 @@ jobs:
           gradle-version: ${{ env.GRADLE_VERSION }}
 
       - id: ver
-        run: echo "version=2.0.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+        run: echo "version=3.0.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
 
       # ------------------------------------------------------------------ 1. LiveKit plugin AAR
       - name: Build NexoraLiveKit plugin AAR
@@ -150,6 +150,8 @@ jobs:
 
       # ------------------------------------------------------------------ 4. Project tweaks (CI copy only)
       - name: CI project tweaks (plugin, version, presets, lossy textures, excludes)
+        env:
+          NX_VERSION: ${{ steps.ver.outputs.version }}
         run: python3 .github/scripts/ci_prepare.py
 
       # ------------------------------------------------------------------ 5. Import, test, export
@@ -284,6 +286,8 @@ jobs:
 
   release:
     needs: [build, emulator]
+    # Godot v3 builds publish only from the godot-v3 branch; the tag prefix keeps them apart from the RN app's v* tags
+    if: github.ref == 'refs/heads/godot-v3'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -294,8 +298,9 @@ jobs:
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.build.outputs.version }}
-          name: NEXORA v${{ needs.build.outputs.version }} (build ${{ github.run_number }})
+          tag_name: godot-v${{ needs.build.outputs.version }}
+          target_commitish: ${{ github.sha }}
+          name: NEXORA Godot v${{ needs.build.outputs.version }} (build ${{ github.run_number }})
           body: |
             NEXORA v${{ needs.build.outputs.version }} — Godot ${{ env.GODOT_VERSION }}, Android 7.0+ (API 24), OpenGL ES 3 (compatibility renderer).
             - `*-universal.apk`: all phones (armeabi-v7a, arm64-v8a, x86, x86_64). Pick this if unsure.
@@ -305,4 +310,5 @@ jobs:
             Smoke-tested on an Android emulator (API 30): installs, launches, stays alive.
             Commit: ${{ github.sha }}
           files: dist/*
-          make_latest: true
+          # do not take "Latest" away from the RN app's releases
+          make_latest: false

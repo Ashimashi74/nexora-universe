@@ -11,13 +11,18 @@ func _run() -> void:
 	await process_frame
 	var ES = load("res://src/game/engine.gd")
 	var n := 10
+	var m0 := 0
+	# optional: -- from=<first match> n=<count>  (split the run to fit short timeouts)
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("n="): n = int(a.substr(2))
+		if a.begins_with("from="): m0 = int(a.substr(5))
 	var errors := 0
 	var goals := 0
 	var nogoals := 0
 	var shots := 0
 	var ballhits := 0
 	var finals := 0
-	for m in n:
+	for m in range(m0, m0 + n):
 		var cfg := {"field": m % D.FIELDS.size(), "ball": m % 36, "forms": [m % 6, (m * 7 + 3) % 6], "ai": true, "ai_lvl": m % 3,
 			"limit": 3, "match_time": 180 if m % 4 == 3 else 0, "turn_time": 15, "vip": [false, m % 5 == 0], "first": m % 2,
 			"stats": [{"power": 4.0 + (m % 5), "accuracy": 5.0}, {"power": 4.0 + ((m * 3) % 7), "accuracy": 6.0}],

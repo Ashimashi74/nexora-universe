@@ -349,16 +349,43 @@ func _build_outline() -> void:
 
 # ------------------------------------------------------------------ layout
 ## RN computeView: fits field + both goals between `top` and `bottom` insets (pixels of this node's parent space)
+## v3.0: the pitch is FIELD_LEN_K (8 %) longer, but the scale is still computed from the v2 length, so discs and the
+## ball keep their on-screen size. When the longer pitch + goals no longer fit between the margins, the view pans
+## vertically (smoothly following the ball, clamped so it never shows past either goal); otherwise it is centred
+## exactly as before.
+var _fit_top := 0.0
+var _fit_h := 0.0
+var _pan_lo := 0.0   # oy range allowed by the pan (equal when the whole pitch fits)
+var _pan_hi := 0.0
+
 func fit(size: Vector2, top: float, bottom: float) -> void:
 	W = size.x; H = size.y
 	var f := e.f
 	var play_h := maxf(300.0, H - top - bottom)
-	s = minf(W / (f.R - f.L + 56 * D.FS), play_h / ((f.B - f.T) + 2 * e.GG.h + 48)) * 0.99
+	var len_v2: float = (f.B - f.T) / D.FIELD_LEN_K
+	s = minf(W / (f.R - f.L + 56 * D.FS), play_h / (len_v2 + 2 * e.GG.h + 48)) * 0.99
 	ox = W / 2 - e.CX * s
-	oy = top + play_h / 2 - e.CY * s
+	_fit_top = top; _fit_h = play_h
+	# content = both goals + a 24 px rim (same allowance as the fit above)
+	var c0: float = f.T - e.GG.h - 24
+	var c1: float = f.B + e.GG.h + 24
+	var centred: float = top + play_h / 2 - e.CY * s
+	if (c1 - c0) * s <= play_h:
+		_pan_lo = centred; _pan_hi = centred
+	else:
+		_pan_hi = top - c0 * s                 # content top edge at the window top
+		_pan_lo = top + play_h - c1 * s        # content bottom edge at the window bottom
+	oy = _pan_target()
 	_place(Vector2.ZERO, 0.0)
 	if bg: bg.queue_redraw()
 	if flash_l: flash_l.queue_redraw()
+
+## oy that puts the ball (kickoff: the centre spot) mid-window, clamped to the pan range
+func _pan_target() -> float:
+	if _pan_lo >= _pan_hi: return _pan_lo
+	var fy: float = e.ball.y if e.ball else e.CY
+	if pos.size() == e.bodies.size() and pos.size() > 0 and pos[pos.size() - 1] != Vector2.ZERO: fy = pos[pos.size() - 1].y
+	return clampf(_fit_top + _fit_h / 2 - fy * s, _pan_lo, _pan_hi)
 
 func to_world(p: Vector2) -> Vector2:
 	if flipped: p = Vector2(W, H) - p
@@ -412,6 +439,10 @@ func _process(delta: float) -> void:
 		# nx8/Godot: shots and hits never shake the camera — only the goal celebration does
 		# (softened so the celebration feels smooth instead of jittery)
 		shk = Vector2(randf() - 0.5, randf() - 0.5) * e.cam * 4.2 * k
+	if _pan_hi > _pan_lo:
+		# pan only while nobody is aiming (a moving view under a finger would shift the aim)
+		if drag_free():
+			oy = lerpf(oy, _pan_target(), clampf(delta * 3.0, 0.0, 1.0))
 	_place(shk, 0.007 * minf(e.cam, 1.4) if hq else 0.0)
 	var bl: NxBody = e.ball
 	if bl:
@@ -462,8 +493,21 @@ func _draw_bg(c: Layer) -> void:
 		c.draw_texture_rect(tex_bg, Rect2((W - f.W * k) / 2, (H - f.H * k) / 2, f.W * k, f.H * k), false)
 		c.draw_rect(Rect2(0, 0, W, H), Color(2 / 255.0, 4 / 255.0, 14 / 255.0, 0.62))
 
+func drag_free() -> bool: return e.drag == null
+
+## 3-slice: the art strips above T and below B (behind the goals) keep their v2 scale, only the play area T..B is
+## stretched by FIELD_LEN_K, so the goal mouths / boxes at the ends are not distorted any further.
 func _draw_field(c: Layer) -> void:
-	if tex_field: c.draw_texture_rect(tex_field, Rect2(0, 0, e.f.W, e.f.H), false)
+	if not tex_field: return
+	var f := e.f
+	var k: float = D.FIELD_LEN_K
+	var b0: float = f.T + (f.B - f.T) / k          # v2 bottom line in v2 field units
+	var h0: float = f.H - (f.B - b0)                # v2 field height
+	var ts := tex_field.get_size()
+	var py: float = ts.y / h0                       # texture px per v2 field unit
+	c.draw_texture_rect_region(tex_field, Rect2(0, 0, f.W, f.T), Rect2(0, 0, ts.x, f.T * py))
+	c.draw_texture_rect_region(tex_field, Rect2(0, f.T, f.W, f.B - f.T), Rect2(0, f.T * py, ts.x, (b0 - f.T) * py))
+	c.draw_texture_rect_region(tex_field, Rect2(0, f.B, f.W, f.H - f.B), Rect2(0, b0 * py, ts.x, (h0 - b0) * py))
 
 func _draw_outline(c: Layer) -> void:
 	if hq: c.draw_polyline(_outline, Color(120 / 255.0, 220 / 255.0, 1.0, 0.12), 9.0, true)

@@ -5,13 +5,15 @@ var e: NxEngine
 var v: MatchView
 var out := "/tmp"
 var form := 0
+var field := 0
 var frame := 0
 
 func _initialize() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("form="): form = int(a.substr(5))
 		if a.begins_with("out="): out = a.substr(4)
-	e = NxEngine.new({"field": 0, "ball": 3, "forms": [form, form], "ai": false, "turn_time": 0, "seed": 7, "teams": ["club0", "nat3"]})
+		if a.begins_with("field="): field = int(a.substr(6))
+	e = NxEngine.new({"field": field, "ball": 3, "forms": [form, form], "ai": false, "turn_time": 0, "seed": 7, "teams": ["club0", "nat3"]})
 	v = MatchView.new()
 	v.setup(e, {"quality": "high"})
 	root.add_child(v)
@@ -31,6 +33,6 @@ func _initialize() -> void:
 func _process(_d: float) -> bool:
 	frame += 1
 	if frame == 8:
-		root.get_texture().get_image().save_png("%s/form_%d.png" % [out, form])
+		root.get_texture().get_image().save_png("%s/form_%d%s.png" % [out, form, ("" if field == 0 else "_f%d" % field)])
 		return true
 	return false

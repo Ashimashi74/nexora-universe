@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """CI-only project tweaks (run on the CI checkout, never committed back):
 - enable the NexoraLiveKit editor plugin (so its EditorExportPlugin ships the AAR + maven deps)
-- stamp version code/name from the run number
+- stamp version code (run number) / name (NX_VERSION = 3.0.<run>) and config/version
 - export hygiene: exclude tests/, shots/, plugin_src/, *.md; compress native libs
 - textures: lossy WebP (quality 0.75) instead of lossless for every 2D texture import
 - add two more presets cloned from "Android": "Android AAB" (export_format=1) and "Android arm64"
@@ -9,6 +9,8 @@
 import glob, os, re
 
 run = os.environ.get("GITHUB_RUN_NUMBER", "1")
+# version name: NX_VERSION from the workflow (3.0.<run>), else 3.0.<run>
+ver = os.environ.get("NX_VERSION") or "3.0.%s" % run
 
 # ---- project.godot: editor plugin
 p = "project.godot"
@@ -22,6 +24,12 @@ if want not in s:
         s = s.rstrip("\n") + '\n\n[editor_plugins]\n\nenabled=PackedStringArray("%s")\n' % want
     open(p, "w", encoding="utf-8").write(s)
     print("enabled editor plugin")
+# ---- project.godot: application/config/version = the build's version name
+s = open(p, encoding="utf-8").read()
+s2 = re.sub(r'(?m)^config/version=".*"$', 'config/version="%s"' % ver, s, count=1)
+if s2 != s:
+    open(p, "w", encoding="utf-8").write(s2)
+    print("config/version =", ver)
 
 # ---- textures: lossy webp
 n = 0
@@ -51,7 +59,7 @@ m = re.search(r'(?s)\[preset\.0\]\n(.*?)\n\[preset\.0\.options\]\n(.*?)(?=\n\[pr
 head, opts = m.group(1), m.group(2)
 head = setopt(head, "exclude_filter", '"tests/*, shots/*, plugin_src/*, *.md, android/keys/*"')
 opts = setopt(opts, "version/code", run)
-opts = setopt(opts, "version/name", '"2.0.%s"' % run)
+opts = setopt(opts, "version/name", '"%s"' % ver)
 opts = setopt(opts, "gradle_build/compress_native_libraries", "true")
 opts = setopt(opts, "gradle_build/export_format", "0")
 opts = setopt(opts, "gradle_build/min_sdk", '"24"')
