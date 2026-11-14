@@ -57,17 +57,21 @@ const CAT_FA := {"lux": "لوکس", "club": "باشگاه", "nat": "ملی", "sp
 ## Formations (user's 9-formation sheet). Entry: [name_fa, name_en, rows (legacy, unused), pts]
 ## pts: [depth, lateral] per disc — depth 0 = own goal line … 1 = halfway line; lateral 0..1 across the pitch
 ## (left->right for the bottom side; the top side is the mirror image). Spaced for the current disc radius (fm check: min gap >= 13 px).
+## 9 kickoff formations (5 discs) — RN v6 data.ts FORMS. Points are [nx, ny]: nx = across the pitch (0 = left touchline as seen
+## from your own goal), ny = distance from your own goal line as a fraction of the full pitch length (half-way line = 0.5).
+## Extracted from the owner's reference «انتخاب ترکیب» screen. Team 1 uses the 180° rotation (engine.reset).
 const FORMS := [
-	["الماس", "Diamond", [], [[0.14, 0.5], [0.39, 0.20], [0.39, 0.80], [0.76, 0.36], [0.76, 0.64]]],
-	["عقاب", "Eagle", [], [[0.14, 0.5], [0.36, 0.20], [0.36, 0.80], [0.56, 0.5], [0.86, 0.5]]],
-	["موج", "Wave", [], [[0.30, 0.27], [0.30, 0.73], [0.62, 0.06], [0.62, 0.5], [0.62, 0.94]]],
-	["ماه", "Moon", [], [[0.18, 0.5], [0.38, 0.18], [0.38, 0.82], [0.64, 0.04], [0.64, 0.96]]],
-	["دیوانه", "Crazy", [], [[0.62, 0.5], [0.86, 0.0], [0.86, 0.31], [0.86, 0.69], [0.86, 1.0]]],
-	["لبه", "Edge", [], [[0.11, 0.5], [0.37, 0.5], [0.63, 0.5], [0.86, 0.12], [0.86, 0.88]]],
-	["نیش", "Sting", [], [[0.13, 0.5], [0.50, 0.08], [0.50, 0.92], [0.88, 0.08], [0.88, 0.92]]],
-	["بازو", "Arm", [], [[0.13, 0.5], [0.56, 0.12], [0.56, 0.5], [0.56, 0.88], [0.88, 0.88]]],
-	["حمله همه جانبه", "All-out Attack", [], [[0.13, 0.5], [0.72, 0.30], [0.72, 0.70], [0.88, 0.04], [0.88, 0.96]]],
+	["موج", "Wave", [[0.23, 0.155], [0.701, 0.155], [0.911, 0.291], [0.499, 0.292], [0.061, 0.293]]],
+	["عقاب", "Eagle", [[0.489, 0.083], [0.786, 0.172], [0.194, 0.173], [0.491, 0.291], [0.489, 0.378]]],
+	["الماس", "Diamond", [[0.499, 0.083], [0.198, 0.196], [0.788, 0.196], [0.58, 0.364], [0.363, 0.365]]],
+	["لبه", "Edge", [[0.498, 0.078], [0.486, 0.185], [0.496, 0.292], [0.168, 0.402], [0.799, 0.402]]],
+	["دیوانه", "Crazy", [[0.489, 0.327], [0.874, 0.393], [0.674, 0.394], [0.079, 0.395], [0.279, 0.396]]],
+	["ماه", "Moon", [[0.494, 0.118], [0.183, 0.178], [0.784, 0.179], [0.912, 0.291], [0.064, 0.292]]],
+	["حمله همه جانبه", "All-out Attack", [[0.497, 0.078], [0.333, 0.378], [0.579, 0.379], [0.168, 0.426], [0.742, 0.427]]],
+	["بازو", "Arm", [[0.494, 0.078], [0.16, 0.28], [0.812, 0.28], [0.486, 0.281], [0.815, 0.426]]],
+	["نیش", "Sting", [[0.498, 0.078], [0.095, 0.245], [0.842, 0.246], [0.093, 0.426], [0.842, 0.426]]],
 ]
+const FORM_DEFAULT := 8   # نیش (the reference's selected one)
 const TRAILS := [
 	{"k": "bolt", "c": ["#19b4ff", "#8fe6ff", "#ffffff"]},
 	{"k": "prism", "c": ["#ff7bd5", "#7bd7ff", "#ffffff"]},
@@ -203,22 +207,13 @@ static func field_price(i: int) -> int:
 
 ## formation slots: Array of [nx, ny] (float64 — Vector2 is float32 and would break physics parity)
 ## nx = lateral 0..1 (engine insets it by the disc radius), ny = distance from own goal line as a fraction of the pitch length.
+static func form_idx(fi: int) -> int:
+	return fi if fi >= 0 and fi < FORMS.size() else FORM_DEFAULT
+
 static func slots(fi: int) -> Array:
 	var o: Array = []
-	var fm: Array = FORMS[clampi(fi, 0, FORMS.size() - 1)]
-	if fm.size() > 3:
-		for pt in fm[3]:
-			o.append([float(pt[1]), 0.02 + float(pt[0]) * 0.48])
-		return o
-	for row in fm[2]:
-		var ny: float = row[0]
-		var c: int = int(row[1])
-		for i in c:
-			var nx: float
-			if c == 1: nx = 0.5
-			elif c == 2: nx = 0.27 + 0.46 * i
-			else: nx = 0.17 + 0.33 * i
-			o.append([nx, ny])
+	for pt in FORMS[form_idx(fi)][2]:
+		o.append([float(pt[0]), float(pt[1])])
 	return o
 
 # ---------------- util.ts ----------------

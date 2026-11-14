@@ -20,12 +20,12 @@ form.subtitle,چیدمان تیمت را انتخاب کن,Pick your team's form
 form.select,انتخاب,Select
 form.selected,انتخاب شده,Selected
 form.open,انتخاب ترکیب,Choose formation
-form.n0,الماس,Diamond
+form.n0,موج,Wave
 form.n1,عقاب,Eagle
-form.n2,موج,Wave
-form.n3,ماه,Moon
+form.n2,الماس,Diamond
+form.n3,لبه,Edge
 form.n4,دیوانه,Crazy
-form.n5,لبه,Edge
-form.n6,نیش,Sting
+form.n5,ماه,Moon
+form.n6,حمله همه جانبه,All-out Attack
 form.n7,بازو,Arm
-form.n8,حمله همه جانبه,All-out Attack
+form.n8,نیش,Sting

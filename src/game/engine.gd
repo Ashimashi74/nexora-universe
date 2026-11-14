@@ -51,11 +51,11 @@ const SPIN_VIS := 0.25
 # Every body is treated like a pool ball on cloth: straight lines, constant rolling friction (linear speed decay),
 # near-elastic equal-mass collisions (centered hit stops the striker, cut shots split ~90°), cushions that mirror
 # the angle (in = out) and keep 85% of the speed. Continuous collision (time-of-impact rewind) + adaptive substeps.
-const PM := 36.0            # disc mass — foosball-style: discs are heavy/rigid, the ball is light.
+const PM := 40.0            # disc mass (v3: 36 -> 40, discs 20x the ball) — foosball-style: discs are heavy/rigid, the ball is light.
                             # 18:1 vs the ball means a disc barely moves when it touches the ball
                             # (≈9% speed change) while the ball flies off with ≈1.6x the disc speed.
 const BM := 2.0             # ball mass (light, billiard-like)
-const DISC_DISC_K := 0.45   # fraction of the disc-disc impulse actually applied: discs shove each
+const DISC_DISC_K := 0.35   # (v3: .45 -> .35) fraction of the disc-disc impulse actually applied: discs shove each
                             # other a little (foosball figures) instead of bouncing like billiard balls
 const SHOT_MAX := 1900.0    # disc launch speed at full drag (LMAX); scales LINEARLY with drag length
 const DISC_VMAX := 2000.0   # max launch speed (power stats / VIP can push a shot up to here)
@@ -68,11 +68,22 @@ const SETTLE_K := 2.0
 const E_SOFT := 0.55        # restitution of very light body contacts (rises linearly to E_BODY at V_SOFT)
 const V_SOFT := 240.0       # px/s normal approach speed at or above which contacts use the full E_BODY
 const E_BODY := 0.95        # restitution disc-disc (unchanged)
-const E_DISC_BALL := 0.70   # restitution disc-ball (was 0.95). With the 3:1 mass ratio, 0.95 launched the ball at 1.46x
+const E_DISC_BALL := 0.55   # v3: .70 -> .55 (ball hops/bounces less off discs). Was 0.95 before. With the 3:1 mass ratio, 0.95 launched the ball at 1.46x
                             # the disc's speed (~8 pitch lengths of roll) - a light, flying ball. 0.70 keeps a strong shot
                             # (ball leaves at 1.275x the disc speed) while the ball feels heavier and a ball hitting a disc
                             # thuds (disc gets 42%, ball rebounds 27%) instead of knocking it away.
-const E_CUSHION := 0.85     # restitution off walls / goal frame / posts; tangential speed scaled the same -> angle in = angle out
+const E_CUSHION := 0.85     # restitution off walls / goal frame for DISCS; tangential speed scaled the same -> angle in = angle out
+# --- v3 physics (user: discs clearly heavier, soft small push after a hit without jitter; ball shot with the same system but
+#     must not bounce/hop around: lower restitution off walls and discs, a little more damping, no vertical hop) ---
+const E_CUSHION_BALL := 0.62    # ball off walls / goal frame / posts (was E_CUSHION .85)
+const E_CUSHION_BALL_T := 0.92  # ball's speed ALONG a cushion is mostly kept (only the bounce off it is damped)
+const E_CUSHION_SOFT := 0.45    # a struck (soft) disc off a wall: dies instead of rebounding
+const E_DISC_DISC := 0.30       # disc-disc restitution (was E_BODY .95): discs thud, they don't bounce like pool balls
+const BALL_FRICTION := 400.0    # ball cloth friction px/s^2 (was FRICTION 360)
+const BALL_DRAG := 0.30         # extra linear damping of the ball, 1/s (was 0)
+const DISC_HIT_FRICTION := 1100.0  # friction of a struck disc until it stops (shooter keeps FRICTION)
+const STRUCK_MASS_K := 3.0     # disc-disc: the struck disc behaves 3x heavier (replaces the DISC_DISC_K impulse scaling)
+const DISC_V_STOP := 14.0       # discs below this speed snap to rest (was V_STOP 6) -> no creeping / jitter
 const SUB_PX := 4.0         # max travel per substep (px): substeps chosen so no body moves more than this per substep
 const SUB_MAX := 16
 const ROLL_K := 0.6         # visual roll rate vs true rolling (render only)
@@ -173,6 +184,10 @@ var c_turn_time := 15.0
 var c_vip := [false, false]
 var c_forms := [0, 0]
 var c_stats = null
+## v3 tournament rules (RN v6): shots per team (0 = unlimited); with a time limit, `win` goals end the match early (0 = none)
+var c_max_shots := 0
+var c_win := 0
+var team_shots := [0, 0]
 
 func _init(_cfg: Dictionary) -> void:
 	cfg = _cfg
@@ -190,11 +205,17 @@ func _init(_cfg: Dictionary) -> void:
 	c_vip = cfg.get("vip", [false, false])
 	c_forms = cfg.get("forms", [0, 0])
 	c_stats = cfg.get("stats", null)
+	c_max_shots = int(cfg.get("max_shots", cfg.get("maxShots", 0)))
+	c_win = int(cfg.get("win", 0))
+	c_forms = [int(c_forms[0]), int(c_forms[1])] if c_forms is Array and c_forms.size() >= 2 else [D.FORM_DEFAULT, D.FORM_DEFAULT]
 	var fi := int(cfg.get("field", 0))
 	f = D.FIELDS[fi] if fi >= 0 and fi < D.FIELDS.size() else D.FIELDS[0]
 	Fl = f.L + 4; Fr = f.R - 4; Ft = f.T + 4; Fb = f.B - 4
 	F = {"l": Fl, "r": Fr, "t": Ft, "b": Fb}
-	CX = (Fl + Fr) / 2.0; CY = (Ft + Fb) / 2.0; KY = f.cs
+	CX = (Fl + Fr) / 2.0; CY = (Ft + Fb) / 2.0
+	# v3 fix: Data.FIELDS[].cs was never scaled when the fields were stretched (+30% length), which put the kickoff spot
+	# ~200 px above the painted centre spot. The centre spot is the middle of the play area on every field.
+	KY = CY if (v4 == false) else f.cs
 	var gi: Array = D.GS[f.gs]
 	var gw: float = 2.0 * f.g / (gi[3] - gi[2])
 	GG = {"w": gw, "h": gw * gi[1] / gi[0] * 1.28, "x": CX - f.g - gi[2] * gw}
@@ -217,8 +238,10 @@ func reset(kick_team: int) -> void:
 		for i in sl.size():
 			var nx: float = sl[i][0]
 			var ny: float = sl[i][1]
-			var ins := pr + (10.0 if v4 else 6.0)
-			var x := Fl + ins + nx * (Fw - 2 * ins)
+			var ins := pr + 10.0
+			# team 1 is the 180° rotation of team 0 (each side sees its formation exactly as designed from its own goal)
+			var lx := (1.0 - nx) if cm else nx
+			var x := Fl + ins + lx * (Fw - 2 * ins)
 			var y := (Ft + ny * Fh) if cm else (Fb - ny * Fh)
 			bodies.append(_mk(x, y, cm, pr, 5.0 if v4 else PM, cm * 20 + i))
 	ball = _mk(CX, KY, 2, BR if not v4 else 25.5, BM, 99)
@@ -226,6 +249,13 @@ func reset(kick_team: int) -> void:
 	turn = kick_team; phase = "aim"; drag = null; pause = 0.0; idle = 0.0; shots = 0
 	tleft = c_turn_time; ai_t = 0.0; ai_plan = null
 	events.append({"t": "turn", "team": turn})
+
+## change a side's formation; it is applied at the next kickoff (start / after every goal)
+func set_form(team: int, fi: int) -> void:
+	if team < 0 or team > 1 or fi < 0 or fi >= D.FORMS.size(): return
+	c_forms[team] = fi
+	var f: Array = cfg.get("forms", [0, 0])
+	if f is Array and f.size() >= 2: f[team] = fi
 
 func is_ai_turn() -> bool: return (c_ai and turn == 1) or bool(ai_teams[turn])
 func can_control() -> bool: return phase == "aim" and not is_ai_turn()
@@ -291,9 +321,12 @@ func fire(b: NxBody, dx: float, dy: float, l: float, human := false) -> void:
 	var vx := ux * v
 	var vy := uy * v
 	if v4: b.tvx = vx * 1.02; b.tvy = vy * 1.02; b.ramp = 0.06; b.vx = vx * 0.5; b.vy = vy * 0.5; b.boost = 0.22
-	else: b.vx = vx; b.vy = vy; b.ramp = 0.0; b.boost = 0.0; b.tvx = 0.0; b.tvy = 0.0; b.spin = 0.0
+	else: b.vx = vx; b.vy = vy; b.ramp = 0.0; b.boost = 0.0; b.tvx = 0.0; b.tvy = 0.0; b.spin = 0.0; b.soft = false
+	if not v4:
+		for ob: NxBody in bodies: ob.shooter = false
+		b.shooter = true
 	if not v4 and b.team != turn: turn = b.team
-	phase = "move"; idle = 0.0; shots += 1; drag = null
+	phase = "move"; idle = 0.0; shots += 1; team_shots[team] += 1; drag = null
 	if v4: cam = maxf(cam, 0.18)   # nx8/Godot: no camera kick on shots (crisp, no shake)
 	last_who = b.team
 	events.append({"t": "shot", "team": b.team})
@@ -513,14 +546,24 @@ func _hit8(a: NxBody, b: NxBody, h: float) -> void:
 		var ny := dy / d
 		vn = rvx * nx + rvy * ny
 		if vn < 0.0:
-			# light contacts thud instead of bouncing (less jiggle); real hits stay at E_BODY
-			var e_full := E_DISC_BALL if isB else E_BODY
+			# v3: the slower body of the pair is the one being hit -> it becomes "soft" (heavy friction until it stops)
+			var sa2 := a.vx * a.vx + a.vy * a.vy
+			var sb2 := b.vx * b.vx + b.vy * b.vy
+			var hit_b: NxBody = a if sa2 < sb2 else b
+			if hit_b != ball and not hit_b.shooter: hit_b.soft = true
+			# light contacts thud instead of bouncing (less jiggle); real hits use E_DISC_BALL / E_DISC_DISC
+			var e_full := E_DISC_BALL if isB else E_DISC_DISC
 			var ee := e_full if -vn >= V_SOFT else lerpf(minf(E_SOFT, e_full), e_full, -vn / V_SOFT)
-			var j := -(1.0 + ee) * vn / sm
+			# foosball: discs are rigid figures planted on the cloth. In a disc-disc hit the struck disc reacts as if it
+			# were STRUCK_MASS_K times heavier (a full, separating impulse — no repeated half-impulses that glued the pair
+			# together and dragged the struck disc along), so it only gets a short soft push and the striker is stopped.
+			var ima := a.im
+			var imb := b.im
 			if not isB:
-				# foosball: discs are rigid figures, disc-disc hits only nudge each other
-				j *= DISC_DISC_K
-			a.vx -= j * nx * a.im; a.vy -= j * ny * a.im; b.vx += j * nx * b.im; b.vy += j * ny * b.im
+				if hit_b == a: ima /= STRUCK_MASS_K
+				else: imb /= STRUCK_MASS_K
+			var j := -(1.0 + ee) * vn / (ima + imb)
+			a.vx -= j * nx * ima; a.vy -= j * ny * ima; b.vx += j * nx * imb; b.vy += j * ny * imb
 			_cap(a); _cap(b)
 		a.x += a.vx * s; a.y += a.vy * s; b.x += b.vx * s; b.y += b.vy * s
 	# any overlap left (bodies pushed together by a third body / a wall) is removed positionally, no velocity change
@@ -543,7 +586,7 @@ func _hit8(a: NxBody, b: NxBody, h: float) -> void:
 			var pw := minf(1, -vn / 2100.0)
 			if pw > 0.2:
 				var o := a if ball == b else b
-				ball.sq = maxf(ball.sq, pw * 0.6); o.sq = maxf(o.sq, pw * 0.25)
+				ball.sq = maxf(ball.sq, pw * 0.3); o.sq = maxf(o.sq, pw * 0.15)   # v3: smaller squash pulse (no hop look)
 				if pw > 0.45:
 					burst((a.x + b.x) / 2, (a.y + b.y) / 2, int(roundf(4 + pw * 8)), 200 + pw * 260, HIT_COLS, 0.3, 2)
 
@@ -596,9 +639,20 @@ func _post8(b: NxBody, px: float, py: float) -> void:
 	b.x = px + nx * m; b.y = py + ny * m
 	if vn < 0:
 		# mirror the velocity about the tangent and scale the whole vector by E_CUSHION
-		b.vx = E_CUSHION * (b.vx - 2.0 * vn * nx); b.vy = E_CUSHION * (b.vy - 2.0 * vn * ny)
+		var ec := _ec(b)
+		b.vx = ec * (b.vx - 2.0 * vn * nx); b.vy = ec * (b.vy - 2.0 * vn * ny)
 		if b == ball:
 			events.append({"t": "post", "power": -vn / 1800})
+
+## v3: restitution of a cushion contact for this body (ball / struck disc / free disc)
+func _ec(b: NxBody) -> float:
+	if b == ball: return E_CUSHION_BALL
+	return E_CUSHION_SOFT if b.soft else E_CUSHION
+
+## v3: tangential speed kept along a cushion. The ball keeps most of it (it slides along the wall instead of dying in
+## the disc-wall wedge); discs keep the old angle-in = angle-out scaling.
+func _et(b: NxBody) -> float:
+	return E_CUSHION_BALL_T if b == ball else _ec(b)
 
 ## cushion bounce on an axis-aligned wall: normal component reversed, whole velocity scaled by E_CUSHION
 ## (so the reflection angle equals the incidence angle), overshoot mirrored back.
@@ -609,8 +663,9 @@ func _cushion_x(b: NxBody, wall: float, side: float) -> void:
 	if b.vx * side < 0.0:
 		var vs := sqrt(b.vx * b.vx + b.vy * b.vy)
 		if b == ball and vs > 200: events.append({"t": "wall", "power": vs / 1800})
-		b.vx = -b.vx * E_CUSHION; b.vy *= E_CUSHION
-		b.x = wall + side * over * E_CUSHION
+		var ec := _ec(b)
+		b.vx = -b.vx * ec; b.vy *= _et(b)
+		b.x = wall + side * over * ec
 	else:
 		b.x = wall
 
@@ -620,8 +675,9 @@ func _cushion_y(b: NxBody, wall: float, side: float, ev := true) -> void:
 	if b.vy * side < 0.0:
 		var vs := sqrt(b.vx * b.vx + b.vy * b.vy)
 		if ev and b == ball and vs > 200: events.append({"t": "wall", "power": vs / 1800})
-		b.vy = -b.vy * E_CUSHION; b.vx *= E_CUSHION
-		b.y = wall + side * over * E_CUSHION
+		var ec := _ec(b)
+		b.vy = -b.vy * ec; b.vx *= _et(b)
+		b.y = wall + side * over * ec
 	else:
 		b.y = wall
 
@@ -650,10 +706,10 @@ func _walls8(b: NxBody) -> void:
 			if dp + r > DEPTH:
 				b.y = back - g.d * r
 				if g.d * b.vy > 0:
-					b.vy = -b.vy * (0.2 if gl else E_CUSHION)
-					b.vx *= (0.6 if gl else E_CUSHION)
+					b.vy = -b.vy * (0.2 if gl else _ec(b))
+					b.vx *= (0.6 if gl else _ec(b))
 			if dp > (r * 0.6 if bl else 0.0):
-				var ee := 0.3 if gl else E_CUSHION
+				var ee := 0.3 if gl else _ec(b)
 				if b.x < g.x1 + r:
 					b.x = g.x1 + r
 					if b.vx < 0: b.vx = -b.vx * ee; b.vy *= (1.0 if gl else ee)
@@ -696,8 +752,12 @@ func _sub8(h: float) -> void:
 		var sp := sqrt(b.vx * b.vx + b.vy * b.vy)
 		if sp > 0:
 			# cloth rolling friction: constant deceleration along the current direction (straight line, linear speed decay)
-			var ns := sp - FRICTION * (SETTLE_K if sp < V_SETTLE else 1.0) * h
-			if ns < V_STOP: b.vx = 0.0; b.vy = 0.0
+			var isb := b == ball
+			var fr := BALL_FRICTION if isb else (DISC_HIT_FRICTION if b.soft else FRICTION)
+			var ns := sp - fr * (SETTLE_K if sp < V_SETTLE else 1.0) * h
+			if isb: ns -= BALL_DRAG * sp * h
+			if ns < (V_STOP if isb else DISC_V_STOP):
+				b.vx = 0.0; b.vy = 0.0; b.soft = false
 			else:
 				var k2 := minf(ns, V_SAFE) / sp
 				b.vx *= k2; b.vy *= k2
@@ -830,6 +890,35 @@ func burst(x: float, y: float, n: int, sp: float, cols: Array, life: float, k :=
 		p.c = cols[i % cols.size()]; p.r = 2 + rng.randf() * 3.5; p.k = k; p.g = 600.0 if k == 3 else 0.0
 		parts.append(p)
 
+## v3: with the calmer ball (lower restitution) a ball resting jammed in a corner can no longer be bounced out by a
+## direct hit (any disc contact only drives it deeper). When play stops with the ball in a corner, it is put back
+## into play a little way out along the corner diagonal, on the nearest spot no disc covers (foosball "dead ball" rule).
+func _free_corner_ball() -> void:
+	if ball == null: return
+	var r := ball.r
+	var gap := 8.0
+	var at_l := ball.x - r <= Fl + gap
+	var at_r := ball.x + r >= Fr - gap
+	var at_t: bool = ball.y - r <= Ft + gap and (ball.x < goals[0].x1 or ball.x > goals[0].x2)
+	var at_b: bool = ball.y + r >= Fb - gap and (ball.x < goals[1].x1 or ball.x > goals[1].x2)
+	if not ((at_l or at_r) and (at_t or at_b)): return
+	var dx := 1.0 if at_l else -1.0
+	var dy := 1.0 if at_t else -1.0
+	var cx := (Fl if at_l else Fr) + dx * r
+	var cy := (Ft if at_t else Fb) + dy * r
+	for k in range(4, 40):
+		var d := k * 10.0
+		var x := cx + dx * d * 0.7071
+		var y := cy + dy * d * 0.7071
+		var free := true
+		for o: NxBody in bodies:
+			if o == ball: continue
+			if (o.x - x) * (o.x - x) + (o.y - y) * (o.y - y) < (o.r + r + 4) * (o.r + r + 4): free = false; break
+		if free:
+			ball.x = x; ball.y = y; ball.px = x; ball.py = y; ball.vx = 0.0; ball.vy = 0.0
+			events.append({"t": "corner"})
+			return
+
 func _finish_turn() -> void:
 	turn = 1 - turn; phase = "aim"; tleft = c_turn_time; ai_t = 0.0; ai_plan = null
 	events.append({"t": "turn", "team": turn})
@@ -863,7 +952,13 @@ func update(rdt: float) -> void:
 		for b: NxBody in bodies:
 			if b.vx != 0 or b.vy != 0 or (v4 and b.ramp > 0): moving = true; break
 		idle = 0.0 if moving else idle + dt
-		if idle > (0.15 if v4 else 0.25): _finish_turn()
+		if idle > (0.15 if v4 else 0.25):
+			# shot limit reached by both sides: decide, or go to sudden death (next goal wins) when level
+			if c_max_shots > 0 and not sudden and team_shots[0] >= c_max_shots and team_shots[1] >= c_max_shots:
+				if score[0] != score[1]: _end(); tick_fx(dt); return
+				sudden = true; events.append({"t": "clock"})
+			if not v4: _free_corner_ball()
+			_finish_turn()
 	elif phase == "aim":
 		if c_match_time > 0 and not sudden and mleft <= 0:
 			if score[0] != score[1]: _end(); return
@@ -877,7 +972,9 @@ func update(rdt: float) -> void:
 	elif phase == "goal":
 		pause -= dt
 		if pause <= 0:
-			if c_match_time > 0:
+			if c_win > 0 and c_match_time > 0 and (score[0] >= c_win or score[1] >= c_win): _end()
+			elif sudden and c_max_shots > 0 and score[0] != score[1]: _end()
+			elif c_match_time > 0:
 				if sudden or (mleft <= 0 and score[0] != score[1]): _end()
 				else:
 					if mleft <= 0: sudden = true

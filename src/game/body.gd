@@ -41,6 +41,11 @@ var gout = null            # NxEngine.Goal or null
 var tr: Array = []         # Array[Vector2] disc motion trail
 ## ball launch ramp timer (feel tweak: eases the ball up to its struck velocity over ~75 ms; 0 in classic mode)
 var lt: float = 0.0
+## v3 physics: a disc that was struck (by the ball or another disc) gets heavy cloth friction until it stops,
+## so its push after a hit is short and soft (no drifting / jitter). Cleared when it stops or is shot.
+var soft: bool = false
+## v3: the disc shot this turn (never turns soft while it is travelling)
+var shooter: bool = false
 
 func _init(_x := 0.0, _y := 0.0, _team := 0, _r := 0.0, m := 1.0, _id := 0) -> void:
 	id = _id; team = _team; x = _x; y = _y; px = _x; py = _y; r = _r; im = 1.0 / m

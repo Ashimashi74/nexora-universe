@@ -9,7 +9,7 @@ signal changed
 
 const PATH := "user://profile.json"
 const INT_KEYS := ["coins", "gems", "xp", "trophies", "played", "wins", "losses", "draws", "goalsFor", "goalsAgainst", "ball", "field", "form",
-	"lastDaily", "streak", "aiLvl", "limit", "turnTime", "cupsWon", "winStreak", "bestStreak", "chests", "lastChest", "fieldsV"]
+	"lastDaily", "streak", "aiLvl", "limit", "turnTime", "cupsWon", "winStreak", "bestStreak", "chests", "lastChest", "fieldsV", "formsV"]
 
 var p: Dictionary = {}
 var ready_ok := false
@@ -29,7 +29,7 @@ func default_profile() -> Dictionary:
 	return {
 		"name": "Pilot", "coins": 600, "gems": 20, "xp": 0, "trophies": 0,
 		"played": 0, "wins": 0, "losses": 0, "draws": 0, "goalsFor": 0, "goalsAgainst": 0,
-		"team": "club0", "ball": 0, "field": D.DEFAULT_FIELD, "form": 0,
+		"team": "club0", "ball": 0, "field": D.DEFAULT_FIELD, "form": D.FORM_DEFAULT, "formsV": 3,
 		"ownedTeams": free_teams, "ownedBalls": balls, "ownedFields": fields,
 		"lastDaily": 0, "streak": 0,
 		"sound": true, "music": true, "haptics": true, "aiLvl": 1, "limit": 3, "turnTime": 15,
@@ -50,6 +50,7 @@ func _ready() -> void:
 		if raw is Dictionary:
 			var q := default_profile()
 			q["fieldsV"] = raw.get("fieldsV", 1)
+			q["formsV"] = raw.get("formsV", 0)
 			for k in raw: q[k] = raw[k]
 			p = migrate(_normalize(q))
 	ready_ok = true
@@ -102,7 +103,9 @@ func migrate(q: Dictionary) -> Dictionary:
 	for t in D.TEAMS:
 		if t.id == n.team: ok = true; break
 	if not ok: n.team = "club0"   # also catches discs removed by the art audit (Data.REMOVED_TEAMS)
-	if not (int(n.get("form", 0)) >= 0 and int(n.get("form", 0)) < D.FORMS.size()): n.form = 0
+	# v3: the 9 RN v6 reference formations replaced the old list (different order) -> start from the default once
+	if int(n.get("formsV", 0)) < 3: n.form = D.FORM_DEFAULT; n.formsV = 3
+	if not (int(n.get("form", 0)) >= 0 and int(n.get("form", 0)) < D.FORMS.size()): n.form = D.FORM_DEFAULT
 	return n
 
 func set_p(patch: Dictionary) -> void:

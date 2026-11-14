@@ -190,7 +190,7 @@ const FIELD_LIST := [["pitch", "NEXORA Pitch"], ["forest", "Forest"], ["ice", "I
 const BALL_NAMES := ["Bolt", "Prism", "Wave", "Starlight", "Classic", "Rainbow", "Neon", "Yin", "Fire", "Blade", "Ghost", "Ember", "Plasma", "Noir Copper", "Space Modern", "Purple Sky", "Black Lux", "Electron", "Cobalt Gold", "Aurora", "Crimson", "Teal Storm", "Royal Gold", "Gold Rush", "Classic Red", "Luxury", "Noir Chrome", "Violet Strike", "Emerald Edge", "Royal Blue Gold", "Crimson Noir", "Blaze Orange", "Aqua Wave", "Sunset Pro", "Elite Cobalt", "Crown Luxury"]
 const TRAILS := [["#19b4ff", "#8fe6ff", "#ffffff"], ["#ff7bd5", "#7bd7ff", "#ffffff"], ["#2fe0d0", "#9ff7ef", "#ffffff"], ["#5cb6ff", "#bfe3ff", "#ffffff"], ["#e8ecf2", "#9aa3b0", "#ffffff"], ["#ff5b5b", "#ffd23a", "#5bff8a", "#5bd0ff", "#c05bff"], ["#4dff2a", "#b6ff9a", "#ffffff"], ["#ffffff", "#9b5cff", "#000000"], ["#ff8a1f", "#ffd24a", "#fff3c4"], ["#ff2b3a", "#ff8a92", "#ffffff"], ["#dbe7ff", "#8fb0ff", "#ffffff"], ["#ff6a1f", "#ffb347", "#fff0c8"], ["#2f8bff", "#7fc6ff", "#ffffff"], ["#d9915b", "#f2c9a0", "#fff4e6"], ["#2f7bff", "#8fd0ff", "#ffffff"], ["#9b5cff", "#e0b8ff", "#ffffff"], ["#e0a82e", "#ffe08a", "#fff7d6"], ["#2f6bff", "#7fb4ff", "#ffffff"], ["#2f8bff", "#e8b84a", "#ffffff"], ["#1fd6a0", "#3b9bff", "#ffffff"], ["#ff2b3a", "#ff8a92", "#ffffff"], ["#18d8c0", "#9ff5e6", "#ffffff"], ["#2f5bff", "#ffc83a", "#fff3c4"], ["#ffffff", "#e0a82e", "#000000"], ["#ff4a4a", "#9aa3b0", "#ffffff"], ["#e0a82e", "#fff0b0", "#ffffff"], ["#2f8bff", "#c0c8d8", "#ffffff"], ["#9b5cff", "#ffffff", "#ffffff"], ["#4dff2a", "#c0c8d8", "#ffffff"], ["#e8b84a", "#2f6bff", "#ffffff"], ["#ff2b3a", "#ff8a92", "#ffffff"], ["#ff8a1f", "#ffd24a", "#ffffff"], ["#3b9bff", "#2fe08a", "#ffffff"], ["#ff4a7a", "#9b5cff", "#ffffff"], ["#2f6bff", "#ffffff", "#ffffff"], ["#ffd56b", "#ffffff", "#ffffff"]]
 const VIP_PRICES := [260, 275, 290, 255, 300, 265, 280, 270, 0, 295, 285, 250]
-const FORMS := [["1-2-2", "Balanced", [[.09, 1], [.22, 2], [.36, 2]]], ["2-2-1", "Cautious", [[.10, 2], [.24, 2], [.37, 1]]], ["3-1-1", "Wall", [[.10, 3], [.25, 1], [.37, 1]]], ["2-1-2", "Diamond", [[.10, 2], [.24, 1], [.37, 2]]], ["1-3-1", "Midfield", [[.09, 1], [.23, 3], [.37, 1]]], ["1-1-3", "Attack", [[.09, 1], [.22, 1], [.36, 3]]]]
+const FORMS := []   # v3: always read from Data.FORMS (RN v6 9 reference formations)
 const RARITY := [{"n": "COMMON", "c": "#8ea3d6"}, {"n": "RARE", "c": "#4fe3ff"}, {"n": "EPIC", "c": "#b46bff"}, {"n": "LEGENDARY", "c": "#ffd257"}]
 const LEAGUES := [["BRONZE", 0], ["SILVER", 300], ["GOLD", 800], ["PLATINUM", 1600], ["DIAMOND", 3000], ["NEXORA", 5000]]
 const LEAGUE_FA := {"BRONZE": "برنز", "SILVER": "نقره", "GOLD": "طلا", "PLATINUM": "پلاتین", "DIAMOND": "الماس", "NEXORA": "نکسورا"}
@@ -273,15 +273,7 @@ static func trail(i: int) -> Array:
 	return TRAILS[i % TRAILS.size()]
 
 static func slots(fi: int) -> Array:
-	if has("Data", "slots"):
-		return node("Data").slots(fi)
-	var o := []
-	for row in forms()[fi][2]:
-		var ny: float = row[0]
-		var c: int = int(row[1])
-		for i in c:
-			o.append([0.5 if c == 1 else (.27 + .46 * i if c == 2 else .17 + .33 * i), ny])
-	return o
+	return node("Data").slots(fi)
 
 static func team_price(t: Dictionary) -> int:
 	if has("Data", "team_price"):

@@ -85,6 +85,7 @@ func _initialize() -> void:
 	_open_case()
 	_aim_case()
 	_pool_cases()
+	_struck_cases()
 	quit(0)
 
 func _open(e) -> void:
@@ -405,3 +406,30 @@ func _mass_cases() -> void:
 		e.fire(d, 0.0, -pw * e.LMAX, pw * e.LMAX, true)
 		var r := _impact(e, d, e.ball)
 		print("MASS disc->ball p=", pw, " disc_in=", snappedf(r.pre.length(), 0.1), " ball_out=", snappedf(r.tg.length(), 0.1), " (", snappedf(100.0 * r.tg.length() / r.pre.length(), 0.1), "%) disc_keeps=", snappedf(r.st.length(), 0.1), " (", snappedf(100.0 * r.st.length() / r.pre.length(), 0.1), "%)")
+
+## v3 (user: struck discs move soft and small, no jitter): a full-power disc shot straight into a resting disc —
+## how far does the struck disc travel, how long until everything rests, and does any disc oscillate (jitter = velocity sign flips)
+func _struck_cases() -> void:
+	var cm: Dictionary = (EngineS as GDScript).get_script_constant_map()
+	print("--- STRUCK --- E_DISC_DISC=", cm.get("E_DISC_DISC", "n/a"), " STRUCK_MASS_K=", cm.get("STRUCK_MASS_K", "n/a"), " DISC_HIT_FRICTION=", cm.get("DISC_HIT_FRICTION", "n/a"), " DISC_V_STOP=", cm.get("DISC_V_STOP", "n/a"))
+	for pw in [1.0, 0.5, 0.25]:
+		var e = _mk_engine()
+		var d = _first_disc(e)
+		var o = _opp_disc(e)
+		_clear_except(e, [d, o, e.ball])
+		_open(e)
+		e.ball.x = 300; e.ball.y = 300
+		d.x = 0; d.y = 0
+		o.x = 0; o.y = -(d.r + o.r + 40)
+		var o0 := Vector2(o.x, o.y)
+		e.turn = 0; e.phase = "aim"
+		e.fire(d, 0.0, -pw * e.LMAX, pw * e.LMAX, true)
+		var t := 0
+		var flips := 0
+		var last_vy: float = 0.0
+		while t < 240 * 20:
+			e._sim(e.STEP); t += 1
+			if last_vy != 0.0 and o.vy != 0.0 and signf(o.vy) != signf(last_vy): flips += 1
+			if o.vy != 0.0: last_vy = o.vy
+			if d.vx == 0 and d.vy == 0 and o.vx == 0 and o.vy == 0: break
+		print("STRUCK disc<-disc p=", pw, " struck disc moved ", snappedf(o0.distance_to(Vector2(o.x, o.y)), 0.1), "px, striker moved ", snappedf(Vector2(d.x, d.y).length(), 0.1), "px, rest after ", snappedf(t * e.STEP, 0.01), "s, struck-disc direction flips=", flips)

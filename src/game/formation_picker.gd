@@ -7,6 +7,15 @@ extends VBoxContainer
 
 const D := preload("res://src/core/data.gd")
 
+## v3 options (set before add_child): value (-1 = Store.p.form), disc art, on_select(fi) callback,
+## save (write Store.p.form on pick), title / subtitle overrides, read_only (captain-only online picks)
+var value := -1
+var disc_tex: Texture2D = null
+var on_select: Callable = Callable()
+var save := true
+var title_text := ""
+var sub_text := ""
+var read_only := false
 var _cards: Array = []
 var _btns: Array = []
 var _thumbs: Array = []
@@ -17,10 +26,11 @@ static func t(key: String, fa: String) -> String:
 
 func _ready() -> void:
 	add_theme_constant_override("separation", 24)
-	var title := Kit.title(t("form.title", "ترکیب"), 56)
+	if value < 0: value = int(UD.p().get("form", D.FORM_DEFAULT))
+	var title := Kit.title(title_text if title_text != "" else t("form.title", "ترکیب"), 56)
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(title)
-	var sub := Kit.label(t("form.subtitle", "چیدمان تیمت را انتخاب کن"), 30, NX.DIM)
+	var sub := Kit.label(sub_text if sub_text != "" else t("form.subtitle", "چیدمان تیمت را انتخاب کن"), 30, NX.DIM)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	add_child(sub)
 	var sc := ScrollContainer.new()
@@ -34,7 +44,7 @@ func _ready() -> void:
 	grid.add_theme_constant_override("v_separation", 18)
 	sc.add_child(grid)
 	var p := UD.p()
-	var tex: Texture2D = UD.team_tex(UD.team_by_id(str(p.get("team", "club0"))))
+	var tex: Texture2D = disc_tex if disc_tex else UD.team_tex(UD.team_by_id(str(p.get("team", "club0"))))
 	for i in D.FORMS.size():
 		var card := PanelContainer.new()
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -42,7 +52,7 @@ func _ready() -> void:
 		v.add_theme_constant_override("separation", 10)
 		card.add_child(v)
 		var th := _Thumb.new()
-		th.pts = D.FORMS[i][3]
+		th.pts = D.FORMS[i][2]
 		th.tex = tex
 		th.custom_minimum_size = Vector2(280, 300)
 		th.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -64,13 +74,21 @@ func _ready() -> void:
 	_refresh()
 
 func _pick(i: int) -> void:
-	if i == int(UD.p().get("form", 0)): return
-	UD.set_p({"form": i})
+	if read_only or i == value: return
+	value = i
+	if save: UD.set_p({"form": i})
 	UD.sfx("ui")
+	_refresh()
+	if on_select.is_valid(): on_select.call(i)
+
+## external update (online: the host's state changed)
+func set_value(i: int) -> void:
+	if i == value: return
+	value = i
 	_refresh()
 
 func _refresh() -> void:
-	var cur := clampi(int(UD.p().get("form", 0)), 0, D.FORMS.size() - 1)
+	var cur := clampi(value, 0, D.FORMS.size() - 1)
 	for i in _cards.size():
 		var on := i == cur
 		var sb := StyleBoxFlat.new()
@@ -130,11 +148,12 @@ class _Thumb extends Control:
 		draw_rect(Rect2((w - bw) * 0.5, h - m - bh, bw, bh), lc, false, 2.0, true)
 		draw_rect(Rect2((w - w * 0.28) * 0.5, h - m - bh * 0.42, w * 0.28, bh * 0.42), lc, false, 2.0, true)
 		draw_rect(Rect2((w - w * 0.3) * 0.5, h - m + 1, w * 0.3, m - 2), Color(1, 1, 1, 0.9))
-		# discs (same mapping as the engine: lateral 0..1 inset by the disc radius, depth 0 goal line .. 1 halfway)
+		# discs (RN v6 FormationMini mapping, own goal at the bottom): nx = across, ny = depth from the own goal line
+		# (0.03 .. 0.47 of the full pitch fills the half shown here)
 		var dr := w * 0.085
 		for pt in pts:
-			var x := m + dr + float(pt[1]) * (w - 2 * (m + dr))
-			var y := (h - m) - (0.045 + float(pt[0]) * 0.40) * 2.0 * (h - 2 * m)
+			var x := m + dr + float(pt[0]) * (w - 2 * (m + dr))
+			var y := (h - m) - ((float(pt[1]) - 0.03) / 0.44) * (h - 2 * m)
 			y = clampf(y, m + dr, h - m - dr)
 			draw_circle(Vector2(x, y + 3), dr, Color(0, 0, 0, 0.35))
 			draw_circle(Vector2(x, y), dr + 3, Color(0.4, 0.92, 1.0) if on else Color(0.85, 0.9, 1.0, 0.9))
