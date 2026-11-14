@@ -87,6 +87,7 @@ func _ready() -> void:
 	add_child(touch)
 	_build_hud()
 	_build_banner()
+	_build_change_form()
 	resized.connect(_layout)
 	_layout()
 	_coach = _load_coach()
@@ -280,6 +281,30 @@ func _build_pause() -> void:
 	var tw := root.create_tween().set_parallel(true)
 	tw.tween_property(root, "modulate:a", 1.0, 0.18)
 	tw.tween_property(pn, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+# ------------------------------------------------------------------ «تغییر ترکیب» (RN v6): bottom-left, applies at the next kickoff
+var change_form: NxChangeForm
+
+func _build_change_form() -> void:
+	if bots: return
+	change_form = NxChangeForm.new()
+	change_form.value = int((eng.c_forms as Array)[0])
+	change_form.disc_tex = D.team_tex(String(teams[0].get("id", "club0")))
+	change_form.on_open = func():
+		if not ended:
+			paused = true; _dragging = false; eng.cancel()
+	change_form.on_close = func(): if not ended: paused = false
+	change_form.on_select = func(fi: int):
+		eng.set_form(0, fi)
+		cfg["forms"] = eng.c_forms
+		if launch_mode() == "local": eng.set_form(1, fi)
+	change_form.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	change_form.position = Vector2(26, size.y - NX.safe_bottom - 150)
+	add_child(change_form)
+	resized.connect(func(): if is_instance_valid(change_form): change_form.position = Vector2(26, size.y - NX.safe_bottom - change_form.size.y - 30))
+
+func launch_mode() -> String:
+	return mode
 
 # ------------------------------------------------------------------ loadout (formation / ball / disc) mid-match
 ## Opens a sheet over the match (the match waits while it is open). Ball and disc skins swap right away

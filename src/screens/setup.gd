@@ -174,4 +174,5 @@ func _go() -> void:
 	UD.set_p({"aiLvl": lvl, "limit": 5 if rule == "g5" else 3, "turnTime": tt})
 	var launch := Launch.build(mode["k"], UD.p(), {"lvl": lvl, "rule": rule, "tt": tt, "opp": opp, "stage": 0})
 	Nav.close_sheet()
-	Nav.go("match", launch)
+	# v3 (RN v6): Setup → pre-match flow (team select → formation select) → match
+	Nav.go("prematch", {"launch": launch})

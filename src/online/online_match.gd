@@ -118,6 +118,7 @@ func _ready() -> void:
 	_build_cfg()
 	_build_view()
 	_build_hud()
+	_build_change_form()
 	_unsub = link.on_game(_on_msg)
 	if not link.changed.is_connected(_on_link_changed):
 		link.changed.connect(_on_link_changed)
@@ -227,6 +228,19 @@ func _build_cfg() -> void:
 	var tm0 := team_of_avatar(disc_of(t0[0] if t0.size() else null))
 	var tm1 := team_of_avatar(disc_of(t1[0] if t1.size() else null))
 	cfg["teams"] = [str(tm0.id), str(tm1.id)]
+	# v3: pre-match choices (team + formation per side, host applies them; clients mirror via snapshots)
+	var pk: Variant = params.get("picks")
+	if pk is Dictionary and pk.get("teams") is Array and pk.get("forms") is Array:
+		cfg["forms"] = [int(pk.forms[0]), int(pk.forms[1])]
+		cfg["stats"] = [_disc_stats(str(pk.teams[0])), _disc_stats(str(pk.teams[1]))]
+		tm0 = team_of_avatar(str(pk.teams[0])); tm1 = team_of_avatar(str(pk.teams[1]))
+		cfg["teams"] = [str(tm0.id), str(tm1.id)]
+	else:
+		cfg["forms"] = [Data.FORM_DEFAULT, Data.FORM_DEFAULT]
+	# tournament per-match rules carried in the room settings (RN v6 cfgFromRoom: shots / win)
+	var rs: Dictionary = room0.get("settings", {}) if room0.get("settings") is Dictionary else {}
+	if _num(rs.get("shots"), 0) > 0: cfg["max_shots"] = int(_num(rs.get("shots"), 0))
+	if _num(rs.get("win"), 0) > 0: cfg["win"] = int(_num(rs.get("win"), 0))
 	eng = NxEngine.new(cfg)
 	var my_team := -1
 	for p in players:
@@ -240,6 +254,23 @@ func _build_cfg() -> void:
 	start = {"my_team": my_team, "names": [nm.call(t0, "آبی"), nm.call(t1, "قرمز")], "teams": [tm0, tm1],
 		"team_ids": [str(tm0.id), str(tm1.id)], "ranked": bool(room0.get("ranked", false))}
 	flipped = my_team == 1
+
+## «تغییر ترکیب» (players only): the host applies it at the next kickoff
+var _change_form: NxChangeForm
+
+func _build_change_form() -> void:
+	var mt := int(start.get("my_team", -1))
+	if mt < 0 or bool(params.get("spectator", false)): return
+	_change_form = NxChangeForm.new()
+	_change_form.value = int((cfg.get("forms", [8, 8]) as Array)[mt])
+	_change_form.disc_tex = Data.team_tex(str(start.team_ids[mt]))
+	_change_form.on_select = func(fi: int):
+		UD.set_p({"form": fi})
+		if is_host: eng.set_form(mt, fi)
+		else: _send({"k": "form", "t": mt, "f": fi})
+	add_child(_change_form)
+	_change_form.position = Vector2(26, size.y - NX.safe_bottom - 160)
+	resized.connect(func(): if is_instance_valid(_change_form): _change_form.position = Vector2(26, size.y - NX.safe_bottom - _change_form.size.y - 30))
 
 func _name_of(uid: String) -> String:
 	if uid == "":
@@ -939,6 +970,18 @@ func _on_msg(m: Variant, from: String) -> void:
 		if b == null:
 			return
 		eng.drag = {"b": b, "sx": b.x, "sy": b.y, "cx": b.x - _num(m.get("dx"), 0), "cy": b.y - _num(m.get("dy"), 0), "ai": true}
+	elif k == "pm" and is_host:
+		# a late pre-match message: the match already started -> tell everyone to skip straight in
+		var pk: Variant = params.get("picks")
+		_send({"k": "pms", "ph": "go", "rem": 0, "picks": pk if pk is Dictionary else {"teams": cfg.get("teams", ["club0", "club0"]), "forms": cfg.get("forms", [8, 8])}, "ready": [true, true]})
+	elif k == "form" and is_host:
+		# a player changed their side's formation: applied at the next kickoff
+		var t := int(_num(m.get("t"), -1))
+		var f := int(_num(m.get("f"), -1))
+		for pl in link.state.players:
+			if str(pl.get("user_id", "")) == from and str(pl.get("role", "")) == "player" and pl.get("team") != null and int(pl.team) == t:
+				eng.set_form(t, f)
+				break
 	elif k == "res" and not is_host:
 		var sc: Variant = m.get("score")
 		cs.res = {"winner": int(_num(m.get("winner"), -1)), "rd": m.get("rd"), "score": sc if sc is Array and sc.size() == 2 else [eng.score[0], eng.score[1]], "ok": bool(m.get("ok", false))}

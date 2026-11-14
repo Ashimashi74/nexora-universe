@@ -159,7 +159,8 @@ func _go_match(mid: String) -> void:
 	for p in OUI.a(_st().get("players")):
 		if OUI.s(p.get("user_id")) == me and OUI.s(p.get("role")) == "player":
 			spectator = false
-	Nav.go("online_match", {"room_id": OUI.s(_room().get("id")), "match_id": mid, "link": link, "before": OUI.before_profile, "spectator": spectator})
+	# v3 (RN v6): room → pre-match (team + formation, host-synced timers) → match
+	Nav.go("online_prematch", {"room_id": OUI.s(_room().get("id")), "match_id": mid, "link": link, "before": OUI.before_profile, "spectator": spectator})
 
 
 func _watch_live() -> void:

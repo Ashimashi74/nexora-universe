@@ -47,6 +47,12 @@ const REG := {
 	"club": ["res://src/social/club.gd", "screen"],
 	"public_profile": ["res://src/social/public_profile.gd", "screen"],
 	"oracle": ["res://src/oracle/oracle.gd", "screen"],
+	# v3 (RN v6)
+	"prematch": ["res://src/prematch/pre_match.gd", "fs"],
+	"online_prematch": ["res://src/prematch/online_prematch.gd", "fs"],
+	"tournament_v2": ["res://src/online/tournaments_v2.gd", "screen"],
+	"admin": ["res://src/social/admin_panel.gd", "screen"],
+	"notifications": ["res://src/social/notifications.gd", "screen"],
 }
 ## backdrop theme per screen (RN Space theme per tab)
 const BACKDROP := {"home": ["m_home", 0.0], "play": ["m_mode", 0.0], "team": ["m_team", 0.05], "shop": ["m_shop", 0.05], "profile": ["m_settings", 0.08], "account": ["m_settings", 0.1], "result": ["system", 0.0],
@@ -55,7 +61,7 @@ const BACKDROP := {"home": ["m_home", 0.0], "play": ["m_mode", 0.0], "team": ["m
 	"oracle": ["m_oracle", 0.1], "hub": ["m_stadium", 0.05], "lobby": ["m_stadium", 0.05], "online_result": ["m_stadium", 0.1]}
 const NO_MUSIC := ["match", "online_match", "intro"]
 ## alternative script locations tried when the registry path is missing
-const ALT_DIRS := ["res://src/screens/", "res://src/online/", "res://src/social/", "res://src/oracle/"]
+const ALT_DIRS := ["res://src/screens/", "res://src/online/", "res://src/social/", "res://src/oracle/", "res://src/prematch/"]
 
 var main: Node  # set by main.gd (has: host, backdrop, chrome_node, sheet_layer, toast_layer, veil)
 var current := ""
