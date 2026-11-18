@@ -279,7 +279,7 @@ class _OrbitCallPageState extends ConsumerState<OrbitCallPage> {
               const SizedBox(height: 4),
               Text(
                 '${widget.video ? context.tx('تماس تصویری', 'Video call') : context.tx('تماس صوتی', 'Voice call')} · $status',
-                style: TextStyle(color: NxThemeColors.of(context).muted),
+                style: const TextStyle(color: NxColors.textDim),
               ),
               if (_error != null && _error != 'offline')
                 Padding(
@@ -300,7 +300,7 @@ class _OrbitCallPageState extends ConsumerState<OrbitCallPage> {
                                     ? Icons.videocam_off_rounded
                                     : Icons.call_end_rounded,
                                 size: 64,
-                                color: NxThemeColors.of(context).muted),
+                                color: NxColors.textDim),
                       )
                     : GridView.count(
                         padding: const EdgeInsets.all(12),

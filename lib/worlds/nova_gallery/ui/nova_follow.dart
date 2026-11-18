@@ -50,7 +50,7 @@ class _NovaFollowBarState extends ConsumerState<NovaFollowBar> {
     Widget stat(String v, String l) => Expanded(
           child: Column(children: <Widget>[
             Text(v, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-            Text(l, style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
+            Text(l, style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
           ]),
         );
     return Row(children: <Widget>[
@@ -98,13 +98,13 @@ class NovaUserLookup extends ConsumerWidget {
         if (!s.hasData) return const Padding(padding: EdgeInsets.all(12), child: Center(child: CircularProgressIndicator()));
         if (s.data!.isEmpty) {
           return Text(c.tx('کاوشگری با این نام پیدا نشد.', 'No explorer with this name.'),
-              style: TextStyle(color: NxThemeColors.of(context).muted));
+              style: const TextStyle(color: NxColors.textDim));
         }
         final Map<dynamic, dynamic> p = s.data!.first as Map;
         final String uid = '${p['id']}';
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
           Text('Lv ${p['level'] ?? 1}${(p['bio'] ?? '').toString().isEmpty ? '' : ' · ${p['bio']}'}',
-              style: TextStyle(color: NxThemeColors.of(context).muted)),
+              style: const TextStyle(color: NxColors.textDim)),
           const SizedBox(height: 10),
           NovaFollowBar(uid: uid, self: uid == r.me),
         ]);

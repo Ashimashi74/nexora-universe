@@ -4,7 +4,7 @@ publish_to: none
 version: 1.0.0+1
 
 environment:
-  sdk: ">=3.5.0 <4.0.0"
+  sdk: ">=3.10.0 <4.0.0"
 
 dependencies:
   flutter:
@@ -16,11 +16,15 @@ dependencies:
   shared_preferences: ^2.3.3
   flame: ^1.22.0
   supabase_flutter: ^2.15.4
-  livekit_client: 2.3.6
-  image_picker: 1.1.2
+  livekit_client: ^2.13.2
+  image_picker: ^1.2.0
+  file_picker: ^8.1.7
   audioplayers: ^6.1.0
-  flutter_local_notifications: 17.2.4
-  timezone: ^0.9.4
+  flutter_local_notifications: ^19.5.0
+  timezone: ^0.10.1
+  video_player: ^2.10.0
+  path_provider: ^2.1.5
+  url_launcher: ^6.3.1
 
 dev_dependencies:
   flutter_test:
@@ -29,12 +33,34 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: ChakraPetch
+      fonts:
+        - asset: assets/fonts/ChakraPetch-Regular.ttf
+        - asset: assets/fonts/ChakraPetch-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/ChakraPetch-Bold.ttf
+          weight: 700
+    - family: Estedad
+      fonts:
+        - asset: assets/fonts/Estedad-Regular.ttf
+        - asset: assets/fonts/Estedad-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Estedad-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Estedad-Black.ttf
+          weight: 900
+    - family: Lalezar
+      fonts:
+        - asset: assets/fonts/Lalezar-Regular.ttf
   assets:
     - assets/arcade/pedestals/
     - assets/avatar/gear/
     - assets/characters/oracle/
     - assets/characters/oracle/emotes/
     - assets/characters/oracle/poses/
+    - assets/characters/oracle/moods/
+    - assets/branding/
     - assets/games/backgammon/
     - assets/games/billiards/
     - assets/games/carrom/
@@ -53,6 +79,26 @@ flutter:
     - assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/thumb/
     - assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/top/
     - assets/games/shared/discs/
+    - assets/games/kart_racing/
+    - assets/games/obstacle_race/
+    - assets/games/bomb_arena/
+    - assets/games/pool8/
+    - assets/games/mini_golf/
+    - assets/games/basketball_battle/
+    - assets/games/spy_mafia/
+    - assets/games/stickman_arena/
+    - assets/games/ludo_battle/
+    - assets/games/chess_blitz/
+    - assets/games/endless_runner/
+    - assets/games/tetris_rush/
+    - assets/games/helix_jump/
+    - assets/games/fruit_ninja/
+    - assets/games/geo_dash/
+    - assets/games/traffic_racer/
+    - assets/games/stack_tower/
+    - assets/games/bubble_shooter/
+    - assets/games/knife_hit/
+    - assets/games/game_2048/
     - assets/progression/achievements/
     - assets/progression/club_badges/
     - assets/ui/holo_frames/
@@ -60,5 +106,13 @@ flutter:
     - assets/worlds/hub/portals/
     - assets/worlds/hub/props/
     - assets/worlds/hub/props/set/
-    - assets/worlds/hub/ship/
     - assets/worlds/personal_orbit/decor/
+    - assets/media/
+    - assets/ui/nx2/badges/
+    - assets/ui/nx2/bars/
+    - assets/ui/nx2/bg/
+    - assets/ui/nx2/boards/
+    - assets/ui/nx2/chests/
+    - assets/ui/nx2/frames/
+    - assets/ui/nx2/oracle/
+    - assets/ui/nx2/tiles/

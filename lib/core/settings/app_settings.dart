@@ -16,16 +16,42 @@ class AppSettings extends ChangeNotifier {
     _languageCode = _store.getString(_kLang) ?? 'fa';
     _visualTheme = NxVisualTheme.values.firstWhere(
       (e) => e.name == _store.getString(_kVisualTheme),
-      orElse: () => NxVisualTheme.gold,
+      orElse: () => NxVisualTheme.neon,
     );
-    _appearanceMode = NxAppearanceMode.values.firstWhere(
-      (e) => e.name == _store.getString(_kAppearanceMode),
-      orElse: () => NxAppearanceMode.dark,
-    );
+    // NX2 redesign: the cosmic neon skin is the only app skin now.
+    _visualTheme = NxVisualTheme.neon;
+    _music = _store.getBool(_kMusic) ?? true;
+    _musicVolume = (_store.getInt(_kMusicVol) ?? 60).clamp(0, 100) / 100.0;
     _sound = _store.getBool(_kSound) ?? true;
     _haptics = _store.getBool(_kHaptics) ?? true;
     _journeySeen = _store.getBool(_kJourney) ?? false;
     _onboarded = _store.getBool(_kOnboarded) ?? false;
+    _authMode = _store.getString(_kAuthMode) ?? '';
+    _oracleBuddy = _store.getBool(_kOracleBuddy) ?? true;
+    _oracleTalk = _store.getBool(_kOracleTalk) ?? true;
+  }
+
+  static const _kOracleBuddy = 'settings.oracle_buddy';
+  static const _kOracleTalk = 'settings.oracle_talk';
+  late bool _oracleBuddy;
+  late bool _oracleTalk;
+
+  /// The mischievous corner ORACLE outside games (off = hidden everywhere).
+  bool get oracleBuddy => _oracleBuddy;
+
+  /// Speech bubbles / teasing lines from the corner ORACLE (off = silent, animations only).
+  bool get oracleTalk => _oracleTalk;
+
+  set oracleBuddy(bool v) {
+    _oracleBuddy = v;
+    _store.setBool(_kOracleBuddy, v);
+    notifyListeners();
+  }
+
+  set oracleTalk(bool v) {
+    _oracleTalk = v;
+    _store.setBool(_kOracleTalk, v);
+    notifyListeners();
   }
 
   final LocalStore _store;
@@ -33,33 +59,66 @@ class AppSettings extends ChangeNotifier {
   static const _kReduced = 'settings.reduced_motion';
   static const _kLang = 'settings.lang';
   static const _kVisualTheme = 'settings.visual_theme';
-  static const _kAppearanceMode = 'settings.appearance_mode';
   static const _kSound = 'settings.sound';
   static const _kHaptics = 'settings.haptics';
   static const _kJourney = 'settings.journey_seen';
   static const _kOnboarded = 'settings.onboarded';
+  static const _kAuthMode = 'settings.auth_mode';
+  static const _kMusic = 'settings.music';
+  static const _kMusicVol = 'settings.music_volume';
 
   late GraphicsQuality _quality;
   late bool _reducedMotion;
   late String _languageCode;
   late NxVisualTheme _visualTheme;
-  late NxAppearanceMode _appearanceMode;
   late bool _sound;
   late bool _haptics;
   late bool _journeySeen;
   late bool _onboarded;
+  late String _authMode;
+  late bool _music;
+  late double _musicVolume;
+
+  /// Background music on menus (default on).
+  bool get music => _music;
+
+  /// 0..1 background music volume.
+  double get musicVolume => _musicVolume;
+
+  set music(bool v) {
+    _music = v;
+    _store.setBool(_kMusic, v);
+    notifyListeners();
+  }
+
+  set musicVolume(double v) {
+    _musicVolume = v.clamp(0.0, 1.0);
+    _store.setInt(_kMusicVol, (_musicVolume * 100).round());
+    notifyListeners();
+  }
 
   GraphicsQuality get quality => _quality;
   bool get reducedMotion => _reducedMotion;
   String get languageCode => _languageCode;
   NxVisualTheme get visualTheme => _visualTheme;
-  NxAppearanceMode get appearanceMode => _appearanceMode;
   bool get isFa => _languageCode == 'fa';
   Locale get locale => Locale(_languageCode);
   bool get sound => _sound;
   bool get haptics => _haptics;
   bool get journeySeen => _journeySeen;
   bool get onboarded => _onboarded;
+
+  /// '', 'email' or 'guest'. Guest is deliberately local-only.
+  String get authMode => _authMode;
+
+  void setAuthMode(String mode) {
+    if (mode != 'email' && mode != 'guest' && mode.isNotEmpty) return;
+    _authMode = mode;
+    _store.setString(_kAuthMode, mode);
+    notifyListeners();
+  }
+
+  void clearAuthMode() => setAuthMode('');
 
   /// Effects budget helpers used by every world and game.
   bool get fancyEffects =>
@@ -93,13 +152,6 @@ class AppSettings extends ChangeNotifier {
     if (_visualTheme == v) return;
     _visualTheme = v;
     _store.setString(_kVisualTheme, v.name);
-    notifyListeners();
-  }
-
-  set appearanceMode(NxAppearanceMode v) {
-    if (_appearanceMode == v) return;
-    _appearanceMode = v;
-    _store.setString(_kAppearanceMode, v.name);
     notifyListeners();
   }
 

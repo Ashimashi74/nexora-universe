@@ -26,7 +26,7 @@ enum OrbitChatKind { saved, group, channel, direct }
 /// until the server exists; Saved Orbit messages are [read] by you on this device.
 enum OrbitDelivery { queued, sent, delivered, read }
 
-enum OrbitMessageKind { text, art, shared, invite, system, call }
+enum OrbitMessageKind { text, art, shared, invite, system, call, photo, audio, file }
 
 class OrbitChat {
   OrbitChat({
@@ -161,6 +161,12 @@ class OrbitMessage {
         return fa ? '🎮 دعوت به آرکید' : '🎮 Arcade invite';
       case OrbitMessageKind.call:
         return payload['video'] == true ? (fa ? '📹 تماس تصویری' : '📹 Video call') : (fa ? '📞 تماس صوتی' : '📞 Voice call');
+      case OrbitMessageKind.photo:
+        return (fa ? '🖼 عکس' : '🖼 Photo') + (text.isEmpty ? '' : ' · $text');
+      case OrbitMessageKind.audio:
+        return (fa ? '🎵 فایل صوتی' : '🎵 Audio') + (text.isEmpty ? '' : ' · $text');
+      case OrbitMessageKind.file:
+        return (fa ? '📎 فایل' : '📎 File') + (text.isEmpty ? '' : ' · $text');
     }
   }
 

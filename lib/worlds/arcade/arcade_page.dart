@@ -7,8 +7,12 @@ import '../../core/assets/app_assets.dart';
 import '../../core/profile/profile_service.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/theme/nx_theme.dart';
+import '../../core/ui2/nx2_assets.dart';
+import '../../core/ui2/nx2_widgets.dart';
+import '../../core/ui2/oracle_mascot.dart';
 import '../../core/widgets/nx_widgets.dart';
 import '../../games/game_registry.dart';
+import '../../games/arcade_kit/arcade_icon.dart';
 
 /// NEXORA ARCADE lobby (STEP_18): game pedestals, records, quick play.
 class ArcadePage extends ConsumerWidget {
@@ -23,6 +27,7 @@ class ArcadePage extends ConsumerWidget {
       child: NxWorldScaffold(
         title: context.tx('آرکید NEXORA', 'NEXORA ARCADE'),
         palette: WorldPalette.arcade,
+        dock: Nx2Tab.games,
         body: Column(children: [
           TabBar(
             indicatorColor: visual.accent,
@@ -46,41 +51,78 @@ class ArcadePage extends ConsumerWidget {
   }
 }
 
-class _GamesGrid extends StatelessWidget {
+int _groupOf(GameInfo g) => g.group != 0 ? g.group : (_kGameGroup[g.id] ?? 0);
+
+const Map<String, int> _kGameGroup = <String, int>{
+  'finger_soccer': 1,
+  'carrom': 1,
+  'billiards': 1,
+  'backgammon': 2,
+  'ludo': 2,
+  'snakes_ladders': 2,
+  'uno': 3,
+  'quiz': 3,
+  'mafia': 3,
+};
+
+class _GamesGrid extends StatefulWidget {
   const _GamesGrid({required this.profile});
   final ProfileService profile;
 
   @override
+  State<_GamesGrid> createState() => _GamesGridState();
+}
+
+class _GamesGridState extends State<_GamesGrid> {
+  int _group = 0;
+
+  @override
   Widget build(BuildContext context) {
-    final visual = NxThemeColors.of(context);
+    final ProfileService profile = widget.profile;
+    final List<GameInfo> games = kGames
+        .where((GameInfo g) => _group == 0 || _groupOf(g) == _group)
+        .toList();
+    final List<(String, String)> groups = <(String, String)>[
+      ('همه', 'All'),
+      ('ورزشی', 'Sports'),
+      ('تخته‌ای', 'Board'),
+      ('پارتی', 'Party'),
+      ('اکشن و مسابقه', 'Action & Racing'),
+      ('آرکید تک‌نفره', 'Solo Arcade'),
+    ];
     return CustomScrollView(slivers: [
       SliverToBoxAdapter(
         child: Padding(
-          padding:
-              const EdgeInsets.fromLTRB(NxSpace.md, NxSpace.md, NxSpace.md, 0),
-          child: GlassPanel(
-            borderColor: visual.accent.withValues(alpha: 0.6),
-            tint: visual.accent.withValues(alpha: 0.04),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: Nx2Panel(
+            gems: true,
+            padding: const EdgeInsets.fromLTRB(8, 8, 14, 8),
             child: Row(children: [
-              const OracleAvatar(pose: 'cheer', size: 70),
-              const SizedBox(width: 12),
+              const OracleMascot(mood: OracleMood.play, size: 92),
+              const SizedBox(width: 8),
               Expanded(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
+                          context.tx('بیا یه دست بزنیم!', "Let's play a round!"),
+                          style: Nx2.title.copyWith(fontSize: 16)),
+                      const SizedBox(height: 4),
+                      Text(
                           context.tx(
                               '${profile.totalGamesPlayed} بازی · ${profile.totalWins} برد',
                               '${profile.totalGamesPlayed} played · ${profile.totalWins} wins'),
                           style: const TextStyle(
-                              fontWeight: FontWeight.w900, fontSize: 16)),
-                      const SizedBox(height: 4),
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12.5,
+                              color: Nx2.gold)),
+                      const SizedBox(height: 2),
                       Text(
                         context.tx(
-                            'همه‌ی بازی‌ها آفلاین با بات هوشمند یا دو نفره روی یک گوشی کار می‌کنند.',
-                            'Every game works offline against smart bots or with friends on one phone.'),
-                        style: TextStyle(
-                            color: visual.muted, fontSize: 12, height: 1.4),
+                            'با بات هوشمند، دو نفره روی یک گوشی یا آنلاین.',
+                            'Smart bots, two on one phone, or online.'),
+                        style: const TextStyle(
+                            color: Nx2.muted, fontSize: 11.5, height: 1.35),
                       ),
                     ]),
               ),
@@ -88,62 +130,89 @@ class _GamesGrid extends StatelessWidget {
           ),
         ),
       ),
+      SliverToBoxAdapter(
+        child: SizedBox(
+          height: 52,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+            children: [
+              for (int i = 0; i < groups.length; i++)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(end: 8),
+                  child: GestureDetector(
+                    onTap: () => setState(() => _group = i),
+                    child: AnimatedOpacity(
+                      duration: const Duration(milliseconds: 180),
+                      opacity: _group == i ? 1 : 0.7,
+                      child: NxPill(
+                        label: context.tx(groups[i].$1, groups[i].$2),
+                        color: _group == i ? Nx2.magenta : Nx2.violet,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
       SliverPadding(
-        padding: const EdgeInsets.all(NxSpace.md),
+        padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
         sliver: SliverGrid(
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            childAspectRatio: 0.78,
+            childAspectRatio: 0.70,
           ),
           delegate: SliverChildBuilderDelegate(
-            (context, i) =>
-                _GameTile(game: kGames[i], stats: profile.stats[kGames[i].id]),
-            childCount: kGames.length,
+            (context, i) => _GameTile(
+                game: games[i],
+                stats: profile.stats[games[i].id],
+                frame: i),
+            childCount: games.length,
           ),
         ),
       ),
       SliverToBoxAdapter(
         child: Padding(
-          padding:
-              const EdgeInsets.fromLTRB(NxSpace.md, 0, NxSpace.md, NxSpace.sm),
-          child: GlassPanel(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+          child: Nx2Panel(
+            gold: true,
             onTap: () => context.push('/tournaments'),
-            borderColor: NxColors.gold.withValues(alpha: 0.7),
-            tint: NxColors.gold.withValues(alpha: 0.08),
+            padding: const EdgeInsets.all(12),
             child: Row(children: [
-              const Icon(Icons.emoji_events_rounded,
-                  color: NxColors.gold, size: 30),
+              Image.asset(Nx2Assets.badgesTrophyGold,
+                  width: 48, height: 58, cacheWidth: 140),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                          context.tx(
-                              'تورنمنت‌های آنلاین', 'Online tournaments'),
-                          style: const TextStyle(fontWeight: FontWeight.w900)),
+                      Text(context.tx('تورنمنت‌های آنلاین', 'Online tournaments'),
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w900, color: Nx2.gold)),
                       Text(
                           context.tx('حذفی، لیگ، گروهی و سوئیسی با جایزه',
                               'Knockout, league, groups and swiss with prizes'),
-                          style: TextStyle(
-                              color: NxThemeColors.of(context).muted, fontSize: 12)),
+                          style:
+                              const TextStyle(color: Nx2.muted, fontSize: 12)),
                     ]),
               ),
-              const Icon(Icons.chevron_right_rounded),
+              const Icon(Icons.chevron_right_rounded, color: Nx2.gold),
             ]),
           ),
         ),
       ),
       SliverToBoxAdapter(
         child: Padding(
-          padding:
-              const EdgeInsets.fromLTRB(NxSpace.md, 0, NxSpace.md, NxSpace.lg),
-          child: GlassPanel(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 20),
+          child: Nx2Panel(
             onTap: () => context.push('/world/social_station'),
+            padding: const EdgeInsets.all(12),
             child: Row(children: [
-              const Icon(Icons.emoji_events_rounded, color: NxColors.gold),
+              Image.asset(Nx2Assets.badgesMedalCrown,
+                  width: 44, height: 44, cacheWidth: 130),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(context.tx(
@@ -160,57 +229,94 @@ class _GamesGrid extends StatelessWidget {
 }
 
 class _GameTile extends StatelessWidget {
-  const _GameTile({required this.game, required this.stats});
+  const _GameTile({required this.game, required this.stats, required this.frame});
   final GameInfo game;
   final GameStats? stats;
+  final int frame;
 
   @override
   Widget build(BuildContext context) {
-    final visual = NxThemeColors.of(context);
-    return GlassPanel(
-      padding: const EdgeInsets.all(10),
-      borderColor: game.accent.withValues(alpha: 0.55),
-      tint: game.accent.withValues(alpha: 0.08),
-      onTap: () {
-        HapticFeedback.selectionClick();
-        context.push('/arcade/${game.id}');
-      },
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Expanded(
-          child: Hero(
-            tag: 'pedestal_${game.id}',
-            child: Image.asset(AppAssets.pedestal(game.id),
-                cacheWidth: 360,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) =>
-                    Icon(Icons.sports_esports, size: 60, color: game.accent)),
+    final String art = switch (frame % 3) {
+      0 => Nx2Assets.framesTilePurple,
+      1 => Nx2Assets.framesTileBlue,
+      _ => Nx2Assets.framesTileGold,
+    };
+    void open() {
+      HapticFeedback.selectionClick();
+      context.push('/arcade/${game.id}');
+    }
+
+    return Nx2Pressable(
+      onTap: open,
+      child: Nx2Panel(
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+        borderColor: Color.lerp(game.accent, Nx2.violet, 0.35),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Expanded(
+            child: Stack(fit: StackFit.expand, children: [
+              Opacity(
+                opacity: 0.55,
+                child: Image.asset(art,
+                  fit: BoxFit.fill,
+                  cacheWidth: 360,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 16, 14, 18),
+                child: Hero(
+                  tag: 'pedestal_${game.id}',
+                  child: Image.asset(AppAssets.pedestal(game.id),
+                      cacheWidth: 360,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => ArcadeMedallion(game.id)),
+                ),
+              ),
+              if (game.isNew)
+                const PositionedDirectional(
+                  top: 6,
+                  end: 6,
+                  child: NxPill(label: 'NEW', icon: Icons.auto_awesome_rounded, color: Nx2.gold),
+                ),
+              if (game.supportsOnline)
+                const PositionedDirectional(
+                  top: 6,
+                  start: 6,
+                  child: NxPill(
+                      label: 'ONLINE',
+                      icon: Icons.public_rounded,
+                      color: Nx2.cyan),
+                ),
+            ]),
           ),
-        ),
-        const SizedBox(height: 6),
-        Text(context.tx(game.nameFa, game.nameEn),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(fontWeight: FontWeight.w900, color: game.accent)),
-        Text(context.tx(game.taglineFa, game.taglineEn),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: visual.muted, fontSize: 11)),
-        const SizedBox(height: 4),
-        Row(children: [
-          Icon(Icons.people_alt_rounded,
-              size: 13, color: visual.muted.withValues(alpha: 0.8)),
-          const SizedBox(width: 3),
-          Text(
-              game.minPlayers == game.maxPlayers
-                  ? '${game.minPlayers}'
-                  : '${game.minPlayers}-${game.maxPlayers}',
-              style: TextStyle(fontSize: 11, color: visual.muted)),
-          const Spacer(),
-          if (stats != null)
-            Text('${stats!.won}/${stats!.played}',
-                style: const TextStyle(fontSize: 11, color: NxColors.gold)),
+          const SizedBox(height: 6),
+          Text(context.tx(game.nameFa, game.nameEn),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w900, fontSize: 14, color: Nx2.text)),
+          Row(children: [
+            const Icon(Icons.people_alt_rounded, size: 13, color: Nx2.muted),
+            const SizedBox(width: 3),
+            Text(
+                game.minPlayers == game.maxPlayers
+                    ? '${game.minPlayers}'
+                    : '${game.minPlayers}-${game.maxPlayers}',
+                style: const TextStyle(fontSize: 11, color: Nx2.muted)),
+            const Spacer(),
+            if (stats != null)
+              Text('${stats!.won}/${stats!.played}',
+                  style: const TextStyle(fontSize: 11, color: Nx2.gold)),
+          ]),
+          const SizedBox(height: 6),
+          Nx2Button(
+            label: context.tx('بازی', 'PLAY'),
+            kind: frame.isEven ? Nx2ButtonKind.pink : Nx2ButtonKind.violet,
+            height: 36,
+            fontSize: 13,
+            onTap: open,
+          ),
         ]),
-      ]),
+      ),
     );
   }
 }
@@ -224,11 +330,11 @@ class _Records extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(NxSpace.md),
       children: [
-        FilledButton.icon(
-          onPressed: () => context.push('/leaderboard'),
-          icon: const Icon(Icons.leaderboard_rounded),
-          label: Text(context.tx('رتبه‌بندی جهانی (بازی‌های آنلاین)',
-              'Global rankings (online games)')),
+        Nx2Button(
+          onTap: () => context.push('/leaderboard'),
+          icon: Icons.leaderboard_rounded,
+          kind: Nx2ButtonKind.cyan,
+          label: context.tx('رتبه‌بندی جهانی', 'Global rankings'),
         ),
         const SizedBox(height: NxSpace.md),
         for (final g in kGames)
@@ -236,8 +342,7 @@ class _Records extends StatelessWidget {
             padding: const EdgeInsets.only(bottom: 10),
             child: GlassPanel(
               child: Row(children: [
-                Image.asset(AppAssets.pedestal(g.id),
-                    width: 46, cacheWidth: 140),
+                GamePedestal(g.id, size: 46, cacheWidth: 140),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
@@ -252,8 +357,8 @@ class _Records extends StatelessWidget {
                             return Text(
                                 context.tx(
                                     'هنوز بازی نکرده‌ای', 'Not played yet'),
-                                style: TextStyle(
-                                    color: NxThemeColors.of(context).muted, fontSize: 12));
+                                style: const TextStyle(
+                                    color: NxColors.textDim, fontSize: 12));
                           }
                           final rate = s.played == 0
                               ? 0
@@ -262,8 +367,8 @@ class _Records extends StatelessWidget {
                             context.tx(
                                 'بازی ${s.played} · برد ${s.won} · باخت ${s.lost} · مساوی ${s.draw} · ٪$rate',
                                 'Played ${s.played} · W ${s.won} · L ${s.lost} · D ${s.draw} · $rate%'),
-                            style: TextStyle(
-                                color: NxThemeColors.of(context).muted, fontSize: 12),
+                            style: const TextStyle(
+                                color: NxColors.textDim, fontSize: 12),
                           );
                         }),
                       ]),

@@ -5,6 +5,7 @@ import '../../core/profile/profile_service.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/storage/local_store.dart';
 import '../../core/theme/nx_theme.dart';
+import '../../core/ui2/nx2_widgets.dart';
 import '../../core/widgets/nx_widgets.dart';
 import 'core/challenge_store.dart';
 import 'ui/identity_tab.dart';
@@ -85,8 +86,9 @@ class _PersonalOrbitPageState extends ConsumerState<PersonalOrbitPage> {
         child: DefaultTabController(
           length: tabs.length,
           child: NxWorldScaffold(
-            title: 'PERSONAL ORBIT',
+            title: context.tx('پروفایل · مدار شخصی', 'PROFILE · PERSONAL ORBIT'),
             palette: WorldPalette.personal,
+            dock: Nx2Tab.profile,
             body: Column(children: <Widget>[
               Container(
                 margin: const EdgeInsets.fromLTRB(

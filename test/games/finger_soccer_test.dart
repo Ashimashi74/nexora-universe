@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nexora/games/core/game_contract.dart';
+import 'package:nexora/games/finger_soccer/ui/bm_painter.dart';
 import 'package:nexora/games/finger_soccer/ui/bm_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -44,8 +45,8 @@ void main() {
     expect(PR, 63.8);
     expect(BR, 28.8);
     expect(STEP, 1 / 240);
-    expect(kBmFields.length, 29);
-    final BmFieldS f = kBmFields[0]; // forest
+    expect(kBmFields.length, 30);
+    final BmFieldS f = kBmFields.firstWhere((BmFieldS x) => x.id == 'forest');
     expect(f.W, (1086 * FS).roundToDouble());
     expect(f.L, (195 * FS).roundToDouble());
     expect(f.g, 169);
@@ -53,9 +54,26 @@ void main() {
     e.startMatch(_cfg());
     expect(e.bodies.length, 11);
     expect(e.ball!.r, BR);
-    expect(e.ball!.m, 1.9);
+    expect(e.ball!.m, closeTo(1.805, 1e-9));
     expect(e.bodies.first.m, 5);
     expect(e.GOALS[0].x2 - e.GOALS[0].x1, 338);
+  });
+
+  test('phone layout fills the screen while physics radii stay unchanged', () {
+    final BmEngine e = BmEngine(_Hooks(), rng: math.Random(1))..startMatch(_cfg());
+    final double discPhysicsRadius = e.bodies.first.r;
+    final double ballPhysicsRadius = e.ball!.r;
+    final BmView view = BmView()..layout(e, const Size(360, 800));
+    final double pitchWidth = (e.Fr - e.Fl) * view.s;
+    final double matchHeight = ((e.Fb - e.Ft) + 2 * e.GGh * kBmGoalArtScale + 48) * view.s;
+    expect(pitchWidth, inInclusiveRange(360 * 0.80, 360 * 0.90));
+    expect(matchHeight, lessThanOrEqualTo(800 * BmView.matchHeightFraction));
+    expect(matchHeight, greaterThan(800 * 0.70));
+    expect(kBmPlayerVisualScale, 0.78);
+    expect(kBmBallVisualScale, 0.78);
+    expect(kBmGoalArtScale, 0.68);
+    expect(e.bodies.first.r, discPhysicsRadius);
+    expect(e.ball!.r, ballPhysicsRadius);
   });
 
   test('bot vs bot plays a long match without escaping the pitch', () {

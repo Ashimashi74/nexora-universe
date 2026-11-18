@@ -1,15 +1,15 @@
 import 'dart:math';
-import 'dart:ui';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../assets/app_assets.dart';
-import '../navigation/nexora_menu.dart';
 import '../profile/profile_service.dart';
 import '../settings/app_settings.dart';
 import '../theme/nx_theme.dart';
+import '../ui2/nx2_widgets.dart';
+import '../ui2/oracle_mascot.dart';
 
 /// Animated cosmic background used by every world (respects quality + reduced motion).
 class NxBackground extends ConsumerStatefulWidget {
@@ -128,68 +128,14 @@ class _StarPainter extends CustomPainter {
       old.t != t || old.stars != stars;
 }
 
-/// Quiet, premium dark backdrop used by app surfaces (not active game boards).
+/// App surfaces backdrop (NX2: the owner's cosmic castle art, darkened for contrast).
 class NxBrandBackground extends StatelessWidget {
-  const NxBrandBackground({super.key, this.child});
+  const NxBrandBackground({super.key, this.child, this.room = false});
   final Widget? child;
+  final bool room;
 
   @override
-  Widget build(BuildContext context) {
-    final NxThemeColors visual = NxThemeColors.of(context);
-    return Stack(
-      fit: StackFit.expand,
-      children: <Widget>[
-        DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: <Color>[
-                visual.background,
-                visual.backgroundMid,
-                visual.background
-              ],
-            ),
-          ),
-        ),
-        Positioned(
-          top: -150,
-          right: -100,
-          width: 360,
-          height: 360,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(colors: <Color>[
-                  visual.accent.withValues(alpha: 0.13),
-                  Colors.transparent
-                ]),
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          bottom: -180,
-          left: -120,
-          width: 420,
-          height: 420,
-          child: IgnorePointer(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(colors: <Color>[
-                  visual.accentSecondary.withValues(alpha: 0.10),
-                  Colors.transparent
-                ]),
-              ),
-            ),
-          ),
-        ),
-        if (child != null) child!,
-      ],
-    );
-  }
+  Widget build(BuildContext context) => Nx2Background(room: room, child: child);
 }
 
 /// Premium inset panel with a quiet metallic/neon rim, shared by all app worlds.
@@ -214,57 +160,28 @@ class GlassPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final NxThemeColors visual = NxThemeColors.of(context);
-    final Color panelFill = tint ?? visual.surface;
-    Widget body = Container(
+    // NX2: chamfered neon glass. Gold borders keep the legendary look.
+    final Color? bc = borderColor;
+    final bool gold = bc != null &&
+        (bc.r > 0.8 && bc.g > 0.6 && bc.b < 0.5);
+    final Color? t = tint?.withValues(alpha: math.min(0.35, tint!.a));
+    final Widget panel = Nx2Panel(
       padding: padding,
-      decoration: BoxDecoration(
-        color: visual.premiumPanels && tint == null ? null : panelFill,
-        gradient: visual.premiumPanels && tint == null
-            ? LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: <Color>[visual.surfaceRaised, visual.surface],
-              )
-            : null,
-        borderRadius: BorderRadius.circular(radius),
-        border: Border.all(
-          color: borderColor ??
-              visual.border.withValues(alpha: visual.premiumPanels ? 0.48 : 1),
-          width: visual.premiumPanels ? 1.1 : 1,
-        ),
-        boxShadow: visual.premiumPanels
-            ? <BoxShadow>[
-                BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.22),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8)),
-                BoxShadow(
-                    color: visual.accent.withValues(alpha: 0.055),
-                    blurRadius: 16,
-                    spreadRadius: 0.5),
-              ]
-            : null,
-      ),
+      cut: math.min(16, math.max(8, radius * 0.6)),
+      gold: gold,
+      tint: t,
+      borderColor: gold ? null : bc?.withValues(alpha: 1),
       child: child,
     );
-    if (onTap != null) {
-      body = Material(
-        color: Colors.transparent,
-        child: InkWell(
-            borderRadius: BorderRadius.circular(radius),
-            onTap: onTap,
-            child: body),
-      );
-    }
-    if (!blur) {
-      return ClipRRect(
-          borderRadius: BorderRadius.circular(radius), child: body);
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14), child: body),
+    if (onTap == null) return panel;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        splashColor: Nx2.violet.withValues(alpha: 0.18),
+        highlightColor: Colors.transparent,
+        child: panel,
+      ),
     );
   }
 }
@@ -278,23 +195,35 @@ class NxPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color pillColor = color ?? NxThemeColors.of(context).accent;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: pillColor.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(40),
-        border: Border.all(color: pillColor.withValues(alpha: 0.55)),
+    final Color pillColor = color ?? Nx2.cyan;
+    return CustomPaint(
+      painter: Nx2FramePainter(
+        cut: 7,
+        glow: 0,
+        strokeWidth: 1.1,
+        fill: LinearGradient(colors: <Color>[
+          pillColor.withValues(alpha: 0.22),
+          const Color(0xE6120A33),
+        ]),
+        border: LinearGradient(colors: <Color>[
+          pillColor,
+          pillColor.withValues(alpha: 0.5),
+        ]),
       ),
-      child: Row(mainAxisSize: MainAxisSize.min, children: [
-        if (icon != null) ...[
-          Icon(icon, size: 14, color: pillColor),
-          const SizedBox(width: 4)
-        ],
-        Text(label,
-            style: TextStyle(
-                color: pillColor, fontWeight: FontWeight.w700, fontSize: 12)),
-      ]),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (icon != null) ...[
+            Icon(icon, size: 14, color: pillColor),
+            const SizedBox(width: 4)
+          ],
+          Text(label,
+              style: TextStyle(
+                  color: Color.lerp(pillColor, Colors.white, 0.35),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12)),
+        ]),
+      ),
     );
   }
 }
@@ -306,15 +235,10 @@ class WalletChip extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = ref.watch(profileProvider);
-    final NxThemeColors visual = NxThemeColors.of(context);
     return Row(mainAxisSize: MainAxisSize.min, children: [
-      NxPill(
-          label: '${p.coins}', icon: Icons.toll_rounded, color: NxColors.gold),
+      Nx2Stat(value: '${p.coins}'),
       const SizedBox(width: 6),
-      NxPill(
-          label: 'Lv ${p.level}',
-          icon: Icons.bolt_rounded,
-          color: visual.accent),
+      Nx2Stat(value: '${p.level}', icon: Icons.bolt_rounded, color: Nx2.cyan),
     ]);
   }
 }
@@ -327,40 +251,24 @@ class XpBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final p = ref.watch(profileProvider);
-    final NxThemeColors visual = NxThemeColors.of(context);
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
       Row(children: [
         Text('${context.tx('سطح', 'Level')} ${p.level}',
             style: const TextStyle(fontWeight: FontWeight.w800)),
         const SizedBox(width: 8),
         Text(context.tx(p.rankTitleFa, p.rankTitleEn),
-            style: TextStyle(color: visual.muted, fontSize: 12)),
+            style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
         const Spacer(),
         Text('${p.xpIntoLevel}/${ProfileService.xpForLevel(p.level)} XP',
-            style: TextStyle(color: visual.muted, fontSize: 12)),
+            style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
       ]),
       const SizedBox(height: 6),
-      ClipRRect(
-        borderRadius: BorderRadius.circular(height),
-        child: Stack(children: [
-          Container(height: height, color: const Color(0x22FFFFFF)),
-          FractionallySizedBox(
-            widthFactor: p.levelProgress.clamp(0.0, 1.0),
-            child: Container(
-              height: height,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                    colors: [visual.accent, visual.accentSecondary]),
-              ),
-            ),
-          ),
-        ]),
-      ),
+      Nx2Progress(value: p.levelProgress, height: height),
     ]);
   }
 }
 
-/// Standard world page scaffold with themed background and app bar.
+/// Standard world page scaffold (NX2 top bar, cosmic backdrop, optional bottom dock).
 class NxWorldScaffold extends StatelessWidget {
   const NxWorldScaffold({
     super.key,
@@ -371,7 +279,8 @@ class NxWorldScaffold extends StatelessWidget {
     this.floatingActionButton,
     this.bottomNavigationBar,
     this.showWallet = true,
-    this.showSearchButton = true,
+    this.dock,
+    this.room = false,
   });
   final String title;
   final WorldPalette palette;
@@ -380,92 +289,41 @@ class NxWorldScaffold extends StatelessWidget {
   final Widget? floatingActionButton;
   final Widget? bottomNavigationBar;
   final bool showWallet;
-  final bool showSearchButton;
+
+  /// When set, the NX2 bottom dock is shown with this tab highlighted.
+  final Nx2Tab? dock;
+  final bool room;
 
   @override
   Widget build(BuildContext context) {
-    final NxThemeColors visual = NxThemeColors.of(context);
+    final Widget? bottom = bottomNavigationBar ??
+        (dock != null ? Nx2Dock(current: dock) : null);
     return Scaffold(
       extendBodyBehindAppBar: true,
-      backgroundColor: visual.background,
-      appBar: AppBar(
-        foregroundColor: visual.text,
-        titleTextStyle: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0.8,
-            color: visual.text),
-        title: Text(title),
-        actions: [
-          ...?actions,
-          if (showSearchButton)
-            IconButton(
-              tooltip: context.tx('جستجوی سراسری', 'Open global search'),
-              onPressed: () => context.push('/search'),
-              icon: const Icon(Icons.search_rounded),
-            ),
-          IconButton(
-            tooltip: context.tx('باز کردن منوی بخش‌ها', 'Open section menu'),
-            onPressed: () => showNexoraMenu(context),
-            icon: const Icon(Icons.apps_rounded),
-          ),
-          if (showWallet)
-            const Padding(
-                padding: EdgeInsetsDirectional.only(end: 10),
-                child: WalletChip()),
-        ],
-      ),
+      backgroundColor: Nx2.deep,
+      appBar: Nx2TopBar(title: title, actions: actions, showWallet: showWallet),
       floatingActionButton: floatingActionButton,
-      bottomNavigationBar: bottomNavigationBar,
+      bottomNavigationBar: bottom,
       body: NxBrandBackground(
-        child: SafeArea(child: body),
+        room: room,
+        child: SafeArea(
+          bottom: bottom == null,
+          child: body,
+        ),
       ),
     );
   }
 }
 
-/// ORACLE mascot image with gentle float animation.
-class OracleAvatar extends ConsumerStatefulWidget {
+/// ORACLE mascot (NX2 animated robot). Legacy pose names map to moods.
+class OracleAvatar extends StatelessWidget {
   const OracleAvatar({super.key, this.pose = 'idle', this.size = 90});
   final String pose;
   final double size;
 
   @override
-  ConsumerState<OracleAvatar> createState() => _OracleAvatarState();
-}
-
-class _OracleAvatarState extends ConsumerState<OracleAvatar>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 2400))
-    ..repeat(reverse: true);
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final reduced = ref.watch(settingsProvider).reducedMotion;
-    final img = Image.asset(
-      AppAssets.oraclePose(widget.pose),
-      height: widget.size,
-      cacheHeight: (widget.size * 2.5).round(),
-      fit: BoxFit.contain,
-      errorBuilder: (_, __, ___) =>
-          Icon(Icons.blur_circular, size: widget.size, color: NxColors.violet),
-    );
-    if (reduced) return img;
-    return AnimatedBuilder(
-      animation: _c,
-      builder: (_, child) => Transform.translate(
-          offset: Offset(0, -6 * Curves.easeInOut.transform(_c.value)),
-          child: child),
-      child: img,
-    );
-  }
+  Widget build(BuildContext context) => OracleMascot(
+      mood: oracleMoodFromLegacy(pose), size: size, interactive: true);
 }
 
 /// Shows level-up / achievement celebration (short, skippable).

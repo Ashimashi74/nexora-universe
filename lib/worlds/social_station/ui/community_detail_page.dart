@@ -111,7 +111,7 @@ Future<void> showInviteSheet(BuildContext context, WidgetRef ref, Community c) {
                 bc.tx('هر کاوشگری با این کد به جامعه می‌پیوندد.',
                     'Any explorer can join with this code.'),
                 textAlign: TextAlign.center,
-                style: TextStyle(color: NxThemeColors.of(context).muted),
+                style: const TextStyle(color: NxColors.textDim),
               ),
           ]),
     ),
@@ -265,7 +265,7 @@ class _CommunityDetailPageState extends ConsumerState<CommunityDetailPage>
                         NxPill(
                             label: '${c.members.length}',
                             icon: Icons.people_alt_rounded,
-                            color: NxThemeColors.of(context).muted),
+                            color: NxColors.textDim),
                       ]),
                       const SizedBox(height: 6),
                       InkWell(
@@ -288,8 +288,8 @@ class _CommunityDetailPageState extends ConsumerState<CommunityDetailPage>
                                       fontWeight: FontWeight.w800,
                                       letterSpacing: 1.5)),
                               const SizedBox(width: 4),
-                              Icon(Icons.copy_rounded,
-                                  size: 13, color: NxThemeColors.of(context).muted),
+                              const Icon(Icons.copy_rounded,
+                                  size: 13, color: NxColors.textDim),
                             ]),
                       ),
                     ]),

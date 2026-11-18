@@ -9,8 +9,20 @@ import '../core/bm_data.dart';
 import '../core/bm_engine.dart';
 import 'bm_ball.dart';
 
+/// Visual-only sizing; BmEngine radii and collision geometry remain unchanged.
+// Presentation-only tuning. Physics radii stay unchanged so existing replays,
+// snapshots and online peers keep the same deterministic contract.
+const double kBmPlayerVisualScale = 0.78;
+const double kBmBallVisualScale = 0.78;
+const double kBmGoalArtScale = 0.68;
+
 class BmImages {
   ui.Image? field, goal, ball;
+  // Animated sprite-sheet ball (kBmAnimBalls): frames advance with distance rolled + a slow idle spin.
+  ui.Image? ballSheet;
+  int ballFrames = 0;
+  int ballFrameMs = 120;
+  double animPhase = 0, animX = double.nan, animY = double.nan, animT = 0;
   final List<ui.Image?> team = <ui.Image?>[null, null];
   BmBallRenderer? ballR;
   // cached background (blurred cover + faded field), keyed by size/field
@@ -27,6 +39,9 @@ class BmImages {
     team[1]?.dispose();
     bg?.dispose();
     ballR?.dispose();
+    ballSheet?.dispose();
+    ballSheet = null;
+    ballFrames = 0;
     field = goal = ball = bg = null;
     team[0] = team[1] = null;
     ballR = null;
@@ -35,6 +50,12 @@ class BmImages {
 
 /// Screen mapping of game.js build(): world -> screen = world * s + (ox, oy).
 class BmView {
+  /// Breathing room below the top scoreboard. The match HUD is painted above
+  /// the field, so the complete world (including the top goal) must move down
+  /// as one unit instead of moving only the goal artwork.
+  static const double topHudClearance = 20;
+  static const double matchWidthFraction = 0.98;
+  static const double matchHeightFraction = 0.90;
   double s = 1, ox = 0, oy = 0;
   Size size = Size.zero;
 
@@ -43,9 +64,13 @@ class BmView {
     final BmFieldS f = e.field;
     final double W = sz.width, H = sz.height;
     if (W < 50 || H < 50) return;
-    s = math.min(W / (f.R - f.L + 56 * FS), (H - 250) / ((f.B - f.T) + 2 * e.GGh + 48)) * 1.14 * 1.02;
+    final double worldWidth = f.R - f.L + 56 * FS;
+    final double worldHeight = (f.B - f.T) + 2 * e.GGh * kBmGoalArtScale + 48;
+    s = math.min(W * matchWidthFraction / worldWidth, H * matchHeightFraction / worldHeight);
     ox = W / 2 - e.CX * s;
-    oy = H / 2 - e.CY * s;
+    // Keep the scoreboard clear of the top goal while preserving the same
+    // world-to-screen mapping for rendering and pointer input.
+    oy = H / 2 - e.CY * s + topHudClearance;
   }
 
   Offset toWorld(Offset p) => Offset((p.dx - ox) / s, (p.dy - oy) / s);
@@ -76,18 +101,20 @@ class BmPainter extends CustomPainter {
     canvas.save();
     canvas.translate(view.ox + cx * s, view.oy + cy * s);
     canvas.scale(s);
-    if (fancy) _drawTrail(canvas, t);
+    // Keep only the restrained ground/wind trace; no neon projectile effects.
+    _drawTrail(canvas, t);
     if (e.phase == 'aim' && !e.menuOpen) {
       final double k = .5 + .5 * math.sin(t / 260);
       final List<int> c = e.turn != 0 ? <int>[255, 110, 110] : <int>[80, 170, 255];
       for (final BmBody b in e.bodies) {
         if (b.team == e.turn) {
-          canvas.drawCircle(Offset(b.x, b.y), b.r + 11,
+          final double visualRadius = b.r * kBmPlayerVisualScale;
+          canvas.drawCircle(Offset(b.x, b.y), visualRadius + 11,
               Paint()
                 ..style = PaintingStyle.stroke
                 ..strokeWidth = 13
                 ..color = _rgba(c[0], c[1], c[2], .12 + .14 * k));
-          canvas.drawCircle(Offset(b.x, b.y), b.r + 11,
+          canvas.drawCircle(Offset(b.x, b.y), visualRadius + 11,
               Paint()
                 ..style = PaintingStyle.stroke
                 ..strokeWidth = 4
@@ -95,10 +122,11 @@ class BmPainter extends CustomPainter {
         }
       }
     }
-    if (fancy) _pieceTrails(canvas);
+    // Player-piece trails are intentionally disabled; only the ball leaves a trace.
     // soft shadows (SPR.shadow)
     for (final BmBody b in e.bodies) {
-      final double w = b.r * 2.6;
+      final double visualRadius = b == e.ball ? b.r * kBmBallVisualScale : b.r * kBmPlayerVisualScale;
+      final double w = visualRadius * 2.6;
       final Offset c = Offset(b.x + 5, b.y + 11);
       canvas.drawCircle(
           c,
@@ -115,14 +143,16 @@ class BmPainter extends CustomPainter {
     final ui.Image? gi = im.goal;
     if (gi != null) {
       for (final BmGoal g in e.GOALS) {
-        final double gx = e.GGx + math.sin(t / 25) * 8 * e.shake[g.team];
-        final double gy = g.d < 0 ? g.y - e.GGh - 2 : g.y + 2;
-        final Rect dst = Rect.fromLTWH(gx, gy, e.GGw, e.GGh);
+        final double drawWidth = e.GGw * kBmGoalArtScale;
+        final double drawHeight = e.GGh * kBmGoalArtScale;
+        final double gx = e.GGx + (e.GGw - drawWidth) / 2 + math.sin(t / 25) * 8 * e.shake[g.team];
+        final double gy = g.d < 0 ? g.y - drawHeight - 2 : g.y + 2;
+        final Rect dst = Rect.fromLTWH(gx, gy, drawWidth, drawHeight);
         final Rect src = Rect.fromLTWH(0, 0, gi.width.toDouble(), gi.height.toDouble());
         final Paint p = Paint()..filterQuality = FilterQuality.medium;
         if (g.d > 0) {
           canvas.save();
-          canvas.translate(0, gy * 2 + e.GGh);
+          canvas.translate(0, gy * 2 + drawHeight);
           canvas.scale(1, -1);
           canvas.drawImageRect(gi, src, dst, p);
           canvas.restore();
@@ -131,23 +161,9 @@ class BmPainter extends CustomPainter {
         }
       }
     }
-    if (fancy) _drawParts(canvas);
-    if (e.rings.isNotEmpty) {
-      for (final BmRing rg in e.rings) {
-        final double tt = 1 - rg.l / rg.m;
-        canvas.drawCircle(
-            Offset(rg.x, rg.y),
-            rg.r * (1 + tt * 3.2 * (.6 + rg.w)),
-            Paint()
-              ..blendMode = BlendMode.plus
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 6 * (1 - tt) + 1
-              ..color = _rgba(255, 255, 255, (1 - tt) * .8 * rg.w));
-      }
-    }
+    // Impact sparks, rings and the full-screen flash are removed by design.
     _aim(canvas, t);
     canvas.restore();
-    if (e.flash > 0) canvas.drawRect(Offset.zero & size, Paint()..color = _rgba(255, 230, 140, e.flash * .35));
   }
 
   // ------------------------------------------------------------ background (build())
@@ -209,37 +225,20 @@ class BmPainter extends CustomPainter {
   // ------------------------------------------------------------ sprite()
   void _sprite(Canvas canvas, BmBody b, double t) {
     final bool isBall = b == e.ball;
+    final double renderRadius = isBall ? b.r * kBmBallVisualScale : b.r * kBmPlayerVisualScale;
     final ui.Image? sp = isBall ? im.ball : im.team[b.team == 0 ? 0 : 1];
     if (sp == null) {
-      canvas.drawCircle(Offset(b.x, b.y), b.r, Paint()..color = isBall ? Colors.white : (b.team != 0 ? const Color(0xFFFF5B5B) : const Color(0xFF3B9BFF)));
+      canvas.drawCircle(Offset(b.x, b.y), renderRadius, Paint()..color = isBall ? Colors.white : (b.team != 0 ? const Color(0xFFFF5B5B) : const Color(0xFF3B9BFF)));
       return;
     }
     final Rect src = Rect.fromLTWH(0, 0, sp.width.toDouble(), sp.height.toDouble());
-    final Rect dst = Rect.fromLTWH(-b.r, -b.r, b.r * 2, b.r * 2);
+    final Rect dst = Rect.fromLTWH(-renderRadius, -renderRadius, renderRadius * 2, renderRadius * 2);
     canvas.save();
     double drawY = b.y;
     if (isBall) {
       final double sv = math.sqrt(b.vx * b.vx + b.vy * b.vy), fast = math.min(1.0, sv / (1700 * K));
       final BmBallRenderer? br = im.ballR;
       if (br != null && br.ready) br.update(b.R, b.rv);
-      // halo (SPR.h0 / SPR.h1)
-      if (fancy) {
-        final double R = b.r * (2.15 + fast * .5);
-        final bool hot = fast > .55;
-        final double ga = hot ? (.18 + .22 * fast) / .4 : 1;
-        final Offset c = Offset(b.x, drawY);
-        final Color c0 = hot ? _rgba(255, 170, 70, .4) : _rgba(80, 155, 255, .26);
-        canvas.drawCircle(
-            c,
-            R,
-            Paint()
-              ..shader = ui.Gradient.radial(c, R, <Color>[
-                c0.withValues(alpha: c0.a * ga.clamp(0.0, 1.0).toDouble()),
-                c0.withValues(alpha: c0.a * ga.clamp(0.0, 1.0).toDouble()),
-                _rgba(100, 130, 160, .15 * ga.clamp(0.0, 1.0).toDouble()),
-                _rgba(40, 50, 65, 0)
-              ], const <double>[0, .116, .4536, 1]));
-      }
       final double so = b.r * (.55 + .25 * fast);
       canvas.drawOval(Rect.fromCenter(center: Offset(b.x + so * .35, b.y + so), width: b.r * .86 * 2, height: b.r * .34 * 2),
           Paint()..color = _rgba(8, 14, 24, .42 * .8));
@@ -250,8 +249,24 @@ class BmPainter extends CustomPainter {
         canvas.scale(1 + st - sq, 1 - st * .55 + sq);
         canvas.rotate(-a);
       }
+      final ui.Image? sheet = im.ballSheet;
       final ui.Image? rendered = br?.image;
-      if (rendered != null) {
+      if (sheet != null && im.ballFrames > 0) {
+        // distance-driven roll (one frame per ~0.45 radius) + idle spin at a quarter of the GIF speed
+        if (!im.animX.isNaN) {
+          final double dx = b.x - im.animX, dy = b.y - im.animY;
+          im.animPhase += math.sqrt(dx * dx + dy * dy) / (b.r * .45);
+        }
+        if (im.animT > 0) im.animPhase += (t - im.animT).clamp(0, 100) / (im.ballFrameMs * 4);
+        im.animX = b.x;
+        im.animY = b.y;
+        im.animT = t;
+        final int fi = im.animPhase.floor() % im.ballFrames;
+        final double fw = sheet.width / im.ballFrames;
+        if (sv > 40) canvas.rotate(math.atan2(b.vy, b.vx) + math.pi / 2);
+        canvas.drawImageRect(sheet, Rect.fromLTWH(fi * fw, 0, fw, sheet.height.toDouble()), dst,
+            Paint()..filterQuality = FilterQuality.medium);
+      } else if (rendered != null) {
         canvas.drawImageRect(rendered, Rect.fromLTWH(0, 0, rendered.width.toDouble(), rendered.height.toDouble()), dst,
             Paint()..filterQuality = FilterQuality.medium);
       } else {
@@ -275,7 +290,7 @@ class BmPainter extends CustomPainter {
       ..filterQuality = FilterQuality.medium
       ..colorFilter = const ColorFilter.mode(Color.fromRGBO(6, 8, 24, .66), BlendMode.srcATop);
     for (int k = 4; k >= 1; k--) {
-      canvas.drawImageRect(sp, src, dst.shift(Offset(0, b.r * .052 * k)), dark);
+      canvas.drawImageRect(sp, src, dst.shift(Offset(0, renderRadius * .052 * k)), dark);
     }
     canvas.drawImageRect(sp, src, dst, Paint()..filterQuality = FilterQuality.medium);
     canvas.restore();
@@ -402,6 +417,29 @@ class BmPainter extends CustomPainter {
       if (l == 0) l = 1;
       return <double>[-dy / l, dx / l];
     }
+
+    // A low-contrast ground mark sits below the neon trail. It follows the
+    // ball's actual path, fades with the stored trail alpha, and reads like a
+    // speed/skid trace on the pitch instead of a floating laser effect.
+    for (int i = 1; i < n; i++) {
+      final BmTrailPt p = trail[i - 1], q = trail[i];
+      final double f = q.a.clamp(0.0, 1.0).toDouble();
+      final List<double> nn = nrm(i);
+      final double offset = BW * 0.42;
+      final Paint mark = Paint()
+        ..blendMode = BlendMode.multiply
+        ..strokeCap = StrokeCap.round
+        ..strokeWidth = BW * (0.70 + f * 0.85)
+        ..color = _rgba(16, 28, 12, 0.10 + f * 0.16);
+      canvas.drawLine(Offset(p.x + nn[0] * offset, p.y + nn[1] * offset),
+          Offset(q.x + nn[0] * offset, q.y + nn[1] * offset), mark);
+      canvas.drawLine(Offset(p.x - nn[0] * offset, p.y - nn[1] * offset),
+          Offset(q.x - nn[0] * offset, q.y - nn[1] * offset), mark);
+    }
+
+    // Deliberately stop here: only the low-alpha multiply trace remains.
+    // All neon, fire, sparkle and particle trail variants are disabled.
+    return;
 
     void base(double w0, double a0) {
       for (int i = 1; i < n; i++) {

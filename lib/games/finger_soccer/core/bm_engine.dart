@@ -9,6 +9,11 @@ import 'bm_data.dart';
 // ---------------------------------------------------------------- constants (game.js line 4-6)
 const double K = 1.27, PR = 63.8, BR = 28.8, STEP = 1 / 240, RC = 70, LMAX = 320;
 const int NB = 36;
+/// Mini-soccer tuning (redesign-v1.1, owner request): ball mass 1.9 -> 1.805 (x0.95) and a kick factor on the
+/// ball's share of a disc->ball impulse so a disc striking the ball launches it exactly 5% faster than before
+/// (the lighter mass alone gives +1.40%, BKICK supplies the rest). Nothing else changed.
+const double BALL_M = 1.805;
+const double BKICK = 1.05 * ((1 / 1.9) / (1 / 5 + 1 / 1.9)) / ((1 / BALL_M) / (1 / 5 + 1 / BALL_M));
 const double HV = 4, PF1 = 390, PF2 = .8, PV0 = 600, EPP = .48, PCAP = 190;
 
 /// Field size factor (game.js line 12).
@@ -95,10 +100,12 @@ class BmTrailPt {
 }
 
 class BmBody {
-  BmBody(this.x, this.y, this.team, this.r, this.m) : im = 1 / m;
+  BmBody(this.x, this.y, this.team, this.r, this.m, {this.power = 0}) : im = 1 / m;
   double x, y, vx = 0, vy = 0;
   final double r, m, im;
   final int team;
+  /// Per-piece strike rating. 0 is reserved for the ball; player pieces are 1..10.
+  int power;
   double spin = 0, ang = 0, sq = 0, boost = 0;
   final List<double> R = <double>[1, 0, 0, 0, 1, 0, 0, 0, 1];
   int rv = 0;
@@ -242,13 +249,14 @@ class BmEngine {
     final List<double> gi = kBmGS[f.gs]!;
     final double gw = 2 * f.g / (gi[3] - gi[2]);
     GGw = gw;
-    GGh = gw * gi[1] / gi[0];
+    GGh = gw * gi[1] / gi[0] * 1.02; // goal depth +2% (owner request)
     GGx = CX - f.g - gi[2] * gw;
     DEPTH = _mx(106, (GGh * .95).roundToDouble());
     GOALS = <BmGoal>[BmGoal(0, Ft, CX - f.g, CX + f.g, -1), BmGoal(1, Fb, CX - f.g, CX + f.g, 1)];
   }
 
-  BmBody mk(double x, double y, int team, double r, double m) => BmBody(x, y, team, r, m);
+  BmBody mk(double x, double y, int team, double r, double m) =>
+      BmBody(x, y, team, r, m, power: team == 2 ? 0 : 1 + rnd.nextInt(10));
 
   void reset(int k) {
     bodies = <BmBody>[];
@@ -273,7 +281,7 @@ class BmEngine {
         bodies.add(b);
       }
     }
-    final BmBody bl = mk(CX, mirror ? 2 * CY - KY : KY, 2, BR, 1.9);
+    final BmBody bl = mk(CX, mirror ? 2 * CY - KY : KY, 2, BR, BALL_M);
     bl.cid = 99;
     ball = bl;
     bodies.add(bl);
@@ -522,6 +530,17 @@ class BmEngine {
         j = -(1 + e) * vn / sm;
     final BmBody? pa = isB ? (a == bl ? b : a) : null;
     final double pre = pa != null ? math.sqrt(pa.vx * pa.vx + pa.vy * pa.vy) : 0;
+    if (pa != null) {
+      // disc strikes the ball (disc faster than ball): ball launch x1.05 overall (see BKICK).
+      final double bs = math.sqrt(bl.vx * bl.vx + bl.vy * bl.vy);
+      if (pre > bs) {
+        if (a == bl) {
+          ka *= BKICK;
+        } else {
+          kb *= BKICK;
+        }
+      }
+    }
     a.vx -= j * nx * a.im * ka;
     a.vy -= j * ny * a.im * ka;
     b.vx += j * nx * b.im * kb;
@@ -703,10 +722,15 @@ class BmEngine {
   }
 
   void fire(BmBody b, double dx, double dy, double l) {
-    final double p = _mn(l, LMAX) / LMAX, v = (260 + 1085 * math.pow(p, .8).toDouble()) * K * 1.32, vx = dx / l * v, vy = dy / l * v;
+    final double p = _mn(l, LMAX) / LMAX;
+    // Rating is physical: 1 => 0.65x impulse, 5 => 1.05x, 10 => 1.55x.
+    // It is applied before launch, not merely displayed in the UI.
+    final double strike = .55 + b.power * .1;
+    final double v = (260 + 1085 * math.pow(p, .8).toDouble()) * K * 1.32 * strike;
+    final double vx = dx / l * v, vy = dy / l * v;
     launch(b, vx, vy, false);
     final int sg = mirror ? -1 : 1;
-    hooks.emit('shot', <String, dynamic>{'cid': b.cid, 'vx': vx * sg, 'vy': vy * sg, 'team': ct(b.team)});
+    hooks.emit('shot', <String, dynamic>{'cid': b.cid, 'vx': vx * sg, 'vy': vy * sg, 'team': ct(b.team), 'power': b.power});
   }
 
   void finishTurn(bool emitSnap) {
@@ -766,6 +790,8 @@ class BmEngine {
       if (o.cid == cid) b = o;
     }
     if (b == null) return;
+    final int? power = (m['power'] as num?)?.toInt();
+    if (power != null && power >= 1 && power <= 10) b.power = power;
     final int sg = mirror ? -1 : 1;
     launch(b, (m['vx'] as num).toDouble() * sg, (m['vy'] as num).toDouble() * sg, true);
   }
@@ -815,12 +841,8 @@ class BmEngine {
       tleft -= dt;
       if (tleft <= 0) {
         if (mode == 'online') {
-          if (turn == 0) {
-            hooks.emit('timeout', <String, dynamic>{'team': ct(0)});
-            skipTurn();
-          } else if (tleft < -4) {
-            skipTurn();
-          }
+          hooks.emit('timeout', <String, dynamic>{'team': ct(turn)});
+          skipTurn();
         } else {
           skipTurn();
         }

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../storage/local_store.dart';
 import 'achievements.dart';
+import '../ui2/oracle_buddy.dart' show OracleBus;
 
 /// A recorded activity (shown in Personal Orbit timeline).
 class ActivityEntry {
@@ -171,7 +172,9 @@ class ProfileService extends ChangeNotifier {
   void Function(String name)? onNameChanged;
 
   String _idemKey(String event) {
-    if (event.startsWith('world.first_visit.') || event.startsWith('achievement.')) return 'once:$event';
+    if (event.startsWith('world.first_visit.') || event.startsWith('achievement.') || event.startsWith('challenge.')) {
+      return 'once:$event';
+    }
     if (event == 'daily') return 'daily:${_today()}';
     return '$event:${DateTime.now().microsecondsSinceEpoch}:${Random().nextInt(1 << 30)}';
   }
@@ -419,6 +422,7 @@ class ProfileService extends ChangeNotifier {
     bump('game.$gameId.played');
     final xpGain = switch (outcome) { 'win' => 60, 'draw' => 30, _ => 15 };
     final coinGain = switch (outcome) { 'win' => 40, 'draw' => 15, _ => 5 };
+    OracleBus.emit(outcome);
     final res = outcome == 'win' ? 'برد' : outcome == 'draw' ? 'مساوی' : 'باخت';
     final resEn = outcome == 'win' ? 'Won' : outcome == 'draw' ? 'Draw' : 'Lost';
     return award('game.$gameId.$outcome',
@@ -450,6 +454,7 @@ class ProfileService extends ChangeNotifier {
     inventory.add(itemId);
     cloudQueue?.call(<String, dynamic>{'t': 'buy', 'i': itemId, 'p': price});
     bump('shop.bought');
+    OracleBus.emit('spend');
     _log('shop', 'خرید: ${nameFa ?? itemId}', 'Purchased: ${nameEn ?? itemId}');
     _checkAchievements();
     _save();

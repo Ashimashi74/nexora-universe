@@ -1,21 +1,22 @@
-import 'dart:math';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../core/assets/app_assets.dart';
-import '../../core/navigation/nexora_menu.dart';
+import '../../core/audio/music_service.dart';
 import '../../core/profile/profile_service.dart';
 import '../../core/settings/app_settings.dart';
-import '../../core/theme/nx_theme.dart';
+import '../../core/ui2/nx2_assets.dart';
+import '../../core/ui2/nx2_widgets.dart';
+import '../../core/ui2/oracle_mascot.dart';
 import '../../core/widgets/nx_widgets.dart';
+import '../../games/game_registry.dart';
 import '../world_registry.dart';
+import 'hub_search.dart';
 
-/// NEXORA HUB — the station at the center of the universe (STEP_11).
-/// 2.5D orbital ring of world portals: drag to rotate, tap to warp in.
-/// Quick menu keeps every important feature ≤ 2 taps away.
+/// NEXORA HUB (NX2 redesign): profile HUD on top, ORACLE on its crystal dock in the middle,
+/// one big PLAY, the art menu tiles and the bottom dock — following the owner's home mockups.
 class HubPage extends ConsumerStatefulWidget {
   const HubPage({super.key});
 
@@ -23,529 +24,487 @@ class HubPage extends ConsumerStatefulWidget {
   ConsumerState<HubPage> createState() => _HubPageState();
 }
 
-class _HubPageState extends ConsumerState<HubPage>
-    with TickerProviderStateMixin {
-  double _angle = 0; // ring rotation (radians)
-  double _velocity = 0;
-  late final AnimationController _idle =
-      AnimationController(vsync: this, duration: const Duration(seconds: 8))
-        ..repeat();
-  late final AnimationController _inertia =
-      AnimationController.unbounded(vsync: this)..addListener(_tick);
-  Duration _last = Duration.zero;
+class _HubPageState extends ConsumerState<HubPage> {
+  final ValueNotifier<int> _coinPoke = ValueNotifier<int>(0);
+  OracleMood _mood = OracleMood.greet;
+  int _line = 0;
 
   @override
-  void dispose() {
-    _idle.dispose();
-    _inertia.dispose();
-    super.dispose();
-  }
-
-  void _tick() {
-    final now = _inertia.lastElapsedDuration ?? Duration.zero;
-    final dt = (now - _last).inMicroseconds / 1e6;
-    _last = now;
-    if (dt <= 0) return;
-    setState(() {
-      _angle += _velocity * dt;
-      _velocity *= pow(0.04, dt).toDouble();
-      if (_velocity.abs() < 0.02) {
-        _velocity = 0;
-        _inertia.stop();
-        _snap();
-      }
+  void initState() {
+    super.initState();
+    // Deep links skip the intro; make sure the menu music still starts.
+    MusicService.instance.start();
+    _calm = Timer(const Duration(seconds: 4), () {
+      if (mounted) setState(() => _mood = OracleMood.idle);
     });
   }
 
-  void _snap() {
-    final step = 2 * pi / kWorlds.length;
-    final target = (_angle / step).round() * step;
-    setState(() => _angle = target);
-  }
-
-  int get _frontIndex {
-    final step = 2 * pi / kWorlds.length;
-    final n = kWorlds.length;
-    final idx = (-_angle / step).round() % n;
-    return (idx + n) % n;
-  }
-
-  void _openWorld(NexoraWorld w) {
-    HapticFeedback.selectionClick();
-    context.push('/world/${w.id}');
-  }
+  Timer? _calm;
 
   @override
-  Widget build(BuildContext context) {
-    final p = ref.watch(profileProvider);
-    final s = ref.watch(settingsProvider);
-    final visual = NxThemeColors.of(context);
-    final front = kWorlds[_frontIndex];
-    return Scaffold(
-      backgroundColor: visual.background,
-      body: NxBrandBackground(
-        child: SafeArea(
-          child: Column(
-            children: [
-              _TopBar(profile: p),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: NxSpace.md),
-                child: GlassPanel(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-                  radius: 28,
-                  onTap: () => context.push('/search'),
-                  child: Row(children: [
-                    Icon(Icons.search_rounded, color: visual.accent),
-                    const SizedBox(width: 8),
-                    Text(
-                        context.tx('جستجو در دنیاها، بازی‌ها و قابلیت‌ها',
-                            'Search worlds, games & features'),
-                        style: TextStyle(color: visual.muted)),
-                  ]),
-                ),
-              ),
-              Expanded(
-                child: LayoutBuilder(builder: (context, c) => _ring(c, s)),
-              ),
-              _FrontWorldCard(world: front, onEnter: () => _openWorld(front)),
-              const SizedBox(height: NxSpace.sm),
-              _QuickRow(profile: p),
-              const SizedBox(height: NxSpace.sm),
-            ],
-          ),
-        ),
-      ),
-      floatingActionButton:
-          _OracleOrbButton(onTap: () => context.push('/oracle')),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endTop,
-    );
+  void dispose() {
+    _calm?.cancel();
+    _coinPoke.dispose();
+    super.dispose();
   }
 
-  Widget _ring(BoxConstraints c, AppSettings s) {
-    final w = c.maxWidth;
-    final h = c.maxHeight;
-    final cx = w / 2;
-    final cy = h * 0.55;
-    final rx = w * 0.40;
-    final ry = h * 0.17;
-    final n = kWorlds.length;
-    final step = 2 * pi / n;
-
-    final items = <({double depth, Widget widget})>[];
-    for (var i = 0; i < n; i++) {
-      final a = _angle + i * step;
-      final x = cx + rx * sin(a);
-      final depth = cos(a); // 1 front, -1 back
-      final y = cy + ry * depth;
-      final scale = 0.55 + 0.45 * ((depth + 1) / 2);
-      final size = min(w, h) * 0.34 * scale;
-      final opacity = (0.35 + 0.65 * ((depth + 1) / 2)).clamp(0.0, 1.0);
-      final world = kWorlds[i];
-      items.add((
-        depth: depth,
-        widget: Positioned(
-          left: x - size / 2,
-          top: y - size * 0.85,
-          width: size,
-          height: size,
-          child: Opacity(
-            opacity: opacity,
-            child: GestureDetector(
-              onTap: () => _openWorld(world),
-              child: _Portal(
-                  world: world,
-                  glow: depth > 0.9 && s.fancyEffects,
-                  idle: _idle,
-                  reduced: s.reducedMotion),
-            ),
-          ),
+  List<(String, String)> _lines(ProfileService p) => <(String, String)>[
+        (
+          _greetFa(p.username),
+          _greetEn(p.username),
         ),
-      ));
+        (
+          'یک دست فوتبال انگشتی؟ من داور می‌شم! 😄',
+          'Finger soccer? I will referee! 😄'
+        ),
+        (
+          'نگهم داری، چیزهای باحال نشونت می‌دم.',
+          'Long-press me and I will show you cool stuff.'
+        ),
+        if (p.canClaimDaily)
+          (
+            'صندوق جایزه‌ی امروز منتظرته! 🎁',
+            'Today\'s reward chest is waiting! 🎁'
+          ),
+      ];
+
+  String _greetFa(String n) {
+    final int h = DateTime.now().hour;
+    final String part = h < 12 ? 'صبح بخیر' : (h < 18 ? 'روز بخیر' : 'شب بخیر');
+    return n.isEmpty ? '$part، کاوشگر!' : '$part، $n!';
+  }
+
+  String _greetEn(String n) {
+    final int h = DateTime.now().hour;
+    final String part =
+        h < 12 ? 'Good morning' : (h < 18 ? 'Good afternoon' : 'Good evening');
+    return n.isEmpty ? '$part, explorer!' : '$part, $n!';
+  }
+
+  Future<void> _claimDaily() async {
+    final ProfileService p = ref.read(profileProvider);
+    final AwardOutcome? o = p.claimDaily();
+    if (!mounted) return;
+    if (o == null) {
+      setState(() => _mood = OracleMood.calm);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(context.tx('جایزه‌ی امروز را گرفته‌ای. فردا برگرد!',
+              'Already claimed today. Come back tomorrow!'))));
+      return;
     }
-    items.sort((a, b) => a.depth.compareTo(b.depth));
-
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onHorizontalDragStart: (_) => _inertia.stop(),
-      onHorizontalDragUpdate: (d) =>
-          setState(() => _angle += d.delta.dx / (rx * 1.2)),
-      onHorizontalDragEnd: (d) {
-        _velocity = d.velocity.pixelsPerSecond.dx / (rx * 1.2);
-        if (s.reducedMotion || _velocity.abs() < 0.1) {
-          _velocity = 0;
-          _snap();
-          return;
-        }
-        _last = Duration.zero;
-        _inertia.repeat(min: 0, max: 1, period: const Duration(seconds: 1));
-      },
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          // central command platform + station core
-          Positioned(
-            left: cx - w * 0.42,
-            top: cy - h * 0.12,
-            width: w * 0.84,
-            child: Opacity(
-              opacity: 0.9,
-              child: Image.asset(AppAssets.worldsHubPropsCommandPlatformOctagon,
-                  cacheWidth: (w * 2).round(), fit: BoxFit.contain),
-            ),
-          ),
-          Positioned(
-            left: cx - 70,
-            top: cy - h * 0.36,
-            width: 140,
-            child: AnimatedBuilder(
-              animation: _idle,
-              builder: (_, child) => Transform.translate(
-                offset: Offset(
-                    0, s.reducedMotion ? 0 : sin(_idle.value * 2 * pi) * 6),
-                child: child,
-              ),
-              child: Image.asset(AppAssets.worldsHubPropsSetEnergyCore,
-                  cacheWidth: 360, fit: BoxFit.contain),
-            ),
-          ),
-          for (final it in items) it.widget,
-        ],
-      ),
-    );
+    setState(() => _mood = OracleMood.win);
+    _coinPoke.value++;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(context.tx('+${o.coins} سکه و +${o.xp} XP',
+            '+${o.coins} coins and +${o.xp} XP'))));
+    await showAwardOutcome(context, o);
   }
-}
-
-class _Portal extends StatelessWidget {
-  const _Portal(
-      {required this.world,
-      required this.glow,
-      required this.idle,
-      required this.reduced});
-  final NexoraWorld world;
-  final bool glow;
-  final Animation<double> idle;
-  final bool reduced;
 
   @override
   Widget build(BuildContext context) {
-    final img = Image.asset(AppAssets.portal(world.id),
-        cacheWidth: 420,
-        fit: BoxFit.contain,
-        errorBuilder: (_, __, ___) =>
-            Icon(world.icon, size: 64, color: world.palette.primary));
-    return Stack(alignment: Alignment.center, children: [
-      if (glow)
-        AnimatedBuilder(
-          animation: idle,
-          builder: (_, __) {
-            final t = reduced ? 0.5 : (sin(idle.value * 2 * pi) + 1) / 2;
-            return Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                      color: world.palette.primary
-                          .withValues(alpha: 0.25 + 0.25 * t),
-                      blurRadius: 40 + 20 * t,
-                      spreadRadius: 4),
-                ],
-              ),
-            );
-          },
-        ),
-      img,
-    ]);
-  }
-}
-
-class _TopBar extends StatelessWidget {
-  const _TopBar({required this.profile});
-  final ProfileService profile;
-
-  @override
-  Widget build(BuildContext context) {
-    final visual = NxThemeColors.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          NxSpace.md, NxSpace.sm, NxSpace.md, NxSpace.sm),
-      child: Row(children: [
-        GestureDetector(
-          onTap: () => context.push('/world/personal_orbit'),
-          child: Container(
-            width: 48,
-            height: 48,
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                  colors: [visual.accent, visual.accentSecondary]),
-              boxShadow: [
-                BoxShadow(
-                    color: visual.accent.withValues(alpha: 0.35),
-                    blurRadius: 16)
+    final ProfileService p = ref.watch(profileProvider);
+    final List<(String, String)> lines = _lines(p);
+    final (String, String) line = lines[_line % lines.length];
+    return Scaffold(
+      backgroundColor: Nx2.deep,
+      extendBody: true,
+      bottomNavigationBar: const Nx2Dock(current: Nx2Tab.home),
+      body: Nx2Background(
+        dim: 0.3,
+        child: Stack(children: <Widget>[
+          SafeArea(
+            bottom: false,
+            child: CustomScrollView(
+              physics: const BouncingScrollPhysics(),
+              slivers: <Widget>[
+                SliverToBoxAdapter(
+                    child: _Hud(profile: p, coinPoke: _coinPoke)),
+                SliverToBoxAdapter(
+                  child: _OracleStage(
+                    mood: _mood,
+                    textFa: line.$1,
+                    textEn: line.$2,
+                    onTap: () => setState(() {
+                      _line++;
+                      _mood = OracleMood.happy;
+                    }),
+                    onLongPress: () => context.push('/oracle'),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(28, 0, 28, 6),
+                    child: Nx2Button(
+                      label: context.tx('بازی کن', 'PLAY'),
+                      icon: Icons.play_arrow_rounded,
+                      kind: Nx2ButtonKind.pink,
+                      height: 64,
+                      fontSize: 22,
+                      onTap: () => context.push('/world/nexora_arcade'),
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(28, 4, 28, 14),
+                    child: Row(children: <Widget>[
+                      Expanded(
+                        child: Nx2Button(
+                          label: context.tx('آنلاین', 'ONLINE'),
+                          icon: Icons.public_rounded,
+                          kind: Nx2ButtonKind.cyan,
+                          height: 46,
+                          fontSize: 14,
+                          onTap: () => context.push('/online/finger_soccer'),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Nx2Button(
+                          label: context.tx('اوراکل', 'ORACLE'),
+                          icon: Icons.auto_awesome_rounded,
+                          kind: Nx2ButtonKind.violet,
+                          height: 46,
+                          fontSize: 14,
+                          onTap: () => context.push('/oracle'),
+                        ),
+                      ),
+                    ]),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                    child: _MenuGrid(profile: p, onDaily: _claimDaily)),
+                SliverToBoxAdapter(child: _ActivityStrip(profile: p)),
+                const SliverToBoxAdapter(child: SizedBox(height: 120)),
               ],
             ),
-            child: ClipOval(
-              child: Container(
-                color: visual.background,
-                child: Image.asset(
-                    'assets/characters/oracle/emotes/${profile.avatarCore}.webp',
-                    cacheWidth: 140,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) =>
-                        Icon(Icons.person, color: visual.text)),
-              ),
-            ),
           ),
-        ),
-        const SizedBox(width: 10),
+        ]),
+      ),
+    );
+  }
+}
+
+class _Hud extends StatelessWidget {
+  const _Hud({required this.profile, required this.coinPoke});
+  final ProfileService profile;
+  final ValueNotifier<int> coinPoke;
+
+  @override
+  Widget build(BuildContext context) {
+    final String name =
+        profile.username.isEmpty ? context.tx('کاوشگر', 'Explorer') : profile.username;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(8, 6, 10, 0),
+      child: Row(children: <Widget>[
         Expanded(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(profile.username.isEmpty ? 'Explorer' : profile.username,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    fontSize: 17,
-                    color: visual.text)),
-            Text(
-                '${context.tx(profile.rankTitleFa, profile.rankTitleEn)} · ${profile.explorerId}',
-                style: TextStyle(color: visual.muted, fontSize: 11)),
+          child: Nx2Pressable(
+          onTap: () => context.push('/world/personal_orbit'),
+          child: Row(children: <Widget>[
+            Nx2AvatarRing(
+                size: 62, initial: name.characters.first.toUpperCase()),
+            const SizedBox(width: 2),
+            Flexible(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14,
+                            color: Nx2.text)),
+                    const SizedBox(height: 2),
+                    Text(
+                        '${context.tx('سطح', 'LV')} ${profile.level} · ${context.tx(profile.rankTitleFa, profile.rankTitleEn)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 10.5,
+                            color: Nx2.muted,
+                            fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 4),
+                    Nx2Progress(value: profile.levelProgress, height: 7),
+                  ]),
+            ),
           ]),
         ),
-        const WalletChip(),
-        const SizedBox(width: 56), // space for ORACLE orb (endTop FAB)
+        ),
+        const SizedBox(width: 4),
+        Nx2Stat(
+          value: '${profile.coins}',
+          wiggle: coinPoke,
+          onTap: () => context.push('/world/nexora_exchange'),
+        ),
+        const SizedBox(width: 6),
+        Nx2IconButton(
+          icon: Icons.search_rounded,
+          tooltip: context.tx('جستجو', 'Search'),
+          onTap: () => showSearch<void>(
+              context: context, delegate: HubSearchDelegate(isFa: context.isFa)),
+        ),
+        const SizedBox(width: 6),
+        Nx2IconButton(
+          icon: Icons.settings_rounded,
+          tooltip: context.tx('تنظیمات', 'Settings'),
+          onTap: () => context.push('/settings'),
+        ),
       ]),
     );
   }
 }
 
-class _FrontWorldCard extends StatelessWidget {
-  const _FrontWorldCard({required this.world, required this.onEnter});
-  final NexoraWorld world;
-  final VoidCallback onEnter;
+class _OracleStage extends StatelessWidget {
+  const _OracleStage({
+    required this.mood,
+    required this.textFa,
+    required this.textEn,
+    required this.onTap,
+    required this.onLongPress,
+  });
+  final OracleMood mood;
+  final String textFa;
+  final String textEn;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   @override
   Widget build(BuildContext context) {
+    final double w = MediaQuery.sizeOf(context).width;
+    final double stage = (w * 0.62).clamp(200.0, 320.0);
+    return SizedBox(
+      height: stage + 24,
+      child: Stack(alignment: Alignment.bottomCenter, children: <Widget>[
+        // crystal dock platform
+        Positioned(
+          bottom: 0,
+          child: Image.asset(Nx2Assets.framesDock,
+              width: stage * 0.95,
+              cacheWidth: (stage * 2).round(),
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+        ),
+        Positioned(
+          bottom: stage * 0.24,
+          child: OracleMascot(
+            mood: mood,
+            size: stage * 0.72,
+            onTap: onTap,
+            onLongPress: onLongPress,
+          ),
+        ),
+        PositionedDirectional(
+          top: 6,
+          start: 14,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 260),
+            child: Nx2Bubble(
+              key: ValueKey<String>(textEn),
+              text: context.tx(textFa, textEn),
+              maxWidth: w * 0.5,
+            ),
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+class _MenuItem {
+  const _MenuItem(this.asset, this.fa, this.en, this.onTap, {this.badge = false});
+  final String asset;
+  final String fa;
+  final String en;
+  final VoidCallback onTap;
+  final bool badge;
+}
+
+class _MenuGrid extends StatelessWidget {
+  const _MenuGrid({required this.profile, required this.onDaily});
+  final ProfileService profile;
+  final VoidCallback onDaily;
+
+  @override
+  Widget build(BuildContext context) {
+    final List<_MenuItem> items = <_MenuItem>[
+      _MenuItem(Nx2Assets.tilesTileShop, 'فروشگاه', 'Shop',
+          () => context.push('/world/nexora_exchange')),
+      _MenuItem(Nx2Assets.tilesTileInventory, 'کوله‌پشتی', 'Inventory',
+          () => context.push('/world/personal_orbit')),
+      _MenuItem(Nx2Assets.tilesTileRanking, 'رتبه‌بندی', 'Ranking',
+          () => context.push('/leaderboard')),
+      _MenuItem(Nx2Assets.badgesTrophyGold, 'تورنمنت', 'Cups',
+          () => context.push('/tournaments')),
+      _MenuItem(Nx2Assets.badgesMedalPeople, 'دوستان', 'Friends',
+          () => context.push('/world/orbit_network')),
+      _MenuItem(Nx2Assets.badgesMedalCrown, 'اجتماع', 'Social',
+          () => context.push('/world/social_station')),
+      _MenuItem(Nx2Assets.badgesBadgePlanet, 'نوا گالری', 'Gallery',
+          () => context.push('/world/nova_gallery')),
+      _MenuItem(Nx2Assets.chestsChestLegendary, 'جایزه', 'Reward', onDaily,
+          badge: profile.canClaimDaily),
+    ];
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: NxSpace.md),
-      child: AnimatedSwitcher(
-        duration: NxMotion.normal,
-        child: GlassPanel(
-          key: ValueKey(world.id),
-          borderColor: world.palette.primary.withValues(alpha: 0.6),
-          child: Row(children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: world.palette.primary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(world.icon, color: world.palette.primary, size: 27),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Nx2Panel(
+        gems: true,
+        padding: const EdgeInsets.fromLTRB(8, 15, 8, 12),
+        child: Column(children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Nx2SectionHeader(
+              title: context.tx('منوی نکسورا', 'NEXORA MENU'),
+              action: context.tx('همه', 'All'),
+              onAction: () => _showAll(context),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(context.isFa ? world.nameFa : world.name,
-                        style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 17,
-                            color: world.palette.primary)),
-                    Text(context.tx(world.taglineFa, world.taglineEn),
-                        style: TextStyle(
-                            color: NxThemeColors.of(context).muted,
-                            fontSize: 12)),
-                  ]),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(
-                  backgroundColor: world.palette.primary),
-              onPressed: onEnter,
-              child: Text(context.tx('ورود', 'Enter')),
-            ),
-          ]),
+          ),
+          const SizedBox(height: 10),
+          LayoutBuilder(builder: (BuildContext context, BoxConstraints c) {
+            final double cell = (c.maxWidth - 16) / 4;
+            return Wrap(
+              spacing: 0,
+              children: <Widget>[
+                for (final _MenuItem it in items)
+                  SizedBox(
+                    width: cell,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+                      child: Nx2Tile(
+                        asset: it.asset,
+                        label: context.tx(it.fa, it.en),
+                        onTap: it.onTap,
+                        badge: it.badge,
+                        size: (cell - 8).clamp(56.0, 78.0),
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          }),
+        ]),
+      ),
+    );
+  }
+
+  void _showAll(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: const Color(0xF2120A33),
+      builder: (BuildContext ctx) => SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                const XpBar(),
+                const SizedBox(height: 12),
+                for (final NexoraWorld w in kWorlds)
+                  ListTile(
+                    leading: Icon(w.icon, color: w.palette.primary),
+                    title: Text(ctx.isFa ? w.nameFa : w.name),
+                    subtitle: Text(ctx.tx(w.taglineFa, w.taglineEn),
+                        style: const TextStyle(fontSize: 12)),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      context.push('/world/${w.id}');
+                    },
+                  ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.settings_rounded),
+                  title: Text(ctx.tx('تنظیمات', 'Settings')),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    context.push('/settings');
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.info_outline_rounded),
+                  title: Text(ctx.tx(
+                      '${kGames.length} بازی · ${kWorlds.length} دنیا',
+                      '${kGames.length} games · ${kWorlds.length} worlds')),
+                ),
+              ]),
         ),
       ),
     );
   }
 }
 
-class _QuickRow extends ConsumerWidget {
-  const _QuickRow({required this.profile});
+class _ActivityStrip extends StatelessWidget {
+  const _ActivityStrip({required this.profile});
   final ProfileService profile;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final visual = NxThemeColors.of(context);
-    final items = <({
-      IconData icon,
-      String fa,
-      String en,
-      VoidCallback onTap,
-      bool badge
-    })>[
-      (
-        icon: Icons.sports_esports_rounded,
-        fa: 'آرکید',
-        en: 'Arcade',
-        onTap: () => context.push('/world/nexora_arcade'),
-        badge: false
-      ),
-      (
-        icon: Icons.emoji_events_rounded,
-        fa: 'تورنمنت',
-        en: 'Cups',
-        onTap: () => context.push('/tournaments'),
-        badge: false
-      ),
-      (
-        icon: Icons.forum_rounded,
-        fa: 'پیام',
-        en: 'Chat',
-        onTap: () => context.push('/world/orbit_network'),
-        badge: false
-      ),
-      (
-        icon: Icons.card_giftcard_rounded,
-        fa: 'جایزه',
-        en: 'Reward',
-        onTap: () async {
-          final o = ref.read(profileProvider).claimDaily();
-          if (o == null) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text(context.tx(
-                    'جایزه‌ی امروز را گرفته‌ای. فردا برگرد!',
-                    'Already claimed today. Come back tomorrow!'))));
-            return;
-          }
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(context.tx('+${o.coins} سکه و +${o.xp} XP',
-                  '+${o.coins} coins and +${o.xp} XP'))));
-          await showAwardOutcome(context, o);
-        },
-        badge: profile.canClaimDaily
-      ),
-      (
-        icon: Icons.storefront_rounded,
-        fa: 'بازار',
-        en: 'Shop',
-        onTap: () => context.push('/world/nexora_exchange'),
-        badge: false
-      ),
-      (
-        icon: Icons.grid_view_rounded,
-        fa: 'همه بخش‌ها',
-        en: 'All sections',
-        onTap: () => showNexoraMenu(context),
-        badge: false
-      ),
-    ];
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: NxSpace.md),
-      child: GlassPanel(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (final it in items)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: it.onTap,
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 4),
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Badge(
-                            isLabelVisible: it.badge,
-                            smallSize: 9,
-                            child: Icon(it.icon, color: visual.accent)),
-                        const SizedBox(height: 3),
-                        Text(context.tx(it.fa, it.en),
-                            style: TextStyle(fontSize: 11, color: visual.text)),
-                      ]),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _OracleOrbButton extends ConsumerStatefulWidget {
-  const _OracleOrbButton({required this.onTap});
-  final VoidCallback onTap;
-
-  @override
-  ConsumerState<_OracleOrbButton> createState() => _OracleOrbButtonState();
-}
-
-class _OracleOrbButtonState extends ConsumerState<_OracleOrbButton>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _c =
-      AnimationController(vsync: this, duration: const Duration(seconds: 3))
-        ..repeat();
-
-  @override
-  void dispose() {
-    _c.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final reduced = ref.watch(settingsProvider).reducedMotion;
+    final List<ActivityEntry> recent = profile.activity.take(3).toList();
     return Padding(
-      padding: const EdgeInsets.only(top: 4),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedBuilder(
-          animation: _c,
-          builder: (_, child) {
-            final t = reduced ? 0.0 : _c.value;
-            return Container(
-              width: 52,
-              height: 52,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: SweepGradient(
-                  transform: GradientRotation(t * 2 * pi),
-                  colors: const [
-                    NxColors.violet,
-                    NxColors.turquoise,
-                    NxColors.electricBlue,
-                    NxColors.violet
-                  ],
-                ),
-                boxShadow: [
-                  BoxShadow(
-                      color: NxColors.violet.withValues(alpha: 0.6),
-                      blurRadius: 18)
-                ],
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 0),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+        Expanded(
+          child: Nx2Panel(
+            gold: true,
+            onTap: () => context.push('/tournaments'),
+            padding: const EdgeInsets.all(10),
+            child: Row(children: <Widget>[
+              Image.asset(Nx2Assets.badgesTrophyGold,
+                  width: 40,
+                  height: 48,
+                  cacheWidth: 120,
+                  errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(context.tx('لیگ و تورنمنت', 'Leagues & Cups'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 12.5,
+                              color: Nx2.gold)),
+                      Text(context.tx('ثبت‌نام و جایزه', 'Join & win prizes'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 11, color: Nx2.muted)),
+                    ]),
               ),
-              padding: const EdgeInsets.all(3),
-              child: child,
-            );
-          },
-          child: ClipOval(
-            child: Container(
-              color: NxColors.navyDeep,
-              child: Image.asset(AppAssets.charactersOraclePosesIdle,
-                  cacheHeight: 160, fit: BoxFit.contain),
-            ),
+            ]),
           ),
         ),
-      ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Nx2Panel(
+            padding: const EdgeInsets.all(10),
+            onTap: () => context.push('/world/personal_orbit'),
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(context.tx('آخرین فعالیت', 'Latest activity'),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 12.5,
+                          color: Nx2.cyan)),
+                  const SizedBox(height: 2),
+                  if (recent.isEmpty)
+                    Text(context.tx('هنوز چیزی نیست', 'Nothing yet'),
+                        style: const TextStyle(fontSize: 11, color: Nx2.muted))
+                  else
+                    for (final ActivityEntry a in recent)
+                      Text(context.tx(a.textFa, a.textEn),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              const TextStyle(fontSize: 11, color: Nx2.muted)),
+                ]),
+          ),
+        ),
+      ]),
     );
   }
 }

@@ -45,6 +45,7 @@ Schema: `supabase/migrations/20261115000200_nx_social.sql` (applied live). Only 
   change (member: posts + events/RSVP; moderator: + tournaments/local players; admin/owner: all). Role change / kick / delete /
   join-by-code / join-public / leave are role-checked RPCs. Discover sheet lists public communities.
   Known limit: within the parts a role may edit, a modified client could rewrite others' posts (no per-post server check).
+- **Orbit chat media**: photos, audio/music and documents now upload to `nx-media/<uid>/chat/` with an 8 MiB/MIME allow-list, are sent as typed `photo`/`audio`/`file` messages in direct chats, groups and channels, and render as image/file cards with external open actions. The server RPC and Storage policies are in `20261119000100_nx_chat_media.sql`.
 
 ## ORACLE remote (M5)
 - `RemoteOracleEngine` → existing `oracle-chat` Edge Function (unchanged). Contract: POST `{messages, ctx}` with the user JWT →
@@ -56,7 +57,7 @@ Schema: `supabase/migrations/20261115000200_nx_social.sql` (applied live). Only 
   with no app change.
 
 ## Remaining / next
-- Media in Orbit chats (photos/voice notes) — Nova photo upload exists and can be reused.
+- Voice recording (microphone capture) is still a separate follow-up; selected audio/music files are supported in Orbit chats now.
 - Push notifications for messages/calls when the app is closed (calls ring only while the app is open).
 - ORACLE voice (the notice stays; `oracle-chat` supports audio but needs the provider balance first).
 - No device testing possible from the build agent: SQL/RPC/RLS/Storage/Edge Functions verified live with guest accounts
@@ -101,3 +102,35 @@ No extra server: everything runs in the existing Supabase project (Postgres RPCs
 - Verified live against the project with guest accounts (SE/DE/two legs/RR/groups/swiss/custom paths, byes, golden-goal cap,
   codes + rate limit, approvals, waitlist, refunds, cancel, payout maths, disputes, admin correction, forfeits, cron-driven run,
   RLS from the REST API). Pure-Dart mirror + tests: `test/features/tournaments/bracket_test.dart`.
+
+## ORACLE personality (redesign, 2026-11-17) — `lib/worlds/oracle_core/persona/`
+- `oracle_persona_data.dart`: default JSON config (39 players + aliases, verbatim lines, login greetings, spontaneous lines,
+  result reactions, funny tutorials per game mechanic, guided-tour texts, `{jan}` replies, frequencies/cooldowns, category switches).
+  `{jan}` renders the stretched signature «جاااااااااان» (8–13 ا, 10 by default); any short signature «جان» in admin text is upgraded.
+- `oracle_persona.dart` (pure Dart): name NLU (normalisation, ZWNJ, ی/ي ک/ك, letter squeeze, Persian suffixes, Latin aliases,
+  Levenshtein for long names, ambiguity for shared first names), cooldown manager, no-repeat shuffle bag, login greetings
+  (never claims another player logged in), spontaneous lines, reactions from real results, tutorials, tour steps, AI context.
+- Wired into: offline brain (`respond` → players / wake / jan replies / unknown names), corner buddy (login greeting,
+  spontaneous lines, guided tour overlay on route changes), game result screens (offline + online), tutorial banner at game start,
+  in-game ORACLE sheet ("آموزش ORACLE" replay + persona context), `nx-oracle` (persona rules + verified profiles from the server config).
+- Guided tour: `oracle_tour.dart` — spotlight coach marks (`OracleTourTarget` on dock items), once per section per account
+  (LocalStore + `nx_profiles.tour_seen` via `nx_tour_seen_set`), replay from Settings.
+- Server: `supabase/migrations/20261117200000_nx_oracle_persona.sql` (applied live): `nx_oracle_persona` (public read, seeded with
+  the defaults), `nx_oracle_persona_save` (owner or `oracle` permission via `nx_has_perm`, audited in `nx_owner_audit`),
+  `nx_admin_perms` (per-permission admins, used by the admin panel milestone), `nx_tour_seen_set`.
+- Admin editor: Settings → «تنظیمات شخصیت اوراکل (مدیر)» (`/admin/oracle`, JSON editor; visible only when `nx_has_perm('oracle')`).
+- Tests: `test/worlds/oracle_persona_test.dart` (names incl. typos/Latin, Pedro/Denny/Mahyar separation, verbatim lines,
+  stretched signature everywhere, cooldowns, no-repeat, reactions, greetings, tutorials, tour, brain integration).
+
+## Backend split — infrastructure (2026-11-17, applied live; app not switched yet)
+- Auth project: custom access token hook `nx_access_token_hook` enabled (claim `nx_perms`: `owner` | per-permission admins from
+  `nx_admin_perms` | `tournaments` for nx_staff | `unlimited_gems`; never fails a sign-in). Verified: sign-up still works, claim present.
+- Games project trusts auth JWTs (Third-Party Auth, ES256 JWKS) — verified `auth.uid()` = same user id there.
+- Wallet bridge (both directions, verified end-to-end with a temporary guest, then deleted): games `profiles` mirror + `nx_wallet_tx`
+  outbox → auth `nx_bridge_apply_batch` (idempotent by tx id, `nx_bridge_applied`) → snapshot back via `nx_mirror_put`;
+  auth-side profile changes of NEXORA players push snapshots (`nx_profiles_to_games` trigger). Service keys in Vault on both sides.
+  Files: `supabase/games/migrations/20261117100000_g_mirror_bridge.sql`, `supabase/migrations/20261117210000_nx_access_token_hook.sql`,
+  `supabase/migrations/20261117220000_nx_games_bridge.sql`.
+- Remaining for the split: port rooms/matches/matchmaking + the tournaments engine (~100 SQL functions) to the games project with
+  shims (`nx_perm` instead of nx_staff/is_admin), then switch the app's rooms/matches/tournaments calls to a second Supabase client
+  (`accessToken` = auth session) in one release.

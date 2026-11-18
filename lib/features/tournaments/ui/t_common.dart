@@ -121,7 +121,7 @@ IconData formatIcon(TFormat f) => switch (f) {
     {bool paused = false}) {
   if (paused) return (context.tx('متوقف', 'Paused'), tAccent(context));
   return switch (status) {
-    'draft' => (context.tx('پیش‌نویس', 'Draft'), NxThemeColors.of(context).muted),
+    'draft' => (context.tx('پیش‌نویس', 'Draft'), NxColors.textDim),
     'scheduled' => (context.tx('به‌زودی', 'Scheduled'), tAccent(context)),
     'registering' => (
         context.tx('ثبت‌نام باز', 'Registering'),
@@ -135,7 +135,7 @@ IconData formatIcon(TFormat f) => switch (f) {
     'live' => (context.tx('زنده', 'Live'), tAccentSecondary(context)),
     'finished' => (context.tx('پایان‌یافته', 'Finished'), tAccent(context)),
     'cancelled' => (context.tx('لغو شد', 'Cancelled'), NxColors.danger),
-    _ => (status, NxThemeColors.of(context).muted),
+    _ => (status, NxColors.textDim),
   };
 }
 
@@ -161,6 +161,7 @@ String entryStatusName(BuildContext context, String s) => switch (s) {
       'rejected' => context.tx('رد شده', 'Rejected'),
       'withdrawn' => context.tx('انصراف', 'Withdrawn'),
       'removed' => context.tx('حذف شده', 'Removed'),
+      'no_checkin' => context.tx('بدون اعلام حضور', 'Did not check in'),
       _ => s,
     };
 
@@ -212,6 +213,10 @@ String notifText(BuildContext context, TNotification n) {
         'The draw is done — check the bracket'),
     'starting_soon' => context.tx('تورنمنت ۱۰ دقیقه‌ی دیگر شروع می‌شود',
         'The tournament starts in 10 minutes'),
+    'checkin_open' => context.tx('۱۰ دقیقه تا شروع — در صفحه‌ی تورنمنت اعلام حضور کن',
+        '10 minutes to the start — check in on the tournament page'),
+    'no_checkin' => context.tx('اعلام حضور نکردی؛ ورودیه برگشت داده شد',
+        'You did not check in — entry fee refunded'),
     'started' => context.tx('تورنمنت شروع شد', 'The tournament has started'),
     'match_soon' =>
       context.tx('بازی‌ات ۱۰ دقیقه‌ی دیگر است', 'Your match is in 10 minutes'),

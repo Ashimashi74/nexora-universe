@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../../../core/profile/profile_service.dart';
 import '../../../core/settings/app_settings.dart';
@@ -122,7 +123,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
           ),
           ListTile(
             leading:
-                Icon(Icons.perm_media_rounded, color: NxThemeColors.of(context).muted),
+                const Icon(Icons.perm_media_rounded, color: NxColors.textDim),
             title: Text(c.tx('عکس، ویدئو، فایل، پیام صوتی',
                 'Photo, video, file, voice note')),
             subtitle: Text(c.tx('بعد از اتصال سرور (آپلود امن)',
@@ -151,7 +152,8 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
         final String? g = await showArcadeGamePicker(context);
         if (g == null) return;
         final OrbitChat? target = _ctrl.chatById(widget.chatId);
-        final client = ref.read(onlineProvider).client;
+        final client = ref.read(onlineProvider).games;
+        await ref.read(onlineProvider).gamesHello();
         if (target != null && target.online && client != null) {
           // A real private room; the card lets every member join it.
           try {
@@ -190,13 +192,60 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
         await showSharedInbox(context, chatId: widget.chatId);
         break;
       case 'media':
-        if (!mounted) return;
-        await showOrbitOnlineOnly(context,
-            fa: 'ارسال رسانه و پیام صوتی',
-            en: 'Sending media and voice notes',
-            icon: Icons.attach_file_rounded);
+        await _pickChatFile();
         break;
     }
+  }
+
+  Future<void> _pickChatFile() async {
+    final SupabaseOrbitRepository? online = _ctrl.online;
+    if (online == null) {
+      if (mounted) {
+        await showOrbitOnlineOnly(context,
+            fa: 'ارسال رسانه بعد از ورود به حساب فعال می‌شود',
+            en: 'Media sending is available after signing in',
+            icon: Icons.cloud_off_rounded);
+      }
+      return;
+    }
+    final FilePickerResult? picked = await FilePicker.platform.pickFiles(
+      withData: true,
+      type: FileType.custom,
+      allowedExtensions: <String>[
+        'jpg', 'jpeg', 'png', 'webp', 'gif', 'mp3', 'm4a', 'wav', 'ogg', 'aac', 'pdf', 'doc', 'docx', 'zip', 'txt', 'json',
+      ],
+    );
+    if (!mounted || picked == null || picked.files.single.bytes == null) return;
+    final PlatformFile file = picked.files.single;
+    if (file.size > 8 * 1024 * 1024) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tx('حداکثر اندازه ۸ مگابایت است.', 'Maximum size is 8 MB.'))));
+      return;
+    }
+    final String ext = (file.extension ?? '').toLowerCase();
+    final String mime = _chatMime(ext);
+    final OrbitMessageKind kind = mime.startsWith('image/')
+        ? OrbitMessageKind.photo
+        : (mime.startsWith('audio/') ? OrbitMessageKind.audio : OrbitMessageKind.file);
+    try {
+      final Map<String, dynamic> media = await online.uploadChatAttachment(file.bytes!, fileName: file.name, mime: mime);
+      final String caption = _text.text.trim();
+      _text.clear();
+      final String name = orbitMyName(context, ref.read(profileProvider));
+      await _ctrl.send(widget.chatId, authorName: name, kind: kind, text: caption, payload: media);
+      await _afterSend();
+    } catch (_) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tx('ارسال فایل انجام نشد.', 'Could not send the file.'))));
+    }
+  }
+
+  String _chatMime(String ext) {
+    const Map<String, String> types = <String, String>{
+      'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png', 'webp': 'image/webp', 'gif': 'image/gif',
+      'mp3': 'audio/mpeg', 'm4a': 'audio/mp4', 'wav': 'audio/wav', 'ogg': 'audio/ogg', 'aac': 'audio/aac',
+      'pdf': 'application/pdf', 'doc': 'application/msword', 'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'zip': 'application/zip', 'txt': 'text/plain', 'json': 'application/json',
+    };
+    return types[ext] ?? 'application/octet-stream';
   }
 
   void _call(OrbitChat chat, {required bool video}) {
@@ -391,7 +440,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(live.description,
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: NxThemeColors.of(context).muted)),
+                        style: const TextStyle(color: NxColors.textDim)),
                   ),
                 if (live.isSaved)
                   Padding(
@@ -401,7 +450,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
                           'یادداشت‌ها، لینک‌ها و اشتراک‌های خودت. فقط روی دستگاه تو.',
                           'Your own notes, links and shares. Only on your device.'),
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: NxThemeColors.of(context).muted),
+                      style: const TextStyle(color: NxColors.textDim),
                     ),
                   ),
                 const SizedBox(height: 12),
@@ -450,7 +499,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
                                         ? Icons.shield_rounded
                                         : Icons.person_rounded),
                                 color: m.role == 'member'
-                                    ? NxThemeColors.of(context).muted
+                                    ? NxColors.textDim
                                     : NxColors.gold,
                               ),
                               title: Text(m.id == ctrl.ownerId
@@ -644,8 +693,8 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
                                             : context.tx(
                                                 'گروه · ${chat.memberCount} عضو',
                                                 'Group · ${chat.memberCount} members')),
-                            style: TextStyle(
-                                fontSize: 11, color: NxThemeColors.of(context).muted),
+                            style: const TextStyle(
+                                fontSize: 11, color: NxColors.textDim),
                           ),
                         ]),
                   ),
@@ -758,7 +807,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
           child: Text(
               context.tx('در این کانال فقط مدیران منتشر می‌کنند.',
                   'Only admins can post in this channel.'),
-              style: TextStyle(color: NxThemeColors.of(context).muted)),
+              style: const TextStyle(color: NxColors.textDim)),
         ),
       );
 
@@ -800,8 +849,8 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
                         Text(quote.preview(fa: context.isFa),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                color: NxThemeColors.of(context).muted, fontSize: 12)),
+                            style: const TextStyle(
+                                color: NxColors.textDim, fontSize: 12)),
                       ]),
                 ),
                 IconButton(

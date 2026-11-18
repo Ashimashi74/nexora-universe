@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../ui2/page_turn.dart';
+
 /// NEXORA design tokens. Legacy gameplay colors remain stable; the app chrome
 /// reads [NxThemeColors] from the active theme instead.
 class NxColors {
@@ -21,8 +23,6 @@ class NxColors {
 }
 
 enum NxVisualTheme { gold, neon }
-
-enum NxAppearanceMode { dark, light }
 
 /// Colors and surface treatment for the two selectable NEXORA visual themes.
 class NxThemeColors extends ThemeExtension<NxThemeColors> {
@@ -62,40 +62,17 @@ class NxThemeColors extends ThemeExtension<NxThemeColors> {
     muted: Color(0xFFAEB8C7),
   );
 
+  /// NX2 cosmic neon skin (deep violet, neon cyan/magenta) — the app skin.
   static const neon = NxThemeColors(
-    accent: Color(0xFF2FBFFF),
-    accentSecondary: Color(0xFF9958FF),
-    background: Color(0xFF030713),
-    backgroundMid: Color(0xFF071329),
-    surface: Color(0xE6091428),
-    surfaceRaised: Color(0xF0111E39),
-    border: Color(0xFF235B92),
-    text: Color(0xFFF2F7FF),
-    muted: Color(0xFFAAB9D1),
-  );
-
-  static const goldLight = NxThemeColors(
-    accent: Color(0xFF805700),
-    accentSecondary: Color(0xFF875323),
-    background: Color(0xFFF4F6FA),
-    backgroundMid: Color(0xFFE9EEF5),
-    surface: Color(0xFFFDFEFF),
-    surfaceRaised: Color(0xFFFFFFFF),
-    border: Color(0xFFC8D0DC),
-    text: Color(0xFF172235),
-    muted: Color(0xFF526176),
-  );
-
-  static const neonLight = NxThemeColors(
-    accent: Color(0xFF00699D),
-    accentSecondary: Color(0xFF6338B3),
-    background: Color(0xFFF3F7FC),
-    backgroundMid: Color(0xFFE7EFF9),
-    surface: Color(0xFFFCFEFF),
-    surfaceRaised: Color(0xFFFFFFFF),
-    border: Color(0xFFBFCFE0),
-    text: Color(0xFF13243A),
-    muted: Color(0xFF50647D),
+    accent: Color(0xFF35D6FF),
+    accentSecondary: Color(0xFFB04DFF),
+    background: Color(0xFF07031A),
+    backgroundMid: Color(0xFF140A3A),
+    surface: Color(0xE61A0C45),
+    surfaceRaised: Color(0xF0241158),
+    border: Color(0xFF7A45E6),
+    text: Color(0xFFF4F0FF),
+    muted: Color(0xFFBFB3E6),
   );
 
   /// Original visual language used inside active game boards and their HUDs.
@@ -113,7 +90,7 @@ class NxThemeColors extends ThemeExtension<NxThemeColors> {
   );
 
   static NxThemeColors of(BuildContext context) =>
-      Theme.of(context).extension<NxThemeColors>() ?? gold;
+      Theme.of(context).extension<NxThemeColors>() ?? neon;
 
   @override
   NxThemeColors copyWith({
@@ -214,59 +191,35 @@ class NxMotion {
   static const curve = Curves.easeOutCubic;
 }
 
-ThemeData buildNxTheme([
-  NxVisualTheme style = NxVisualTheme.gold,
-  NxAppearanceMode appearance = NxAppearanceMode.dark,
-]) {
-  final isLight = appearance == NxAppearanceMode.light;
-  final visual = switch ((style, isLight)) {
-    (NxVisualTheme.gold, false) => NxThemeColors.gold,
-    (NxVisualTheme.gold, true) => NxThemeColors.goldLight,
-    (NxVisualTheme.neon, false) => NxThemeColors.neon,
-    (NxVisualTheme.neon, true) => NxThemeColors.neonLight,
-  };
-  return _buildTheme(
-    visual,
-    brightness: isLight ? Brightness.light : Brightness.dark,
-  );
-}
+/// The NX2 redesign ships one skin: cosmic neon. [style] is kept for API compatibility.
+ThemeData buildNxTheme([NxVisualTheme style = NxVisualTheme.neon]) =>
+    _buildTheme(NxThemeColors.neon);
 
 /// Preserve the original Finger Soccer field, ball and player-disc palette.
 ThemeData buildNxGameplayTheme() => _buildTheme(NxThemeColors.gameplay);
 
-ThemeData _buildTheme(
-  NxThemeColors visual, {
-  Brightness brightness = Brightness.dark,
-}) {
-  final scheme = brightness == Brightness.dark
-      ? ColorScheme.dark(
-          primary: visual.accent,
-          secondary: visual.accentSecondary,
-          tertiary: visual.premiumPanels
-              ? visual.accentSecondary
-              : NxColors.turquoise,
-          surface: visual.surfaceRaised,
-          error: NxColors.danger,
-          onPrimary: const Color(0xFF08101A),
-          onSurface: visual.text,
-          onSurfaceVariant: visual.muted,
-        )
-      : ColorScheme.light(
-          primary: visual.accent,
-          onPrimary: Colors.white,
-          secondary: visual.accentSecondary,
-          onSecondary: Colors.white,
-          tertiary: visual.accentSecondary,
-          surface: visual.surfaceRaised,
-          onSurface: visual.text,
-          onSurfaceVariant: visual.muted,
-          error: NxColors.danger,
-          onError: Colors.white,
-        );
+ThemeData _buildTheme(NxThemeColors visual) {
+  final scheme = ColorScheme.dark(
+    primary: visual.accent,
+    secondary: visual.accentSecondary,
+    tertiary:
+        visual.premiumPanels ? visual.accentSecondary : NxColors.turquoise,
+    surface: visual.surfaceRaised,
+    error: NxColors.danger,
+    onPrimary: const Color(0xFF08101A),
+    onSurface: visual.text,
+  );
   final base = ThemeData(
-      useMaterial3: true, colorScheme: scheme, brightness: brightness);
+      useMaterial3: true, colorScheme: scheme, brightness: Brightness.dark);
   return base.copyWith(
     extensions: <ThemeExtension<dynamic>>[visual],
+    pageTransitionsTheme: const PageTransitionsTheme(builders: <TargetPlatform, PageTransitionsBuilder>{
+      TargetPlatform.android: NxPageTurnTransitionsBuilder(),
+      TargetPlatform.iOS: NxPageTurnTransitionsBuilder(),
+      TargetPlatform.linux: NxPageTurnTransitionsBuilder(),
+      TargetPlatform.macOS: NxPageTurnTransitionsBuilder(),
+      TargetPlatform.windows: NxPageTurnTransitionsBuilder(),
+    }),
     scaffoldBackgroundColor: visual.background,
     appBarTheme: AppBarTheme(
       backgroundColor: Colors.transparent,
@@ -274,15 +227,17 @@ ThemeData _buildTheme(
       centerTitle: false,
       foregroundColor: visual.text,
       titleTextStyle: TextStyle(
+          fontFamily: kNxFontHead,
+          fontFamilyFallback: kNxFontHeadFallback,
           fontSize: 18,
           fontWeight: FontWeight.w800,
           letterSpacing: 0.7,
           color: visual.text),
     ),
-    textTheme:
-        base.textTheme.apply(bodyColor: visual.text, displayColor: visual.text),
+    textTheme: nxGameTextTheme(base.textTheme)
+        .apply(bodyColor: visual.text, displayColor: visual.text),
     iconTheme: IconThemeData(color: visual.text),
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: visual.surface,
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -310,8 +265,8 @@ ThemeData _buildTheme(
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        backgroundColor: visual.accent,
-        foregroundColor: scheme.onPrimary,
+        backgroundColor: visual.accentSecondary,
+        foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(NxRadius.md)),
@@ -331,7 +286,7 @@ ThemeData _buildTheme(
       backgroundColor: visual.surfaceRaised,
       contentTextStyle: TextStyle(color: visual.text),
     ),
-    dialogTheme: DialogTheme(
+    dialogTheme: DialogThemeData(
       backgroundColor: visual.surfaceRaised,
       shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(NxRadius.lg)),
@@ -347,5 +302,65 @@ ThemeData _buildTheme(
       dividerColor: Colors.transparent,
     ),
     progressIndicatorTheme: ProgressIndicatorThemeData(color: visual.accent),
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: const Color(0xF2140A3A),
+      indicatorColor: visual.accentSecondary.withValues(alpha: 0.35),
+      surfaceTintColor: Colors.transparent,
+      labelTextStyle: WidgetStatePropertyAll<TextStyle>(TextStyle(
+          fontSize: 11, fontWeight: FontWeight.w800, color: visual.text)),
+      iconTheme: WidgetStatePropertyAll<IconThemeData>(
+          IconThemeData(color: visual.text)),
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: const Color(0xE61A0C45),
+      selectedColor: visual.accentSecondary.withValues(alpha: 0.45),
+      side: BorderSide(color: visual.border.withValues(alpha: 0.7)),
+      labelStyle: TextStyle(color: visual.text, fontWeight: FontWeight.w700),
+      shape: const StadiumBorder(),
+    ),
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> s) =>
+          s.contains(WidgetState.selected) ? Colors.white : visual.muted),
+      trackColor: WidgetStateProperty.resolveWith<Color?>((Set<WidgetState> s) =>
+          s.contains(WidgetState.selected)
+              ? visual.accentSecondary
+              : const Color(0x33FFFFFF)),
+    ),
+    sliderTheme: SliderThemeData(
+      activeTrackColor: visual.accent,
+      thumbColor: Colors.white,
+      inactiveTrackColor: const Color(0x33FFFFFF),
+    ),
+  );
+}
+
+
+// ------------------------------------------------------------------ fonts (bundled, OFL)
+/// Latin + digits: Chakra Petch (HUD/game look). Persian uses Estedad for a
+/// consistent, readable shape across body text, buttons and headings.
+const String kNxFont = 'ChakraPetch';
+const List<String> kNxFontFallback = <String>['Estedad'];
+const String kNxFontHead = 'ChakraPetch';
+const List<String> kNxFontHeadFallback = <String>['Estedad'];
+
+TextTheme nxGameTextTheme(TextTheme t) {
+  TextStyle? body(TextStyle? s) => s?.copyWith(fontFamily: kNxFont, fontFamilyFallback: kNxFontFallback);
+  TextStyle? head(TextStyle? s) => s?.copyWith(fontFamily: kNxFontHead, fontFamilyFallback: kNxFontHeadFallback);
+  return t.copyWith(
+    displayLarge: head(t.displayLarge),
+    displayMedium: head(t.displayMedium),
+    displaySmall: head(t.displaySmall),
+    headlineLarge: head(t.headlineLarge),
+    headlineMedium: head(t.headlineMedium),
+    headlineSmall: head(t.headlineSmall),
+    titleLarge: head(t.titleLarge),
+    titleMedium: body(t.titleMedium),
+    titleSmall: body(t.titleSmall),
+    bodyLarge: body(t.bodyLarge),
+    bodyMedium: body(t.bodyMedium),
+    bodySmall: body(t.bodySmall),
+    labelLarge: body(t.labelLarge),
+    labelMedium: body(t.labelMedium),
+    labelSmall: body(t.labelSmall),
   );
 }

@@ -66,7 +66,6 @@ class TLocalNotifier {
         tz.TZDateTime.from(utc.toUtc(), tz.UTC),
         _details,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         payload: payload,
       );
     } catch (e) {
@@ -114,7 +113,7 @@ class TournamentWatcher with WidgetsBindingObserver {
     if (uid == _uid) return;
     _detach();
     _uid = uid;
-    final SupabaseClient? c = o.client;
+    final SupabaseClient? c = o.games;
     if (uid == null || c == null) return;
     _ch = c
         .channel('nxtn:$uid')
@@ -135,6 +134,8 @@ class TournamentWatcher with WidgetsBindingObserver {
       'match_ready' => t('بازی‌ات آماده است — «آماده‌ام» را بزن', 'Your match is ready — tap Ready'),
       'match_soon' => t('بازی‌ات ۱۰ دقیقه‌ی دیگر شروع می‌شود', 'Your match starts in 10 minutes'),
       'starting_soon' => t('تورنمنت ۱۰ دقیقه‌ی دیگر شروع می‌شود', 'The tournament starts in 10 minutes'),
+      'checkin_open' => t('۱۰ دقیقه تا شروع — همین الان اعلام حضور کن', '10 minutes to the start — check in now'),
+      'no_checkin' => t('اعلام حضور نکردی؛ ورودیه برگشت', 'You did not check in — fee refunded'),
       'approved' => t('ثبت‌نامت تأیید شد', 'Registration approved'),
       'promoted' => t('از لیست انتظار وارد شدی', 'You are in from the waitlist'),
       'rejected' => t('ثبت‌نامت رد شد', 'Registration declined'),
@@ -162,7 +163,7 @@ class TournamentWatcher with WidgetsBindingObserver {
     final String route = n.tournamentId == null ? '/tournaments' : '/tournaments/${n.tournamentId}';
     // same key as the scheduled reminder → replaces it instead of showing twice
     final String key = switch (n.kind) {
-      'starting_soon' => 'soon:${n.tournamentId}',
+      'starting_soon' || 'checkin_open' => 'soon:${n.tournamentId}',
       'match_soon' => 'msoon:${n.tmatch}',
       _ => 'n:${n.id}',
     };
@@ -193,7 +194,9 @@ class TournamentWatcher with WidgetsBindingObserver {
         final TEntry? e = mine[t.id];
         if (e == null || e.status != 'approved' || t.isOver || t.status == 'live') continue;
         await TLocalNotifier.scheduleAt('soon:${t.id}', t.startAt.subtract(const Duration(minutes: 10)), t.title,
-            fa ? 'تورنمنت ۱۰ دقیقه‌ی دیگر شروع می‌شود' : 'The tournament starts in 10 minutes',
+            t.cfgB('checkin', false)
+                ? (fa ? '۱۰ دقیقه تا شروع — همین الان اعلام حضور کن' : '10 minutes to the start — check in now')
+                : (fa ? 'تورنمنت ۱۰ دقیقه‌ی دیگر شروع می‌شود' : 'The tournament starts in 10 minutes'),
             payload: '/tournaments/${t.id}');
       }
       for (final TMatch m in await repo.myOpenMatches()) {
@@ -209,16 +212,22 @@ class TournamentWatcher with WidgetsBindingObserver {
     }
   }
 
-  void _detach() {
+  void _detach({bool disposing = false}) {
     final RealtimeChannel? ch = _ch;
-    final SupabaseClient? c = _ref.read(onlineProvider).client;
-    if (ch != null && c != null) unawaited(c.removeChannel(ch));
     _ch = null;
+    if (ch == null) return;
+    // On dispose the app's `ref` is already unusable (Riverpod throws), so only unsubscribe the channel itself.
+    if (disposing) {
+      unawaited(ch.unsubscribe());
+      return;
+    }
+    final SupabaseClient? c = _ref.read(onlineProvider).games;
+    if (c != null) unawaited(c.removeChannel(ch));
   }
 
   void dispose() {
     _reschedule?.cancel();
     WidgetsBinding.instance.removeObserver(this);
-    _detach();
+    _detach(disposing: true);
   }
 }

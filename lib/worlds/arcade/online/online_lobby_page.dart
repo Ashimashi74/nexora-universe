@@ -28,10 +28,13 @@ class _Seat {
 /// Online lobby for one game: quick match, private room by code, open rooms, invite friends.
 class OnlineLobbyPage extends ConsumerStatefulWidget {
   const OnlineLobbyPage(
-      {super.key, required this.gameId, this.joinCode, this.roomId});
+      {super.key, required this.gameId, this.joinCode, this.roomId, this.action});
   final String gameId;
   final String? joinCode;
   final String? roomId;
+
+  /// 'quick' runs matchmaking, 'create' makes a public room, right after sign-in (from the Rooms page).
+  final String? action;
 
   @override
   ConsumerState<OnlineLobbyPage> createState() => _OnlineLobbyPageState();
@@ -53,13 +56,18 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
   bool _inMatch = false;
   String? _lastMatchSeen;
 
-  SupabaseClient? get _c => ref.read(onlineProvider).client;
-  String? get _me => ref.read(onlineProvider).uid;
+  // Cached: dispose() must not touch `ref` (Riverpod throws "Cannot use ref after the widget was disposed", which
+  // left the realtime channel subscribed and broke leaving the lobby with Back).
+  late final OnlineService _online;
+  SupabaseClient? get _c => _online.games; // games project
+  bool get _signedIn => _online.client?.auth.currentSession != null;
+  String? get _me => _online.uid;
   GameInfo? get _game => gameById(widget.gameId);
 
   @override
   void initState() {
     super.initState();
+    _online = ref.read(onlineProvider); // resolved while `ref` is usable
     _wantSeats = _game?.defaultPlayers ?? 2;
     if (widget.gameId == 'mafia') _wantSeats = 6;
     WidgetsBinding.instance.addPostFrameCallback((_) => unawaited(_boot()));
@@ -68,6 +76,7 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
   Future<void> _boot() async {
     final OnlineService o = ref.read(onlineProvider);
     if (!o.isOnline) await o.ensureSession();
+    await o.gamesHello();
     if (!mounted) return;
     if (widget.roomId != null) {
       await _guard(() async {
@@ -78,6 +87,10 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
     } else if (widget.joinCode != null && widget.joinCode!.isNotEmpty) {
       _code.text = widget.joinCode!;
       await _joinByCode();
+    } else if (widget.action == 'quick' && _c != null) {
+      await _quick();
+    } else if (widget.action == 'create' && _c != null) {
+      await _create(false);
     } else {
       await _loadOpen();
     }
@@ -137,7 +150,7 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
 
   Future<void> _loadOpen() async {
     final SupabaseClient? c = _c;
-    if (c == null || c.auth.currentSession == null) return;
+    if (c == null || !_signedIn) return;
     try {
       final List<dynamic> rows = await c
           .from('nx_rooms')
@@ -353,7 +366,8 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
     if (c == null || _roomId == null) return;
     List<NxUser> friends = <NxUser>[];
     try {
-      friends = await SocialApi(c).friends();
+      final SupabaseClient? a = ref.read(onlineProvider).client;
+      if (a != null) friends = await SocialApi(a).friends();
     } catch (_) {}
     if (!mounted) return;
     final Set<String> inRoom = _seats.map((_Seat s) => s.userId).toSet();
@@ -594,7 +608,7 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
             Text(
                 context.tx('الان اتاق بازی نیست؛ یکی بساز یا «بازی سریع» بزن.',
                     'No open rooms right now — create one or tap Quick match.'),
-                style: TextStyle(color: NxThemeColors.of(context).muted)),
+                style: const TextStyle(color: NxColors.textDim)),
           for (final Map<String, dynamic> r in _open)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -798,7 +812,7 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
             radius: 16,
             backgroundColor: p == null
                 ? NxColors.glass
-                : (present ? NxColors.success : NxThemeColors.of(context).muted),
+                : (present ? NxColors.success : NxColors.textDim),
             child: Text('${s + 1}',
                 style: const TextStyle(fontWeight: FontWeight.w800)),
           ),
@@ -812,7 +826,7 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
                       : p.name),
               style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  color: p == null ? NxThemeColors.of(context).muted : null),
+                  color: p == null ? NxColors.textDim : null),
             ),
           ),
           if (p != null && r['host'] == p.userId)
@@ -832,7 +846,7 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
                 p.ready
                     ? Icons.check_circle_rounded
                     : Icons.hourglass_empty_rounded,
-                color: p.ready ? NxColors.success : NxThemeColors.of(context).muted),
+                color: p.ready ? NxColors.success : NxColors.textDim),
           ],
         ]),
       ),

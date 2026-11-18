@@ -84,7 +84,7 @@ String roleLabel(BuildContext context, CommunityRole r) {
   }
 }
 
-Color roleColor(BuildContext context, CommunityRole r) {
+Color roleColor(CommunityRole r) {
   switch (r) {
     case CommunityRole.owner:
       return NxColors.gold;
@@ -93,7 +93,7 @@ Color roleColor(BuildContext context, CommunityRole r) {
     case CommunityRole.moderator:
       return NxColors.turquoise;
     case CommunityRole.member:
-      return NxThemeColors.of(context).muted;
+      return NxColors.textDim;
   }
 }
 
@@ -156,7 +156,7 @@ class RolePill extends StatelessWidget {
   @override
   Widget build(BuildContext context) => NxPill(
         label: roleLabel(context, role),
-        color: roleColor(context, role),
+        color: roleColor(role),
         icon: role == CommunityRole.owner
             ? Icons.workspace_premium_rounded
             : (role == CommunityRole.admin
@@ -180,7 +180,7 @@ class SocialEmpty extends StatelessWidget {
         child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
           Icon(icon, size: 56, color: kSocialPalette.primary.withValues(alpha: 0.7)),
           const SizedBox(height: 12),
-          Text(context.tx(fa, en), textAlign: TextAlign.center, style: TextStyle(color: NxThemeColors.of(context).muted, height: 1.5)),
+          Text(context.tx(fa, en), textAlign: TextAlign.center, style: const TextStyle(color: NxColors.textDim, height: 1.5)),
           if (action != null) ...<Widget>[const SizedBox(height: 14), action!],
         ]),
       ),

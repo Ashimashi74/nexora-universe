@@ -124,9 +124,9 @@ class OrbitChatsTab extends ConsumerWidget {
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
                         Row(children: <Widget>[
                           if (s.chat.isChannel)
-                            Padding(
+                            const Padding(
                               padding: EdgeInsetsDirectional.only(end: 4),
-                              child: Icon(Icons.campaign_rounded, size: 14, color: NxThemeColors.of(context).muted),
+                              child: Icon(Icons.campaign_rounded, size: 14, color: NxColors.textDim),
                             ),
                           Expanded(
                             child: Text(orbitChatTitle(context, s.chat),
@@ -134,7 +134,7 @@ class OrbitChatsTab extends ConsumerWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(fontWeight: FontWeight.w800)),
                           ),
-                          if (s.chat.muted) Icon(Icons.notifications_off_rounded, size: 14, color: NxThemeColors.of(context).muted),
+                          if (s.chat.muted) const Icon(Icons.notifications_off_rounded, size: 14, color: NxColors.textDim),
                           if (s.chat.pinned)
                             const Padding(
                               padding: EdgeInsetsDirectional.only(start: 4),
@@ -142,7 +142,7 @@ class OrbitChatsTab extends ConsumerWidget {
                             ),
                           const SizedBox(width: 6),
                           Text(_listTime(context, s.last?.createdAt ?? s.chat.createdAt),
-                              style: TextStyle(fontSize: 11, color: NxThemeColors.of(context).muted)),
+                              style: const TextStyle(fontSize: 11, color: NxColors.textDim)),
                         ]),
                         const SizedBox(height: 3),
                         Row(children: <Widget>[
@@ -157,7 +157,7 @@ class OrbitChatsTab extends ConsumerWidget {
                                       : s.last!.preview(fa: context.isFa)),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 13),
+                              style: const TextStyle(color: NxColors.textDim, fontSize: 13),
                             ),
                           ),
                           if (s.last != null && s.last!.authorId == ctrl.ownerId && s.last!.kind != OrbitMessageKind.system)
@@ -239,7 +239,7 @@ class _OfflineCallsTab extends StatelessWidget {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
                   Text(context.tx(fa, en), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                  Text(context.tx(dfa, den), style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
+                  Text(context.tx(dfa, den), style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
                 ]),
               ),
               const Icon(Icons.cloud_off_rounded, color: NxColors.gold, size: 18),
@@ -266,7 +266,7 @@ class _OfflineCallsTab extends StatelessWidget {
               context.tx(
                   'تاریخچه‌ی تماس خالی است. هیچ تماسی شبیه‌سازی نمی‌شود.', 'Call history is empty. No call is ever simulated.'),
               textAlign: TextAlign.center,
-              style: TextStyle(color: NxThemeColors.of(context).muted),
+              style: const TextStyle(color: NxColors.textDim),
             ),
           ]),
         ),
@@ -320,7 +320,7 @@ class _OfflineContactsTab extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 4),
-            Text(context.tx(p.rankTitleFa, p.rankTitleEn), style: TextStyle(color: NxThemeColors.of(context).muted)),
+            Text(context.tx(p.rankTitleFa, p.rankTitleEn), style: const TextStyle(color: NxColors.textDim)),
             const SizedBox(height: 14),
             Row(children: <Widget>[
               Expanded(
@@ -368,7 +368,7 @@ class _OfflineContactsTab extends ConsumerWidget {
                 'Your friends appear here once NEXORA is online. Share your ID so they can find you.',
               ),
               textAlign: TextAlign.center,
-              style: TextStyle(color: NxThemeColors.of(context).muted, height: 1.5),
+              style: const TextStyle(color: NxColors.textDim, height: 1.5),
             ),
           ]),
         ),
@@ -439,7 +439,7 @@ class _OrbitMessageListPageState extends ConsumerState<OrbitMessageListPage> {
                           : (_q.trim().isEmpty
                               ? context.tx('عبارتی بنویس.', 'Type something.')
                               : context.tx('نتیجه‌ای پیدا نشد.', 'No results.')),
-                      style: TextStyle(color: NxThemeColors.of(context).muted),
+                      style: const TextStyle(color: NxColors.textDim),
                     ),
                   ]),
                 )
@@ -469,7 +469,7 @@ class _OrbitMessageListPageState extends ConsumerState<OrbitMessageListPage> {
                               Text(m.preview(fa: c.isFa), maxLines: 2, overflow: TextOverflow.ellipsis),
                             ]),
                           ),
-                          Text(_listTime(c, m.createdAt), style: TextStyle(fontSize: 11, color: NxThemeColors.of(context).muted)),
+                          Text(_listTime(c, m.createdAt), style: const TextStyle(fontSize: 11, color: NxColors.textDim)),
                         ]),
                       ),
                     );
@@ -535,7 +535,7 @@ class _OnlineCallsTabState extends ConsumerState<_OnlineCallsTab> {
               child: Column(children: <Widget>[
                 const OracleAvatar(pose: 'calm', size: 80),
                 const SizedBox(height: 8),
-                Text(context.tx('هنوز تماسی نداشته‌ای.', 'No calls yet.'), style: TextStyle(color: NxThemeColors.of(context).muted)),
+                Text(context.tx('هنوز تماسی نداشته‌ای.', 'No calls yet.'), style: const TextStyle(color: NxColors.textDim)),
               ]),
             )
           else
@@ -705,7 +705,7 @@ class _OrbitFriendsPanelState extends ConsumerState<OrbitFriendsPanel> {
                 trailing: friendIds.contains(u.id)
                     ? IconButton(icon: const Icon(Icons.chat_rounded), onPressed: () => _message(u))
                     : pendingIds.contains(u.id)
-                        ? Text(context.tx('در انتظار', 'Pending'), style: TextStyle(color: NxThemeColors.of(context).muted))
+                        ? Text(context.tx('در انتظار', 'Pending'), style: const TextStyle(color: NxColors.textDim))
                         : FilledButton.tonalIcon(
                             onPressed: () async {
                               try {
@@ -724,7 +724,7 @@ class _OrbitFriendsPanelState extends ConsumerState<OrbitFriendsPanel> {
           ] else if (_q.trim().length >= 2 && !_searching)
             Padding(
               padding: const EdgeInsets.all(8),
-              child: Text(context.tx('کسی پیدا نشد.', 'Nobody found.'), style: TextStyle(color: NxThemeColors.of(context).muted)),
+              child: Text(context.tx('کسی پیدا نشد.', 'Nobody found.'), style: const TextStyle(color: NxColors.textDim)),
             ),
           if (incoming.isNotEmpty) ...<Widget>[
             const SizedBox(height: 10),
@@ -782,7 +782,7 @@ class _OrbitFriendsPanelState extends ConsumerState<OrbitFriendsPanel> {
                   context.tx('هنوز دوستی نداری. نام کاربری دوستت را بالا جستجو کن و درخواست بفرست.',
                       'No friends yet. Search a username above and send a request.'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: NxThemeColors.of(context).muted, height: 1.5),
+                  style: const TextStyle(color: NxColors.textDim, height: 1.5),
                 ),
               ]),
             )

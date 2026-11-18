@@ -368,7 +368,7 @@ class SupabaseNovaRepository implements NovaRepository {
             .order('created_at', ascending: false)
             .limit(60);
       }
-      return _hydrate(rows);
+      return await _hydrate(rows);
     } catch (_) {
       return <NovaPost>[];
     }

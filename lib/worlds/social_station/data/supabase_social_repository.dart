@@ -152,7 +152,7 @@ class SupabaseSocialRepository implements SocialRepository {
     if (n == null) return null;
     try {
       final dynamic id = await c.rpc('nx_community_join', params: <String, dynamic>{'p_code': n});
-      return _fetch('$id');
+      return await _fetch('$id');
     } catch (_) {
       return null;
     }

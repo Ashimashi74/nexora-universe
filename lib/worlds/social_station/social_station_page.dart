@@ -349,8 +349,8 @@ class _Hero extends StatelessWidget {
                       Text(
                         context.tx('جامعه بساز، رویداد بچین، جام برگزار کن.',
                             'Build communities, plan events, host cups.'),
-                        style: TextStyle(
-                            color: NxThemeColors.of(context).muted, fontSize: 12),
+                        style: const TextStyle(
+                            color: NxColors.textDim, fontSize: 12),
                       ),
                     ]),
               ),
@@ -395,8 +395,8 @@ class _Hero extends StatelessWidget {
                               style:
                                   const TextStyle(fontWeight: FontWeight.w800)),
                           Text(nextCommunity!.name,
-                              style: TextStyle(
-                                  color: NxThemeColors.of(context).muted, fontSize: 12)),
+                              style: const TextStyle(
+                                  color: NxColors.textDim, fontSize: 12)),
                         ]),
                   ),
                   CountdownText(
@@ -423,7 +423,7 @@ class _Stat extends StatelessWidget {
             style: TextStyle(
                 fontSize: 22, fontWeight: FontWeight.w900, color: color)),
         Text(label,
-            style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 11)),
+            style: const TextStyle(color: NxColors.textDim, fontSize: 11)),
       ]);
 }
 
@@ -499,7 +499,7 @@ class CommunityCard extends StatelessWidget {
                   Text(c.description,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: NxThemeColors.of(context).muted)),
+                      style: const TextStyle(color: NxColors.textDim)),
                 ],
                 const SizedBox(height: 12),
                 Row(children: <Widget>[
@@ -540,11 +540,11 @@ class _Meta extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsetsDirectional.only(end: 12),
         child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
-          Icon(icon, size: 15, color: NxThemeColors.of(context).muted),
+          Icon(icon, size: 15, color: NxColors.textDim),
           const SizedBox(width: 3),
           Text(text,
-              style: TextStyle(
-                  color: NxThemeColors.of(context).muted,
+              style: const TextStyle(
+                  color: NxColors.textDim,
                   fontSize: 12,
                   fontWeight: FontWeight.w700)),
         ]),
@@ -603,7 +603,7 @@ class _DiscoverSheetState extends ConsumerState<_DiscoverSheet> {
                       child: Text(
                           context.tx('جامعه‌ی عمومی تازه‌ای پیدا نشد.',
                               'No new public communities found.'),
-                          style: TextStyle(color: NxThemeColors.of(context).muted)),
+                          style: const TextStyle(color: NxColors.textDim)),
                     )
                   : ListView(children: <Widget>[
                       for (final Community c in l)

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/assets/app_assets.dart';
 import '../../../core/settings/app_settings.dart';
@@ -11,6 +12,7 @@ import '../../nova_gallery/ui/nova_visuals.dart';
 import '../data/orbit_shared_inbox.dart';
 import '../models/arcade_refs.dart';
 import '../models/orbit_models.dart';
+import '../../../games/arcade_kit/arcade_icon.dart';
 
 String orbitTime(DateTime t) => '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
@@ -30,7 +32,7 @@ Future<void> showOrbitOnlineOnly(BuildContext context,
           c.tx('تماس‌ها از طریق LiveKit و سرور NEXORA برقرار می‌شوند؛ تا آن زمان هیچ تماسی شبیه‌سازی نمی‌شود.',
               'Calls run through LiveKit and the NEXORA server; until then no call is simulated.'),
           textAlign: TextAlign.center,
-          style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12),
+          style: const TextStyle(color: NxColors.textDim, fontSize: 12),
         ),
       ]),
     ),
@@ -89,12 +91,12 @@ class OrbitDeliveryIcon extends StatelessWidget {
         return Tooltip(
           message: context.tx(
               'روی دستگاه ذخیره شد؛ بعد از اتصال سرور ارسال می‌شود', 'Saved on device; sends once the server is connected'),
-          child: Icon(Icons.schedule_rounded, size: 14, color: NxThemeColors.of(context).muted),
+          child: const Icon(Icons.schedule_rounded, size: 14, color: NxColors.textDim),
         );
       case OrbitDelivery.sent:
-        return Icon(Icons.done_rounded, size: 14, color: NxThemeColors.of(context).muted);
+        return const Icon(Icons.done_rounded, size: 14, color: NxColors.textDim);
       case OrbitDelivery.delivered:
-        return Icon(Icons.done_all_rounded, size: 14, color: NxThemeColors.of(context).muted);
+        return const Icon(Icons.done_all_rounded, size: 14, color: NxColors.textDim);
       case OrbitDelivery.read:
         return const Icon(Icons.done_all_rounded, size: 14, color: NxColors.turquoise);
     }
@@ -185,16 +187,16 @@ class OrbitMessageBubble extends StatelessWidget {
                   ),
                 ]),
                 Text(replyTo!.preview(fa: context.isFa),
-                    maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: NxThemeColors.of(context).muted)),
+                    maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: NxColors.textDim)),
               ]),
             ),
           ),
         if (m.deleted)
           Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
-            Icon(Icons.block_rounded, size: 14, color: NxThemeColors.of(context).muted),
+            const Icon(Icons.block_rounded, size: 14, color: NxColors.textDim),
             const SizedBox(width: 4),
             Text(context.tx('این پیام حذف شد', 'This message was deleted'),
-                style: TextStyle(fontStyle: FontStyle.italic, color: NxThemeColors.of(context).muted)),
+                style: const TextStyle(fontStyle: FontStyle.italic, color: NxColors.textDim)),
           ])
         else ...<Widget>[
           if (m.kind == OrbitMessageKind.art) _ArtBody(assetRef: '${m.payload['asset'] ?? ''}'),
@@ -202,6 +204,8 @@ class OrbitMessageBubble extends StatelessWidget {
           if (m.kind == OrbitMessageKind.invite)
             OrbitInviteCard(gameId: '${m.payload['gameId'] ?? ''}', code: '${m.payload['code'] ?? ''}'),
           if (m.kind == OrbitMessageKind.call) OrbitCallCard(message: m, mine: mine),
+          if (m.kind == OrbitMessageKind.photo || m.kind == OrbitMessageKind.audio || m.kind == OrbitMessageKind.file)
+            _OrbitMediaBody(message: m),
           if (m.text.isNotEmpty && m.kind != OrbitMessageKind.shared && m.kind != OrbitMessageKind.invite)
             Padding(
               padding: EdgeInsets.only(top: m.kind == OrbitMessageKind.art ? 6 : 0),
@@ -219,9 +223,9 @@ class OrbitMessageBubble extends StatelessWidget {
           if (m.editedAt != null && !m.deleted)
             Padding(
               padding: const EdgeInsetsDirectional.only(end: 4),
-              child: Text(context.tx('ویرایش‌شده', 'edited'), style: TextStyle(fontSize: 10, color: NxThemeColors.of(context).muted)),
+              child: Text(context.tx('ویرایش‌شده', 'edited'), style: const TextStyle(fontSize: 10, color: NxColors.textDim)),
             ),
-          Text(orbitTime(m.createdAt), style: TextStyle(fontSize: 10, color: NxThemeColors.of(context).muted)),
+          Text(orbitTime(m.createdAt), style: const TextStyle(fontSize: 10, color: NxColors.textDim)),
           if (mine) ...<Widget>[const SizedBox(width: 3), OrbitDeliveryIcon(delivery: m.delivery)],
         ]),
       ],
@@ -286,6 +290,37 @@ class _ArtBody extends StatelessWidget {
       ),
     );
   }
+}
+
+class _OrbitMediaBody extends StatelessWidget {
+  const _OrbitMediaBody({required this.message});
+  final OrbitMessage message;
+
+  @override
+  Widget build(BuildContext context) {
+    final String url = '${message.payload['url'] ?? ''}';
+    final String name = '${message.payload['name'] ?? message.text}';
+    final bool image = message.kind == OrbitMessageKind.photo;
+    final IconData icon = message.kind == OrbitMessageKind.audio ? Icons.audiotrack_rounded : Icons.insert_drive_file_rounded;
+    return InkWell(
+      onTap: url.isEmpty ? null : () => launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 280),
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(14)),
+        child: image && url.isNotEmpty
+            ? ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.network(url, height: 180, width: 260, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _fallback(icon, name)))
+            : _fallback(icon, name),
+      ),
+    );
+  }
+
+  Widget _fallback(IconData icon, String name) => Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+        Icon(icon, color: NxColors.turquoise, size: 28),
+        const SizedBox(width: 8),
+        Flexible(child: Text(name.isEmpty ? 'Attachment' : name, maxLines: 2, overflow: TextOverflow.ellipsis)),
+      ]);
 }
 
 /// Rich card for an item shared from another world.
@@ -392,7 +427,7 @@ class OrbitInviteCard extends StatelessWidget {
               AppAssets.pedestal(g.id),
               cacheHeight: 220,
               fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => Icon(Icons.sports_esports_rounded, size: 48, color: accent),
+              errorBuilder: (_, __, ___) => ArcadeMedallion(g.id),
             ),
           ),
         const SizedBox(height: 4),
@@ -401,7 +436,7 @@ class OrbitInviteCard extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
         ),
         if (note.isNotEmpty)
-          Text(note, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
+          Text(note, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
         const SizedBox(height: 6),
         FilledButton.icon(
           style: FilledButton.styleFrom(backgroundColor: accent, padding: const EdgeInsets.symmetric(vertical: 10)),

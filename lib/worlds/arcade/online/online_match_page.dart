@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/audio/music_service.dart';
 import '../../../core/online/cloud_profile_sync.dart';
 import '../../../core/online/match_link.dart';
 import '../../../core/online/online_service.dart';
@@ -11,6 +12,8 @@ import '../../../core/profile/profile_service.dart';
 import '../../../core/settings/app_settings.dart';
 import '../../../core/theme/nx_theme.dart';
 import '../../../games/game_registry.dart';
+import '../../oracle_core/persona/oracle_persona.dart';
+import '../../oracle_core/persona/oracle_persona_widgets.dart';
 
 /// Hosts one online match: opens the move link, builds the game in online mode,
 /// rebuilds + replays the log on reconnect/resync, reports the result and shows it.
@@ -38,6 +41,7 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
   int _generation = 0;
   bool _finished = false;
   GameResult? _result;
+  String? _oracleLine;
   String? _resultNoteFa;
   String? _resultNoteEn;
   bool _recorded = false;
@@ -46,20 +50,22 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
   @override
   void initState() {
     super.initState();
+    MusicService.instance.enterGame();
     WidgetsBinding.instance.addObserver(this);
     unawaited(_open());
   }
 
   Future<void> _open() async {
     final OnlineService o = ref.read(onlineProvider);
-    final client = o.client;
-    if (client == null) {
+    final client = o.games;
+    final String? uid = o.uid;
+    if (client == null || uid == null) {
       setState(() => _error = 'offline');
       return;
     }
     try {
       final SupabaseMatchLink link =
-          await SupabaseMatchLink.open(client, widget.matchId);
+          await SupabaseMatchLink.open(client, widget.matchId, uid: uid);
       if (!mounted) {
         link.dispose();
         return;
@@ -153,6 +159,10 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
     }
     if (!_recorded) {
       _recorded = true;
+      _oracleLine = OraclePersona.instance.resultReaction(
+          outcome: switch (r.outcome) { GameOutcome.win => 'win', GameOutcome.loss => 'loss', GameOutcome.draw => 'draw' },
+          myScore: r.score,
+          oppScore: r.opponentScore);
       final GameInfo? g = gameById(widget.gameId);
       ref.read(profileProvider).recordOnlineGame(
             gameId: widget.gameId,
@@ -192,7 +202,7 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
       try {
         await ref
             .read(onlineProvider)
-            .client
+            .games
             ?.rpc('nx_t_report', params: <String, dynamic>{
           'p_game': widget.matchId,
           'p_winner_seat': winnerSeat,
@@ -245,6 +255,7 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
       l.resyncRequests.removeListener(_onResync);
       l.dispose();
     }
+    MusicService.instance.exitGame();
     super.dispose();
   }
 
@@ -315,6 +326,13 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
                 top: MediaQuery.paddingOf(context).top + 10,
                 end: 10,
                 child: _presenceBar(l)),
+          if (_result == null)
+            Positioned(
+              top: MediaQuery.paddingOf(context).top + 58,
+              left: 0,
+              right: 0,
+              child: OracleTutorialBanner(gameId: widget.gameId),
+            ),
           if (_result != null)
             Positioned.fill(child: _overlay(context, _result!)),
         ]),
@@ -388,10 +406,11 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
               textAlign: TextAlign.center,
               style: const TextStyle(color: NxColors.iceWhite)),
         ],
+        if (_oracleLine != null) OracleResultLine(text: _oracleLine!),
         const SizedBox(height: 10),
         Text(
             '${context.tx('بازی آنلاین ثبت شد', 'Online match recorded')} · $reward 🪙',
-            style: TextStyle(color: NxThemeColors.of(context).muted)),
+            style: const TextStyle(color: NxColors.textDim)),
         if (widget.tournamentMatchId != null)
           Padding(
             padding: const EdgeInsets.only(top: 6),

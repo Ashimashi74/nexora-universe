@@ -123,7 +123,7 @@ class _CommunityEditorState extends ConsumerState<_CommunityEditor> {
             child: Container(
               width: 44,
               height: 4,
-              decoration: BoxDecoration(color: NxThemeColors.of(context).muted, borderRadius: BorderRadius.circular(4)),
+              decoration: BoxDecoration(color: NxColors.textDim, borderRadius: BorderRadius.circular(4)),
             ),
           ),
           const SizedBox(height: 14),
@@ -164,7 +164,7 @@ class _CommunityEditorState extends ConsumerState<_CommunityEditor> {
               padding: const EdgeInsets.only(top: 8),
               child: Text(
                 context.tx('جامعه خصوصی فقط با کد دعوت قابل ورود است.', 'Private communities can only be joined with the invite code.'),
-                style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12),
+                style: const TextStyle(color: NxColors.textDim, fontSize: 12),
               ),
             ),
           if (_needsGame) ...<Widget>[
@@ -198,7 +198,7 @@ class _CommunityEditorState extends ConsumerState<_CommunityEditor> {
                         shape: BoxShape.circle,
                         border: Border.all(color: _badge == b ? accent : Colors.transparent, width: 2.5),
                       ),
-                      child: CommunityBadge(badgeId: b, size: 60, glow: _badge == b ? accent : NxThemeColors.of(context).muted),
+                      child: CommunityBadge(badgeId: b, size: 60, glow: _badge == b ? accent : NxColors.textDim),
                     ),
                   ),
               ],

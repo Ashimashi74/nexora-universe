@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -61,6 +62,7 @@ class SupabaseOrbitRepository implements OrbitRepository {
   String get me => c.auth.currentUser!.id;
 
   static const String kPending = 'orbit.pending.v1';
+  static const String bucket = 'nx-media';
 
   final Map<String, OrbitChat> _chats = <String, OrbitChat>{};
   final Map<String, OrbitMessage?> _last = <String, OrbitMessage?>{};
@@ -556,5 +558,28 @@ class SupabaseOrbitRepository implements OrbitRepository {
   Future<List<OrbitCallEntry>> callHistory() async {
     final List<dynamic> rows = await c.from('nx_calls').select().order('created_at', ascending: false).limit(60);
     return rows.map((dynamic r) => OrbitCallEntry.fromRow(Map<String, dynamic>.from(r as Map))).toList();
+  }
+
+  /// Uploads a chat attachment under the caller's private folder and returns
+  /// the public Storage URL used by the message card.
+  Future<Map<String, dynamic>> uploadChatAttachment(
+    List<int> bytes, {
+    required String fileName,
+    required String mime,
+  }) async {
+    final String safe = fileName.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+    final String path = '$me/chat/${DateTime.now().millisecondsSinceEpoch}_$safe';
+    await c.storage.from(bucket).uploadBinary(
+          path,
+          Uint8List.fromList(bytes),
+          fileOptions: FileOptions(contentType: mime, upsert: false),
+        );
+    return <String, dynamic>{
+      'url': c.storage.from(bucket).getPublicUrl(path),
+      'name': fileName,
+      'mime': mime,
+      'size': bytes.length,
+      'path': path,
+    };
   }
 }

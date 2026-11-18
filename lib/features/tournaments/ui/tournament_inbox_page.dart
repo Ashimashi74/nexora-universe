@@ -49,6 +49,7 @@ class _TournamentInboxPageState extends ConsumerState<TournamentInboxPage> {
   IconData _icon(String kind) => switch (kind) {
         'match_ready' || 'match_soon' => Icons.sports_esports_rounded,
         'starting_soon' ||
+        'checkin_open' ||
         'started' ||
         'time_changed' =>
           Icons.schedule_rounded,
@@ -75,7 +76,7 @@ class _TournamentInboxPageState extends ConsumerState<TournamentInboxPage> {
                       Center(
                           child: Text(
                               context.tx('اعلانی نداری', 'No notifications'),
-                              style: TextStyle(color: NxThemeColors.of(context).muted))),
+                              style: const TextStyle(color: NxColors.textDim))),
                     ])
                   : ListView.builder(
                       padding: const EdgeInsets.all(NxSpace.md),

@@ -9,6 +9,8 @@ import '../../core/profile/achievements.dart';
 import '../../core/profile/profile_service.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/theme/nx_theme.dart';
+import '../../core/ui2/nx2_assets.dart';
+import '../../core/ui2/nx2_widgets.dart';
 import '../../core/widgets/nx_widgets.dart';
 import 'core/exchange_rules.dart';
 import 'core/exchange_service.dart';
@@ -94,9 +96,9 @@ Color rarityColor(String rarity) {
     case 'legendary':
       return NxColors.gold;
     case 'epic':
-      return const Color(0xFFB57BFF);
+      return const Color(0xFFD068FF);
     case 'rare':
-      return NxColors.electricBlue;
+      return const Color(0xFF35D6FF);
     default:
       return const Color(0xFF9FB3C8);
   }
@@ -154,6 +156,8 @@ class _ExchangePageState extends ConsumerState<ExchangePage> {
                       ),
                     ),
                     const _WalletPanel(),
+                    const SizedBox(height: NxSpace.md),
+                    const _RarityTiers(),
                     const SizedBox(height: NxSpace.md),
                     _FeaturedStrip(items: featured, onRotate: _onRotate),
                     const SizedBox(height: NxSpace.sm),
@@ -233,6 +237,64 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
 
 // ---------------------------------------------------------------- wallet
 
+/// Chest art of the four rarity tiers. Prices are fixed and shown up front: these are tier
+/// emblems, not random loot boxes (the shop never sells chance).
+String rarityChest(String rarity) {
+  switch (rarity) {
+    case 'legendary':
+      return Nx2Assets.chestsChestLegendary;
+    case 'epic':
+      return Nx2Assets.chestsChestEpic;
+    case 'rare':
+      return Nx2Assets.chestsChestRare;
+    default:
+      return Nx2Assets.chestsChestStandard;
+  }
+}
+
+class _RarityTiers extends StatelessWidget {
+  const _RarityTiers();
+
+  @override
+  Widget build(BuildContext context) {
+    const List<String> tiers = <String>['common', 'rare', 'epic', 'legendary'];
+    return Nx2Panel(
+      gems: true,
+      padding: const EdgeInsets.fromLTRB(8, 12, 8, 10),
+      child: Column(children: <Widget>[
+        Nx2SectionHeader(
+            title: context.tx('سطح کمیابی آیتم‌ها', 'Item rarity tiers')),
+        const SizedBox(height: 8),
+        Row(children: <Widget>[
+          for (final String r in tiers)
+            Expanded(
+              child: Column(children: <Widget>[
+                SizedBox(
+                  height: 64,
+                  child: Image.asset(rarityChest(r),
+                      cacheWidth: 200,
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                ),
+                const SizedBox(height: 4),
+                Text(_rarityName(context, r),
+                    style: TextStyle(
+                        color: rarityColor(r),
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w900)),
+              ]),
+            ),
+        ]),
+        const SizedBox(height: 6),
+        Text(
+            context.tx('قیمت‌ها ثابت و شفاف‌اند؛ هیچ جعبه‌ی شانسی در کار نیست.',
+                'Fixed, transparent prices — no random boxes.'),
+            style: const TextStyle(color: Nx2.muted, fontSize: 11)),
+      ]),
+    );
+  }
+}
+
 class _WalletPanel extends ConsumerWidget {
   const _WalletPanel();
 
@@ -284,7 +346,7 @@ class _WalletPanel extends ConsumerWidget {
                   ]),
             ),
             if (p.canClaimDaily)
-              FilledButton.icon(
+              Flexible(child: FilledButton.icon(
                 style: FilledButton.styleFrom(
                     backgroundColor: visual.accent,
                     foregroundColor: visual.background),
@@ -300,7 +362,7 @@ class _WalletPanel extends ConsumerWidget {
                 },
                 icon: const Icon(Icons.card_giftcard_rounded, size: 18),
                 label: Text(context.tx('جایزه‌ی روزانه', 'Daily bonus')),
-              ),
+              )),
           ]),
           const SizedBox(height: NxSpace.sm),
           Theme(
@@ -563,6 +625,18 @@ class _ItemCard extends ConsumerWidget {
             children: <Widget>[
               Expanded(
                 child: Stack(children: <Widget>[
+                  PositionedDirectional(
+                    bottom: 0,
+                    end: 0,
+                    child: Opacity(
+                      opacity: 0.9,
+                      child: Image.asset(rarityChest(item.rarity),
+                          width: 30,
+                          height: 30,
+                          cacheWidth: 90,
+                          errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                    ),
+                  ),
                   Positioned.fill(child: ItemPreview(item: item, size: 90)),
                   if (equipped)
                     PositionedDirectional(

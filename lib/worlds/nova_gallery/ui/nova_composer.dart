@@ -274,7 +274,7 @@ class _ComposerSheetState extends ConsumerState<_ComposerSheet> {
             subtitle: Text(
               context.tx('گرادیان زنده به‌جای ویدئو. آپلود ویدئوی واقعی بعد از اتصال سرور.',
                   'A living gradient instead of video. Real video uploads come with the server.'),
-              style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12),
+              style: const TextStyle(color: NxColors.textDim, fontSize: 12),
             ),
           ),
         ]),
@@ -335,7 +335,7 @@ Future<ArtAsset?> showArtAssetPicker(BuildContext context) {
                         Text(a.label,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontSize: 11, color: NxThemeColors.of(context).muted)),
+                            style: const TextStyle(fontSize: 11, color: NxColors.textDim)),
                       ]),
                     );
                   },

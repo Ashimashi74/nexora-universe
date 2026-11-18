@@ -21,7 +21,7 @@ const String _a = 'assets/games/bermuda/';
 
 /// Online match settings (config.js MATCH_SECONDS / TURN_SECONDS).
 const int kBmMatchSeconds = 300;
-const double kBmOnlineTurnSeconds = 15;
+const double kBmOnlineTurnSeconds = 10;
 
 class BermudaView extends StatefulWidget {
   const BermudaView({super.key, required this.launch, this.autoStart = false});
@@ -69,11 +69,11 @@ class _BermudaViewState extends State<BermudaView>
   Duration _last = Duration.zero;
   double _nowMs = 0;
   late final AnimationController _goalAnim =
-      AnimationController(vsync: this, duration: const Duration(seconds: 2));
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 1800));
 
   // setup
   String stage = 'setup'; // setup | waiting | match
-  late _Setup my = _Setup('club0', 0, 6, 0);
+  late _Setup my = _Setup('club0', 0, 0, 0);
   int _cat = 0;
   BmConfig? cfg;
 
@@ -133,7 +133,7 @@ class _BermudaViewState extends State<BermudaView>
       my = _Setup(
           kBmTeams.any((BmTeam x) => x.id == t) ? t : 'club0',
           (p.getInt('bm.form') ?? 0).clamp(0, kBmForms.length - 1).toInt(),
-          (p.getInt('bm.field') ?? 6).clamp(0, kBmFields.length - 1).toInt(),
+          (p.getInt('bm.field') ?? 0).clamp(0, kBmFields.length - 1).toInt(),
           (p.getInt('bm.ball') ?? 0).clamp(0, NB - 1).toInt());
       _cat = math.max(0,
           kBmCats.indexWhere((List<Object> c) => c[0] == bmTeam(my.team).cat));
@@ -182,7 +182,7 @@ class _BermudaViewState extends State<BermudaView>
 
   void _ensureBallRenderer() {
     final ui.Image? b = im.ball;
-    if (b == null || view.s <= 0) return;
+    if (b == null || view.s <= 0 || im.ballSheet != null) return;
     final double dpr =
         math.min(MediaQuery.maybeDevicePixelRatioOf(context) ?? 1, 1.75);
     final int n = math.max(
@@ -237,8 +237,9 @@ class _BermudaViewState extends State<BermudaView>
           'a': 'shot',
           'cid': data['cid'],
           'vx': data['vx'],
-          'vy': data['vy']
-        });
+          'vy': data['vy'],
+          'power': data['power'],
+        }, kind: 'move');
         break;
       case 'settled':
         net?.send(<String, dynamic>{
@@ -255,7 +256,7 @@ class _BermudaViewState extends State<BermudaView>
         });
         break;
       case 'timeout':
-        net?.send(<String, dynamic>{'a': 'timeout', 'seat': data['team']});
+        net?.send(<String, dynamic>{'a': 'timeout', 'seat': data['team']}, kind: 'timeout');
         break;
       case 'turn':
         if (net != null) net.turnSeat = data['turn'] as int;
@@ -317,13 +318,26 @@ class _BermudaViewState extends State<BermudaView>
           ],
           field: h.field,
           ball: h.ball,
-          limit: 0,
-          matchTime: kBmMatchSeconds,
+          // Tournament rules (server-set in nx_matches.settings): first to N goals, or 3/5/7 minutes.
+          // A golden-goal decider game is first to 1. Engine and physics are unchanged.
+          limit: _goalLimit(net.settings),
+          matchTime: _goalLimit(net.settings) > 0 ? 0 : _matchSeconds(net.settings),
           turnTime: kBmOnlineTurnSeconds,
           mirror: mySeat == 1,
           first: 0,
         ),
         quiet: quiet);
+  }
+
+  static int _goalLimit(Map<String, dynamic> st) {
+    if (st['golden_goal'] == true) return 1;
+    final int g = (st['goal_target'] as num?)?.toInt() ?? 0;
+    return g.clamp(0, 20);
+  }
+
+  static int _matchSeconds(Map<String, dynamic> st) {
+    final int m = (st['match_minutes'] as num?)?.toInt() ?? 0;
+    return (m == 3 || m == 5 || m == 7) ? m * 60 : kBmMatchSeconds;
   }
 
   void _begin(BmConfig c, {bool quiet = false}) {
@@ -367,10 +381,24 @@ class _BermudaViewState extends State<BermudaView>
       }
       return;
     }
+    final anim = kBmAnimBalls[c.ball];
+    final ui.Image? sheet = anim == null ? null : await _img(anim.sheet);
+    if (!mounted || _disposed) {
+      for (final ui.Image? i in r) {
+        i?.dispose();
+      }
+      sheet?.dispose();
+      return;
+    }
     im.dispose();
     im.field = r[0];
     im.goal = r[1];
     im.ball = r[2];
+    if (anim != null && sheet != null) {
+      im.ballSheet = sheet;
+      im.ballFrames = anim.frames;
+      im.ballFrameMs = anim.frameMs;
+    }
     im.team[0] = r[3];
     im.team[1] = r[4];
   }
@@ -771,7 +799,8 @@ class _BermudaViewState extends State<BermudaView>
       builder: (BuildContext context, int _, Widget? __) {
         final NxThemeColors visual = NxThemeColors.of(context);
         final double screenWidth = MediaQuery.sizeOf(context).width;
-        final double sw = math.max(0, math.min(screenWidth - 76, 500));
+        // A wide, shallow HUD gives names and scores room without covering the pitch.
+        final double sw = math.max(0, math.min(screenWidth - 28, 620));
         final bool aim = e.phase == 'aim';
         String clock = '';
         bool low = false;
@@ -790,8 +819,8 @@ class _BermudaViewState extends State<BermudaView>
           final bool on = aim && e.turn == t;
           final Color accent = t == 0 ? visual.accent : visual.accentSecondary;
           final Widget logo = Container(
-            width: 30,
-            height: 30,
+            width: 26,
+            height: 26,
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -842,7 +871,7 @@ class _BermudaViewState extends State<BermudaView>
                   '${e.score[t]}',
                   style: TextStyle(
                     color: on ? accent : visual.text,
-                    fontSize: 27,
+                    fontSize: 24,
                     height: .98,
                     fontWeight: FontWeight.w900,
                     fontFeatures: const <ui.FontFeature>[
@@ -859,7 +888,7 @@ class _BermudaViewState extends State<BermudaView>
           return Expanded(
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
               decoration: BoxDecoration(
                 color: on ? accent.withValues(alpha: .13) : Colors.transparent,
                 borderRadius: BorderRadius.circular(14),
@@ -900,9 +929,9 @@ class _BermudaViewState extends State<BermudaView>
                     children: <Widget>[
                       team(0),
                       Container(
-                        width: 67,
+                        width: 74,
                         padding: const EdgeInsets.symmetric(
-                            vertical: 7, horizontal: 3),
+                            vertical: 4, horizontal: 5),
                         decoration: BoxDecoration(
                           color: visual.background.withValues(alpha: .76),
                           borderRadius: BorderRadius.circular(14),
@@ -918,7 +947,7 @@ class _BermudaViewState extends State<BermudaView>
                           mainAxisSize: MainAxisSize.min,
                           children: <Widget>[
                             Icon(Icons.timer_outlined,
-                                size: 13,
+                                size: 12,
                                 color: e.sd
                                     ? visual.accent
                                     : (low
@@ -936,7 +965,7 @@ class _BermudaViewState extends State<BermudaView>
                                       : (low
                                           ? const Color(0xFFFF8794)
                                           : visual.text),
-                                  fontSize: e.sd ? 10 : 16,
+                                  fontSize: e.sd ? 9 : 14,
                                   height: 1.05,
                                   fontWeight: FontWeight.w900,
                                   fontFeatures: const <ui.FontFeature>[

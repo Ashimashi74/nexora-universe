@@ -7,6 +7,9 @@ import '../../core/settings/app_settings.dart';
 import '../../core/storage/local_store.dart';
 import '../../core/theme/nx_theme.dart';
 import '../../core/widgets/nx_widgets.dart';
+import '../../core/online/online_service.dart';
+import '../oracle_core/persona/oracle_tour.dart';
+import '../../features/admin/admin_access.dart';
 import 'account_page.dart';
 
 /// Settings (STEP_12, P13, P16, P27, P28).
@@ -31,72 +34,32 @@ class SettingsPage extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(NxSpace.md),
         children: [
-          _section(context, context.tx('تم ظاهری', 'Appearance')),
+          _section(context, context.tx('صدا و موسیقی', 'Sound & music')),
           GlassPanel(
-            child: SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              secondary: Icon(
-                s.appearanceMode == NxAppearanceMode.light
-                    ? Icons.light_mode_rounded
-                    : Icons.dark_mode_rounded,
-                color: visual.accent,
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: s.music,
+                onChanged: (v) => s.music = v,
+                secondary: const Icon(Icons.music_note_rounded),
+                title: Text(context.tx('موسیقی منو', 'Menu music')),
+                subtitle: Text(context.tx(
+                    'در منوها پخش می‌شود و داخل بازی آرام قطع می‌شود',
+                    'Plays on menus, fades out inside games')),
               ),
-              title: Text(context.tx('حالت روشن', 'Light appearance')),
-              subtitle: Text(context.tx(
-                'پس‌زمینه‌ها و اجزای اصلی برنامه را روشن می‌کند.',
-                'Use light surfaces and colors across the app.',
-              )),
-              value: s.appearanceMode == NxAppearanceMode.light,
-              onChanged: (light) => s.appearanceMode =
-                  light ? NxAppearanceMode.light : NxAppearanceMode.dark,
-            ),
-          ),
-          const SizedBox(height: NxSpace.sm),
-          GlassPanel(
-            child: Column(children: [
-              _appearanceOption(
-                context,
-                settings: s,
-                theme: NxVisualTheme.gold,
-                title: 'طلایی لوکس / Gold Luxe',
-                description: context.tx(
-                  'جزئیات طلایی فلزی؛ سازگار با حالت روشن و تیره.',
-                  'Metallic gold accents, adapted for light and dark modes.',
+              Row(children: [
+                const Icon(Icons.volume_down_rounded, color: NxColors.textDim),
+                Expanded(
+                  child: Slider(
+                    value: s.musicVolume,
+                    onChanged: s.music ? (v) => s.musicVolume = v : null,
+                    label: '${(s.musicVolume * 100).round()}%',
+                    divisions: 20,
+                  ),
                 ),
-                colors: s.appearanceMode == NxAppearanceMode.light
-                    ? const [
-                        Color(0xFFF4F6FA),
-                        Color(0xFF805700),
-                        Color(0xFF875323),
-                      ]
-                    : const [
-                        Color(0xFF050A14),
-                        Color(0xFFF3C56B),
-                        Color(0xFFB77D35),
-                      ],
-              ),
-              const SizedBox(height: 10),
-              _appearanceOption(
-                context,
-                settings: s,
-                theme: NxVisualTheme.neon,
-                title: 'نئون کیهانی / Cosmic Neon',
-                description: context.tx(
-                  'درخشش آبی و بنفش؛ سازگار با حالت روشن و تیره.',
-                  'Electric blue and violet accents, adapted for light and dark modes.',
-                ),
-                colors: s.appearanceMode == NxAppearanceMode.light
-                    ? const [
-                        Color(0xFFF3F7FC),
-                        Color(0xFF00699D),
-                        Color(0xFF6338B3),
-                      ]
-                    : const [
-                        Color(0xFF030713),
-                        Color(0xFF2FBFFF),
-                        Color(0xFF9958FF),
-                      ],
-              ),
+                const Icon(Icons.volume_up_rounded, color: NxColors.textDim),
+              ]),
             ]),
           ),
           _section(context, context.tx('گرافیک و حرکت', 'Graphics & motion')),
@@ -120,8 +83,7 @@ class SettingsPage extends ConsumerWidget {
                 context.tx(
                     'کیفیت کمتر = ستاره، ذره و جلوه‌ی کمتر و باتری بیشتر.',
                     'Lower quality = fewer stars, particles and effects, better battery.'),
-                style: TextStyle(
-                    color: NxThemeColors.of(context).muted, fontSize: 12),
+                style: const TextStyle(color: NxColors.textDim, fontSize: 12),
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
@@ -144,6 +106,34 @@ class SettingsPage extends ConsumerWidget {
                 onChanged: (v) => s.sound = v,
                 title: Text(context.tx('بازخورد بازی‌ها', 'Game feedback')),
               ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: s.oracleBuddy,
+                onChanged: (v) => s.oracleBuddy = v,
+                title: Text(context.tx('اوراکل شیطون گوشه‌ی صفحه', 'Corner ORACLE buddy')),
+                subtitle: Text(context.tx('بکش تا جابه‌جا شود؛ دو بار بزن تا کوچک شود؛ نگه دار تا گفتگو باز شود',
+                    'Drag to move; double-tap to minimise; long-press to chat')),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: s.oracleTalk,
+                onChanged: s.oracleBuddy ? (v) => s.oracleTalk = v : null,
+                title: Text(context.tx('حرف زدن اوراکل', 'ORACLE speech bubbles')),
+              ),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.tour_rounded, color: Color(0xFF8FF3FF)),
+                title: Text(context.tx('دیدن دوباره‌ی تور اوراکل', 'Replay ORACLE tour')),
+                subtitle: Text(context.tx('راهنمای قدم‌به‌قدم هر بخش دوباره نشان داده می‌شود',
+                    'Every section shows its step-by-step guide again')),
+                onTap: () async {
+                  final client = ref.read(onlineProvider).client;
+                  await OracleTourStore.reset(client?.auth.currentUser?.id, client: client);
+                  OracleTourStore.replayTick.value++;
+                },
+              ),
+              const _AdminInviteTile(),
+              const _OracleAdminTile(),
             ]),
           ),
           _section(context, context.tx('زبان', 'Language')),
@@ -158,25 +148,6 @@ class SettingsPage extends ConsumerWidget {
               showSelectedIcon: false,
             ),
           ),
-          _section(context, context.tx('سفر اول', 'The First Journey')),
-          GlassPanel(
-            child: Column(children: [
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.movie_filter_rounded,
-                    color: NxColors.violet),
-                title: Text(context.tx('پخش کامل سفر', 'Replay full journey')),
-                onTap: () => context.go('/journey'),
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.fast_forward_rounded,
-                    color: NxColors.turquoise),
-                title: Text(context.tx('نسخه‌ی کوتاه سفر', 'Short journey')),
-                onTap: () => context.go('/journey?mode=short'),
-              ),
-            ]),
-          ),
           _section(context, context.tx('حساب و داده', 'Account & data')),
           GlassPanel(
             child:
@@ -189,8 +160,7 @@ class SettingsPage extends ConsumerWidget {
                 context.tx(
                     'یک نسخه از داده‌ها همیشه روی همین گوشی می‌ماند (کار آفلاین).',
                     'A copy of your data always stays on this phone (works offline).'),
-                style: TextStyle(
-                    color: NxThemeColors.of(context).muted, fontSize: 12),
+                style: const TextStyle(color: NxColors.textDim, fontSize: 12),
               ),
               const SizedBox(height: 10),
               const AccountStatusCard(),
@@ -240,8 +210,7 @@ class SettingsPage extends ConsumerWidget {
                 'NEXORA · YOUR UNIVERSE. YOUR IDENTITY. YOUR EXPERIENCE.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    color:
-                        NxThemeColors.of(context).muted.withValues(alpha: 0.6),
+                    color: NxColors.textDim.withValues(alpha: 0.6),
                     fontSize: 10)),
           ),
         ],
@@ -258,68 +227,75 @@ class SettingsPage extends ConsumerWidget {
                 letterSpacing: 0.5)),
       );
 
-  Widget _appearanceOption(
-    BuildContext context, {
-    required AppSettings settings,
-    required NxVisualTheme theme,
-    required String title,
-    required String description,
-    required List<Color> colors,
-  }) {
-    final visual = NxThemeColors.of(context);
-    final selected = settings.visualTheme == theme;
-    return GlassPanel(
-      padding: const EdgeInsets.all(14),
-      radius: NxRadius.md,
-      onTap: () => settings.visualTheme = theme,
-      borderColor:
-          selected ? visual.accent : visual.border.withValues(alpha: 0.55),
-      tint: selected ? visual.accent.withValues(alpha: 0.08) : null,
-      child: Row(
-        children: [
-          Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(15),
-              gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: colors),
-              border: Border.all(
-                  color: colors[1].withValues(alpha: 0.8), width: 1.3),
-              boxShadow: [
-                BoxShadow(
-                    color: colors[1].withValues(alpha: 0.22), blurRadius: 12)
+}
+
+
+/// Any signed-in user can redeem the one-time code issued by the main admin.
+/// The server, not this widget, decides whether the code and account are valid.
+class _AdminInviteTile extends ConsumerWidget {
+  const _AdminInviteTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: const Icon(Icons.vpn_key_rounded, color: Color(0xFF8FF3FF)),
+        title: Text(context.tx('ورود کد دعوت ادمین', 'Redeem admin invitation code')),
+        subtitle: Text(context.tx('کد را از مدیر اصلی بگیر', 'Use a code issued by the main admin')),
+        onTap: () async {
+          final TextEditingController code = TextEditingController();
+          final String? value = await showDialog<String>(
+            context: context,
+            builder: (BuildContext ctx) => AlertDialog(
+              title: Text(ctx.tx('کد دعوت ادمین', 'Admin invitation code')),
+              content: TextField(
+                controller: code,
+                autofocus: true,
+                textCapitalization: TextCapitalization.characters,
+                decoration: const InputDecoration(hintText: 'NX-XXXXXXXX'),
+              ),
+              actions: <Widget>[
+                TextButton(onPressed: () => Navigator.pop(ctx), child: Text(ctx.tx('انصراف', 'Cancel'))),
+                FilledButton(onPressed: () => Navigator.pop(ctx, code.text), child: Text(ctx.tx('ثبت', 'Redeem'))),
               ],
             ),
-            child: Icon(
-                theme == NxVisualTheme.gold
-                    ? Icons.workspace_premium_rounded
-                    : Icons.bolt_rounded,
-                color: Colors.white,
-                size: 27),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title,
-                  style: TextStyle(
-                      color: visual.text,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 15)),
-              const SizedBox(height: 4),
-              Text(description,
-                  style: TextStyle(
-                      color: visual.muted, fontSize: 11, height: 1.45)),
-            ]),
-          ),
-          const SizedBox(width: 8),
-          Icon(selected ? Icons.check_circle_rounded : Icons.circle_outlined,
-              color: selected ? visual.accent : visual.muted, size: 22),
-        ],
+          );
+          code.dispose();
+          if (value == null || value.trim().isEmpty || !context.mounted) return;
+          final Map<String, dynamic> result = await AdminApi(ref.read(onlineProvider)).redeemAdminCode(value);
+          if (!context.mounted) return;
+          final bool fa = context.isFa;
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(result['ok'] == true
+                ? (fa ? 'دسترسی ساخت تورنمنت فعال شد ✓' : 'Tournament-admin access enabled ✓')
+                : adminErrorText(result['error'] as String?, fa)),
+          ));
+          if (result['ok'] == true) await ref.read(adminAccessProvider).refresh();
+        },
+      );
+}
+
+/// Admin entries: the admin panel for any admin, the ORACLE form for the 'oracle' permission (server re-checks).
+class _OracleAdminTile extends ConsumerWidget {
+  const _OracleAdminTile();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final AdminAccess a = ref.watch(adminAccessProvider);
+    if (!a.isAdmin) return const SizedBox.shrink();
+    return Column(children: <Widget>[
+      ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFFFFC857)),
+        title: Text(a.owner ? context.tx('پنل مدیر اصلی', 'Main admin panel') : context.tx('پنل مدیریت', 'Admin panel')),
+        onTap: () => context.push('/admin'),
       ),
-    );
+      if (a.can(AdminPerm.oracle))
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.psychology_alt_rounded, color: Color(0xFFFFC857)),
+          title: Text(context.tx('تنظیمات شخصیت اوراکل (مدیر)', 'ORACLE personality config (admin)')),
+          onTap: () => context.push('/admin/oracle'),
+        ),
+    ]);
   }
 }

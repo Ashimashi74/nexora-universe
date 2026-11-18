@@ -174,7 +174,7 @@ class CommunityFeedTab extends ConsumerWidget {
                   Text(a.text, style: const TextStyle(fontWeight: FontWeight.w700, height: 1.4)),
                   const SizedBox(height: 4),
                   Text('${a.authorName} · ${formatDateTime(a.at)}',
-                      style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 11)),
+                      style: const TextStyle(color: NxColors.textDim, fontSize: 11)),
                 ]),
               ),
               if (CommunityPermissions.canAnnounce(role))
@@ -198,7 +198,7 @@ class CommunityFeedTab extends ConsumerWidget {
           const SizedBox(width: 10),
           Expanded(
               child: Text(context.tx('برای جامعه بنویس…', 'Write to the community…'),
-                  style: TextStyle(color: NxThemeColors.of(context).muted))),
+                  style: const TextStyle(color: NxColors.textDim))),
           Icon(Icons.send_rounded, color: kSocialPalette.primary),
         ]),
       ),
@@ -254,10 +254,10 @@ class _PostCard extends ConsumerWidget {
                         Text(p.authorName, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800))),
                 if (authorRole != null && authorRole != CommunityRole.member) ...<Widget>[
                   const SizedBox(width: 6),
-                  Icon(Icons.verified_rounded, size: 14, color: roleColor(context, authorRole)),
+                  Icon(Icons.verified_rounded, size: 14, color: roleColor(authorRole)),
                 ],
               ]),
-              Text(formatDateTime(p.at), style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 11)),
+              Text(formatDateTime(p.at), style: const TextStyle(color: NxColors.textDim, fontSize: 11)),
             ]),
           ),
           if (p.pinned) Icon(Icons.push_pin_rounded, size: 18, color: kSocialPalette.secondary),
@@ -285,8 +285,8 @@ class _PostCard extends ConsumerWidget {
           TextButton.icon(
             onPressed: () => ctrl.toggleLike(community.id, p.id, me.id),
             icon: Icon(liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                color: liked ? NxColors.pink : NxThemeColors.of(context).muted),
-            label: Text('${p.likedBy.length}', style: TextStyle(color: liked ? NxColors.pink : NxThemeColors.of(context).muted)),
+                color: liked ? NxColors.pink : NxColors.textDim),
+            label: Text('${p.likedBy.length}', style: TextStyle(color: liked ? NxColors.pink : NxColors.textDim)),
           ),
         ]),
       ]),
@@ -344,7 +344,7 @@ class _EventCard extends ConsumerWidget {
     final bool past = e.isPast(DateTime.now());
     final bool going = e.going.contains(me.id);
     final SocialController ctrl = ref.read(socialControllerProvider);
-    final Color accent = past ? NxThemeColors.of(context).muted : NxColors.gold;
+    final Color accent = past ? NxColors.textDim : NxColors.gold;
     return GlassPanel(
       padding: EdgeInsets.zero,
       borderColor: accent.withValues(alpha: 0.5),
@@ -363,16 +363,16 @@ class _EventCard extends ConsumerWidget {
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
                 Text(e.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900)),
-                Text(formatDateTime(e.startsAt), style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
+                Text(formatDateTime(e.startsAt), style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
               ]),
             ),
             if (!past)
               Column(crossAxisAlignment: CrossAxisAlignment.end, children: <Widget>[
-                Text(context.tx('تا شروع', 'Starts in'), style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 10)),
+                Text(context.tx('تا شروع', 'Starts in'), style: const TextStyle(color: NxColors.textDim, fontSize: 10)),
                 CountdownText(target: e.startsAt, style: TextStyle(color: accent, fontWeight: FontWeight.w900, fontSize: 15)),
               ])
             else
-              NxPill(label: context.tx('برگزار شد', 'Ended'), color: NxThemeColors.of(context).muted),
+              NxPill(label: context.tx('برگزار شد', 'Ended'), color: NxColors.textDim),
           ]),
         ),
         Padding(
@@ -409,7 +409,7 @@ class _EventCard extends ConsumerWidget {
               if (canManage)
                 IconButton(
                   tooltip: context.tx('حذف رویداد', 'Delete event'),
-                  icon: Icon(Icons.delete_outline_rounded, color: NxThemeColors.of(context).muted),
+                  icon: const Icon(Icons.delete_outline_rounded, color: NxColors.textDim),
                   onPressed: () async {
                     final bool yes = await confirmAction(context, fa: 'این رویداد حذف شود؟', en: 'Delete this event?');
                     if (yes) await ctrl.deleteEvent(community.id, e.id, me.id);
@@ -512,7 +512,7 @@ class CommunityMembersTab extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             child: Row(children: <Widget>[
               CircleAvatar(
-                backgroundColor: roleColor(context, m.role).withValues(alpha: 0.25),
+                backgroundColor: roleColor(m.role).withValues(alpha: 0.25),
                 child: Text(m.name.isEmpty ? '?' : m.name.characters.first.toUpperCase(),
                     style: const TextStyle(fontWeight: FontWeight.w900)),
               ),
@@ -528,7 +528,7 @@ class CommunityMembersTab extends ConsumerWidget {
                       NxPill(
                           label: context.tx('بازیکن محلی', 'Local player'),
                           icon: Icons.phone_android_rounded,
-                          color: NxThemeColors.of(context).muted),
+                          color: NxColors.textDim),
                   ]),
                 ]),
               ),
@@ -573,7 +573,7 @@ class _MemberMenu extends StatelessWidget {
           PopupMenuItem<String>(
             value: r.name,
             child: Row(children: <Widget>[
-              Icon(Icons.swap_vert_rounded, size: 18, color: roleColor(context, r)),
+              Icon(Icons.swap_vert_rounded, size: 18, color: roleColor(r)),
               const SizedBox(width: 8),
               Text('${c.tx('نقش', 'Make')}: ${roleLabel(c, r)}'),
             ]),
@@ -615,13 +615,13 @@ class CommunityAboutTab extends ConsumerWidget {
             NxPill(label: kindLabel(context, c.kind), icon: kindIcon(c.kind), color: kindColor(c.kind)),
             if (c.gameId != null)
               NxPill(label: gameLabel(context, c.gameId), icon: Icons.sports_esports_rounded, color: kSocialPalette.secondary),
-            NxPill(label: formatDateTime(c.createdAt).split(' ').first, icon: Icons.cake_rounded, color: NxThemeColors.of(context).muted),
+            NxPill(label: formatDateTime(c.createdAt).split(' ').first, icon: Icons.cake_rounded, color: NxColors.textDim),
           ]),
         ]),
       ),
       SocialSectionTitle(context.tx('قوانین جامعه', 'Community rules')),
       if (c.rules.isEmpty)
-        Text(context.tx('قانونی ثبت نشده.', 'No rules set.'), style: TextStyle(color: NxThemeColors.of(context).muted))
+        Text(context.tx('قانونی ثبت نشده.', 'No rules set.'), style: const TextStyle(color: NxColors.textDim))
       else
         GlassPanel(
           child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
@@ -652,7 +652,7 @@ class CommunityAboutTab extends ConsumerWidget {
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
               Text(c.inviteCode, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, letterSpacing: 2)),
               Text(context.tx('کپی کد یا ارسال به ORBIT NETWORK', 'Copy the code or send it to ORBIT NETWORK'),
-                  style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
+                  style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
             ]),
           ),
           const Icon(Icons.ios_share_rounded),
@@ -724,7 +724,7 @@ class _PermissionMatrix extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Text(roleLabel(context, r),
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: roleColor(context, r), fontSize: 11, fontWeight: FontWeight.w800)),
+                    style: TextStyle(color: roleColor(r), fontSize: 11, fontWeight: FontWeight.w800)),
               ),
           ]),
           for (final _Perm p in perms)
@@ -735,7 +735,7 @@ class _PermissionMatrix extends StatelessWidget {
                 Icon(
                   p.allowed(r) ? Icons.check_circle_rounded : Icons.remove_circle_outline_rounded,
                   size: 18,
-                  color: p.allowed(r) ? kSocialPalette.secondary : NxThemeColors.of(context).muted.withValues(alpha: 0.5),
+                  color: p.allowed(r) ? kSocialPalette.secondary : NxColors.textDim.withValues(alpha: 0.5),
                 ),
             ]),
         ],

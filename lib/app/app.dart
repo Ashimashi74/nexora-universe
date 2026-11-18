@@ -3,12 +3,17 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/audio/music_service.dart';
 import '../core/online/call_watcher.dart';
 import '../core/online/cloud_profile_sync.dart';
 import '../core/online/invite_watcher.dart';
 import '../core/online/online_service.dart';
 import '../core/settings/app_settings.dart';
+import '../core/ui2/oracle_buddy.dart';
+import '../core/update/app_updater.dart';
+import '../core/update/update_banner.dart';
 import '../core/theme/nx_theme.dart';
+import '../features/admin/announcement_watcher.dart';
 import '../features/tournaments/tournament_watcher.dart';
 import 'router.dart';
 
@@ -27,6 +32,7 @@ class _NexoraAppState extends ConsumerState<NexoraApp> {
       (String game, String code) => _router.push('/online/$game?code=$code'));
   late final TournamentWatcher _tournaments =
       TournamentWatcher(ref, _messenger, (String route) => _router.push(route));
+  late final AnnouncementWatcher _announcements = AnnouncementWatcher(ref, _messenger);
   late final CallWatcher _calls = CallWatcher(ref, _messenger,
       (String chat, String call, bool video, String title) {
     _router.push(Uri(path: '/call/$chat', queryParameters: <String, String>{
@@ -41,6 +47,8 @@ class _NexoraAppState extends ConsumerState<NexoraApp> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      ref.read(onlineProvider).addListener(_syncAuthMode);
+      _syncAuthMode();
       ref.read(cloudSyncProvider).start();
       ref.read(onlineProvider).addListener(_invites.sync);
       _invites.sync();
@@ -49,12 +57,26 @@ class _NexoraAppState extends ConsumerState<NexoraApp> {
       _tournaments.start();
       ref.read(onlineProvider).addListener(_tournaments.sync);
       _tournaments.sync();
+      ref.read(onlineProvider).addListener(_announcements.sync);
+      _announcements.sync();
+      AppUpdater.instance.start();
     });
+  }
+
+
+  /// A real session (email code, magic-link deep link, password/admin login from Account) always counts as the email
+  /// mode, so onboarding/cloud sync treat the user as signed in even when they had picked guest mode before.
+  void _syncAuthMode() {
+    if (!mounted) return;
+    final OnlineService o = ref.read(onlineProvider);
+    final AppSettings s = ref.read(settingsProvider);
+    if (o.user != null && !o.isGuest && s.authMode != 'email') s.setAuthMode('email');
   }
 
   @override
   void dispose() {
     _invites.dispose();
+    _announcements.dispose();
     _calls.dispose();
     _tournaments.dispose();
     _router.dispose();
@@ -64,10 +86,12 @@ class _NexoraAppState extends ConsumerState<NexoraApp> {
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
+    MusicService.instance
+        .configure(enabled: settings.music, volume: settings.musicVolume);
     return MaterialApp.router(
       title: 'NEXORA',
       debugShowCheckedModeBanner: false,
-      theme: buildNxTheme(settings.visualTheme, settings.appearanceMode),
+      theme: buildNxTheme(settings.visualTheme),
       locale: settings.locale,
       supportedLocales: const [Locale('fa'), Locale('en')],
       localizationsDelegates: const [
@@ -85,7 +109,16 @@ class _NexoraAppState extends ConsumerState<NexoraApp> {
             textScaler:
                 mq.textScaler.clamp(minScaleFactor: 0.85, maxScaleFactor: 1.3),
           ),
-          child: child ?? const SizedBox.shrink(),
+          child: Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: (_) => OracleBus.lastTouch = DateTime.now(),
+            child: UpdateOverlay(
+              child: Stack(children: <Widget>[
+                child ?? const SizedBox.shrink(),
+                Positioned.fill(child: OracleBuddy(router: _router)),
+              ]),
+            ),
+          ),
         );
       },
     );

@@ -423,7 +423,7 @@ class _OracleCorePageState extends ConsumerState<OracleCorePage> {
                       'تا آن موقع می‌توانی سؤالت را تایپ کنی؛ ORACLE همه‌ی کارها را آفلاین انجام می‌دهد.',
                       'Until then, type your question; ORACLE does everything else offline.'),
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: NxThemeColors.of(context).muted),
+                  style: const TextStyle(color: NxColors.textDim),
                 ),
                 const SizedBox(height: NxSpace.md),
                 FilledButton(
@@ -442,7 +442,7 @@ class _OracleCorePageState extends ConsumerState<OracleCorePage> {
   // ------------------------------------------------------------ build
 
   String get _pose {
-    if (_thinking) return 'spin';
+    if (_thinking) return 'focus';
     for (int i = _msgs.length - 1; i >= 0; i--) {
       if (!_msgs[i].fromUser) return _msgs[i].pose;
     }

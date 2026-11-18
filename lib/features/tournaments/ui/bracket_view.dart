@@ -41,7 +41,7 @@ class BracketView extends StatelessWidget {
           child: Text(
               context.tx('براکت بعد از قرعه‌کشی ساخته می‌شود',
                   'The bracket appears after the draw'),
-              style: TextStyle(color: NxThemeColors.of(context).muted)));
+              style: const TextStyle(color: NxColors.textDim)));
     }
     final _Layout winners = _Layout.build(w, 0, 0);
     final _Layout losers = _Layout.build(l, 0, winners.height + 40);
@@ -277,7 +277,7 @@ class _MatchCard extends StatelessWidget {
                 fontSize: 12.5,
                 fontWeight: won ? FontWeight.w900 : FontWeight.w600,
                 color: uid == null
-                    ? NxThemeColors.of(context).muted
+                    ? NxColors.textDim
                     : (uid == me ? accent : NxColors.iceWhite),
               )),
         ),
@@ -286,7 +286,7 @@ class _MatchCard extends StatelessWidget {
               style: TextStyle(
                   fontWeight: FontWeight.w900,
                   fontSize: 12.5,
-                  color: won ? tAccent(context) : NxThemeColors.of(context).muted)),
+                  color: won ? tAccent(context) : NxColors.textDim)),
       ]);
     }
 

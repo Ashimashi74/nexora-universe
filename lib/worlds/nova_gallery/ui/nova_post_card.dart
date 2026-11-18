@@ -57,7 +57,7 @@ class NovaPostCard extends ConsumerWidget {
                     if (post.editedAt != null) context.tx('ویرایش‌شده', 'edited'),
                     if (post.motion) context.tx('حرکتی', 'motion'),
                   ].join(' · '),
-                  style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12),
+                  style: const TextStyle(color: NxColors.textDim, fontSize: 12),
                 ),
               ]),
             ),
@@ -292,7 +292,7 @@ class _CommentsSheetState extends ConsumerState<_CommentsSheet> {
                         title: Row(children: <Widget>[
                           Flexible(child: Text(cm.authorName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13))),
                           const SizedBox(width: 6),
-                          Text(novaAgo(c, cm.at), style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 11)),
+                          Text(novaAgo(c, cm.at), style: const TextStyle(color: NxColors.textDim, fontSize: 11)),
                         ]),
                         subtitle: NovaRichText(
                           text: cm.text,
