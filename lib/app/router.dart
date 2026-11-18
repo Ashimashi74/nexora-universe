@@ -15,6 +15,7 @@ import '../worlds/arcade/game_setup_page.dart';
 import '../worlds/arcade/online/leaderboard_page.dart';
 import '../worlds/arcade/online/online_lobby_page.dart';
 import '../worlds/hub/hub_page.dart';
+import '../worlds/hub/hub_search.dart';
 import '../worlds/journey/journey_page.dart';
 import '../worlds/nexora_exchange/exchange_page.dart';
 import '../worlds/nova_gallery/nova_gallery_page.dart';
@@ -63,6 +64,7 @@ GoRouter buildRouter(WidgetRef ref) {
       ),
       GoRoute(path: '/onboarding', pageBuilder: (context, state) => _fade(state, const OnboardingPage())),
       GoRoute(path: '/hub', pageBuilder: (context, state) => _fade(state, const HubPage())),
+      GoRoute(path: '/search', builder: (context, state) => const NexoraSearchPage()),
       GoRoute(path: '/settings', builder: (context, state) => const SettingsPage()),
       GoRoute(path: '/account', builder: (context, state) => const AccountPage()),
       GoRoute(

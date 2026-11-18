@@ -12,7 +12,6 @@ import '../../core/settings/app_settings.dart';
 import '../../core/theme/nx_theme.dart';
 import '../../core/widgets/nx_widgets.dart';
 import '../world_registry.dart';
-import 'hub_search.dart';
 
 /// NEXORA HUB — the station at the center of the universe (STEP_11).
 /// 2.5D orbital ring of world portals: drag to rotate, tap to warp in.
@@ -95,9 +94,7 @@ class _HubPageState extends ConsumerState<HubPage>
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
                   radius: 28,
-                  onTap: () => showSearch<void>(
-                      context: context,
-                      delegate: HubSearchDelegate(isFa: context.isFa)),
+                  onTap: () => context.push('/search'),
                   child: Row(children: [
                     Icon(Icons.search_rounded, color: visual.accent),
                     const SizedBox(width: 8),

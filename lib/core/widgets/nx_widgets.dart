@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../assets/app_assets.dart';
 import '../navigation/nexora_menu.dart';
@@ -370,6 +371,7 @@ class NxWorldScaffold extends StatelessWidget {
     this.floatingActionButton,
     this.bottomNavigationBar,
     this.showWallet = true,
+    this.showSearchButton = true,
   });
   final String title;
   final WorldPalette palette;
@@ -378,6 +380,7 @@ class NxWorldScaffold extends StatelessWidget {
   final Widget? floatingActionButton;
   final Widget? bottomNavigationBar;
   final bool showWallet;
+  final bool showSearchButton;
 
   @override
   Widget build(BuildContext context) {
@@ -395,6 +398,12 @@ class NxWorldScaffold extends StatelessWidget {
         title: Text(title),
         actions: [
           ...?actions,
+          if (showSearchButton)
+            IconButton(
+              tooltip: context.tx('جستجوی سراسری', 'Open global search'),
+              onPressed: () => context.push('/search'),
+              icon: const Icon(Icons.search_rounded),
+            ),
           IconButton(
             tooltip: context.tx('باز کردن منوی بخش‌ها', 'Open section menu'),
             onPressed: () => showNexoraMenu(context),
