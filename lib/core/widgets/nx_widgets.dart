@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../assets/app_assets.dart';
+import '../navigation/nexora_menu.dart';
 import '../profile/profile_service.dart';
 import '../settings/app_settings.dart';
 import '../theme/nx_theme.dart';
@@ -394,6 +395,11 @@ class NxWorldScaffold extends StatelessWidget {
         title: Text(title),
         actions: [
           ...?actions,
+          IconButton(
+            tooltip: context.tx('باز کردن منوی بخش‌ها', 'Open section menu'),
+            onPressed: () => showNexoraMenu(context),
+            icon: const Icon(Icons.apps_rounded),
+          ),
           if (showWallet)
             const Padding(
                 padding: EdgeInsetsDirectional.only(end: 10),

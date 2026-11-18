@@ -6,11 +6,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/assets/app_assets.dart';
+import '../../core/navigation/nexora_menu.dart';
 import '../../core/profile/profile_service.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/theme/nx_theme.dart';
 import '../../core/widgets/nx_widgets.dart';
-import '../../games/game_registry.dart';
 import '../world_registry.dart';
 import 'hub_search.dart';
 
@@ -441,10 +441,10 @@ class _QuickRow extends ConsumerWidget {
         badge: false
       ),
       (
-        icon: Icons.menu_rounded,
-        fa: 'منو',
-        en: 'Menu',
-        onTap: () => _showMenu(context),
+        icon: Icons.grid_view_rounded,
+        fa: 'همه بخش‌ها',
+        en: 'All sections',
+        onTap: () => showNexoraMenu(context),
         badge: false
       ),
     ];
@@ -479,61 +479,6 @@ class _QuickRow extends ConsumerWidget {
                 ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  void _showMenu(BuildContext context) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => SafeArea(
-        child: SingleChildScrollView(
-          padding:
-              const EdgeInsets.fromLTRB(NxSpace.md, 0, NxSpace.md, NxSpace.md),
-          child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const XpBar(),
-                const SizedBox(height: NxSpace.md),
-                for (final w in kWorlds)
-                  ListTile(
-                    leading: Icon(w.icon, color: w.palette.primary),
-                    title: Text(ctx.isFa ? w.nameFa : w.name),
-                    subtitle: Text(ctx.tx(w.taglineFa, w.taglineEn),
-                        style: const TextStyle(fontSize: 12)),
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      context.push('/world/${w.id}');
-                    },
-                  ),
-                const Divider(),
-                ListTile(
-                  leading: const Icon(Icons.settings_rounded),
-                  title: Text(ctx.tx('تنظیمات', 'Settings')),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    context.push('/settings');
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.movie_filter_rounded),
-                  title:
-                      Text(ctx.tx('تماشای دوباره‌ی سفر', 'Replay the journey')),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    context.go('/journey');
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.info_outline_rounded),
-                  title: Text(ctx.tx(
-                      '${kGames.length} بازی · ${kWorlds.length} دنیا · نسخه‌ی آفلاین ۱.۰',
-                      '${kGames.length} games · ${kWorlds.length} worlds · offline v1.0')),
-                ),
-              ]),
         ),
       ),
     );
