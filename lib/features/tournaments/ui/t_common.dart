@@ -121,7 +121,7 @@ IconData formatIcon(TFormat f) => switch (f) {
     {bool paused = false}) {
   if (paused) return (context.tx('متوقف', 'Paused'), tAccent(context));
   return switch (status) {
-    'draft' => (context.tx('پیش‌نویس', 'Draft'), NxColors.textDim),
+    'draft' => (context.tx('پیش‌نویس', 'Draft'), NxThemeColors.of(context).muted),
     'scheduled' => (context.tx('به‌زودی', 'Scheduled'), tAccent(context)),
     'registering' => (
         context.tx('ثبت‌نام باز', 'Registering'),
@@ -135,7 +135,7 @@ IconData formatIcon(TFormat f) => switch (f) {
     'live' => (context.tx('زنده', 'Live'), tAccentSecondary(context)),
     'finished' => (context.tx('پایان‌یافته', 'Finished'), tAccent(context)),
     'cancelled' => (context.tx('لغو شد', 'Cancelled'), NxColors.danger),
-    _ => (status, NxColors.textDim),
+    _ => (status, NxThemeColors.of(context).muted),
   };
 }
 

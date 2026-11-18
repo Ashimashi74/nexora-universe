@@ -122,7 +122,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
           ),
           ListTile(
             leading:
-                const Icon(Icons.perm_media_rounded, color: NxColors.textDim),
+                Icon(Icons.perm_media_rounded, color: NxThemeColors.of(context).muted),
             title: Text(c.tx('عکس، ویدئو، فایل، پیام صوتی',
                 'Photo, video, file, voice note')),
             subtitle: Text(c.tx('بعد از اتصال سرور (آپلود امن)',
@@ -391,7 +391,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(live.description,
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: NxColors.textDim)),
+                        style: TextStyle(color: NxThemeColors.of(context).muted)),
                   ),
                 if (live.isSaved)
                   Padding(
@@ -401,7 +401,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
                           'یادداشت‌ها، لینک‌ها و اشتراک‌های خودت. فقط روی دستگاه تو.',
                           'Your own notes, links and shares. Only on your device.'),
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: NxColors.textDim),
+                      style: TextStyle(color: NxThemeColors.of(context).muted),
                     ),
                   ),
                 const SizedBox(height: 12),
@@ -450,7 +450,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
                                         ? Icons.shield_rounded
                                         : Icons.person_rounded),
                                 color: m.role == 'member'
-                                    ? NxColors.textDim
+                                    ? NxThemeColors.of(context).muted
                                     : NxColors.gold,
                               ),
                               title: Text(m.id == ctrl.ownerId
@@ -644,8 +644,8 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
                                             : context.tx(
                                                 'گروه · ${chat.memberCount} عضو',
                                                 'Group · ${chat.memberCount} members')),
-                            style: const TextStyle(
-                                fontSize: 11, color: NxColors.textDim),
+                            style: TextStyle(
+                                fontSize: 11, color: NxThemeColors.of(context).muted),
                           ),
                         ]),
                   ),
@@ -758,7 +758,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
           child: Text(
               context.tx('در این کانال فقط مدیران منتشر می‌کنند.',
                   'Only admins can post in this channel.'),
-              style: const TextStyle(color: NxColors.textDim)),
+              style: TextStyle(color: NxThemeColors.of(context).muted)),
         ),
       );
 
@@ -800,8 +800,8 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
                         Text(quote.preview(fa: context.isFa),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: NxColors.textDim, fontSize: 12)),
+                            style: TextStyle(
+                                color: NxThemeColors.of(context).muted, fontSize: 12)),
                       ]),
                 ),
                 IconButton(

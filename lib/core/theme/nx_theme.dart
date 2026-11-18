@@ -22,6 +22,8 @@ class NxColors {
 
 enum NxVisualTheme { gold, neon }
 
+enum NxAppearanceMode { dark, light }
+
 /// Colors and surface treatment for the two selectable NEXORA visual themes.
 class NxThemeColors extends ThemeExtension<NxThemeColors> {
   const NxThemeColors({
@@ -70,6 +72,30 @@ class NxThemeColors extends ThemeExtension<NxThemeColors> {
     border: Color(0xFF235B92),
     text: Color(0xFFF2F7FF),
     muted: Color(0xFFAAB9D1),
+  );
+
+  static const goldLight = NxThemeColors(
+    accent: Color(0xFF805700),
+    accentSecondary: Color(0xFF875323),
+    background: Color(0xFFF4F6FA),
+    backgroundMid: Color(0xFFE9EEF5),
+    surface: Color(0xFFFDFEFF),
+    surfaceRaised: Color(0xFFFFFFFF),
+    border: Color(0xFFC8D0DC),
+    text: Color(0xFF172235),
+    muted: Color(0xFF526176),
+  );
+
+  static const neonLight = NxThemeColors(
+    accent: Color(0xFF00699D),
+    accentSecondary: Color(0xFF6338B3),
+    background: Color(0xFFF3F7FC),
+    backgroundMid: Color(0xFFE7EFF9),
+    surface: Color(0xFFFCFEFF),
+    surfaceRaised: Color(0xFFFFFFFF),
+    border: Color(0xFFBFCFE0),
+    text: Color(0xFF13243A),
+    muted: Color(0xFF50647D),
   );
 
   /// Original visual language used inside active game boards and their HUDs.
@@ -188,27 +214,57 @@ class NxMotion {
   static const curve = Curves.easeOutCubic;
 }
 
-ThemeData buildNxTheme([NxVisualTheme style = NxVisualTheme.gold]) =>
-    _buildTheme(
-      style == NxVisualTheme.gold ? NxThemeColors.gold : NxThemeColors.neon,
-    );
+ThemeData buildNxTheme([
+  NxVisualTheme style = NxVisualTheme.gold,
+  NxAppearanceMode appearance = NxAppearanceMode.dark,
+]) {
+  final isLight = appearance == NxAppearanceMode.light;
+  final visual = switch ((style, isLight)) {
+    (NxVisualTheme.gold, false) => NxThemeColors.gold,
+    (NxVisualTheme.gold, true) => NxThemeColors.goldLight,
+    (NxVisualTheme.neon, false) => NxThemeColors.neon,
+    (NxVisualTheme.neon, true) => NxThemeColors.neonLight,
+  };
+  return _buildTheme(
+    visual,
+    brightness: isLight ? Brightness.light : Brightness.dark,
+  );
+}
 
 /// Preserve the original Finger Soccer field, ball and player-disc palette.
 ThemeData buildNxGameplayTheme() => _buildTheme(NxThemeColors.gameplay);
 
-ThemeData _buildTheme(NxThemeColors visual) {
-  final scheme = ColorScheme.dark(
-    primary: visual.accent,
-    secondary: visual.accentSecondary,
-    tertiary:
-        visual.premiumPanels ? visual.accentSecondary : NxColors.turquoise,
-    surface: visual.surfaceRaised,
-    error: NxColors.danger,
-    onPrimary: const Color(0xFF08101A),
-    onSurface: visual.text,
-  );
+ThemeData _buildTheme(
+  NxThemeColors visual, {
+  Brightness brightness = Brightness.dark,
+}) {
+  final scheme = brightness == Brightness.dark
+      ? ColorScheme.dark(
+          primary: visual.accent,
+          secondary: visual.accentSecondary,
+          tertiary: visual.premiumPanels
+              ? visual.accentSecondary
+              : NxColors.turquoise,
+          surface: visual.surfaceRaised,
+          error: NxColors.danger,
+          onPrimary: const Color(0xFF08101A),
+          onSurface: visual.text,
+          onSurfaceVariant: visual.muted,
+        )
+      : ColorScheme.light(
+          primary: visual.accent,
+          onPrimary: Colors.white,
+          secondary: visual.accentSecondary,
+          onSecondary: Colors.white,
+          tertiary: visual.accentSecondary,
+          surface: visual.surfaceRaised,
+          onSurface: visual.text,
+          onSurfaceVariant: visual.muted,
+          error: NxColors.danger,
+          onError: Colors.white,
+        );
   final base = ThemeData(
-      useMaterial3: true, colorScheme: scheme, brightness: Brightness.dark);
+      useMaterial3: true, colorScheme: scheme, brightness: brightness);
   return base.copyWith(
     extensions: <ThemeExtension<dynamic>>[visual],
     scaffoldBackgroundColor: visual.background,
@@ -255,7 +311,7 @@ ThemeData _buildTheme(NxThemeColors visual) {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: visual.accent,
-        foregroundColor: const Color(0xFF08101A),
+        foregroundColor: scheme.onPrimary,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(NxRadius.md)),

@@ -365,7 +365,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
             tabAlignment: TabAlignment.start,
             indicatorColor: tAccent(context),
             labelColor: tAccent(context),
-            unselectedLabelColor: NxColors.textDim,
+            unselectedLabelColor: NxThemeColors.of(context).muted,
             dividerColor: Colors.transparent,
             tabs: <Widget>[
               for (final (String l, Widget _) in tabs) Tab(text: l)
@@ -431,7 +431,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
                   if (next != null)
                     Row(children: <Widget>[
                       Text('${momentLabel(context, next.$1)} ',
-                          style: const TextStyle(color: NxColors.textDim)),
+                          style: TextStyle(color: NxThemeColors.of(context).muted)),
                       CountdownText(
                           to: next.$2,
                           style: TextStyle(
@@ -501,7 +501,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
                     Text(
                         context.tx('جایزه‌ی سکه‌ای ندارد؛ افتخار و XP!',
                             'No coin prize — glory and XP!'),
-                        style: const TextStyle(color: NxColors.textDim))
+                        style: TextStyle(color: NxThemeColors.of(context).muted))
                   else ...<Widget>[
                     for (int i = 0; i < pc.dist.length; i++)
                       if (pc.dist[i] > 0)
@@ -515,8 +515,8 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
                                         fontWeight: FontWeight.w800))),
                             Expanded(
                                 child: Text('${pc.dist[i]}%',
-                                    style: const TextStyle(
-                                        color: NxColors.textDim))),
+                                    style: TextStyle(
+                                        color: NxThemeColors.of(context).muted))),
                             if (totalC > 0)
                               Text(
                                   '${PrizeSplit.perPlace(totalC, pc.dist)[i]} 🪙'),
@@ -530,8 +530,8 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
                           context.tx(
                               'شامل ${pc.poolPct}٪ از ورودیه‌ها${pc.feePct > 0 ? ' (کارمزد ${pc.feePct}٪)' : ''}؛ با هر ثبت‌نام بیشتر می‌شود.',
                               'Includes ${pc.poolPct}% of entry fees${pc.feePct > 0 ? ' (${pc.feePct}% fee)' : ''}; grows with every entry.'),
-                          style: const TextStyle(
-                              color: NxColors.textDim, fontSize: 12)),
+                          style: TextStyle(
+                              color: NxThemeColors.of(context).muted, fontSize: 12)),
                   ],
                 ]),
           ),
@@ -623,7 +623,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
         child: Row(children: <Widget>[
           Expanded(
               child:
-                  Text(label, style: const TextStyle(color: NxColors.textDim))),
+                  Text(label, style: TextStyle(color: NxThemeColors.of(context).muted))),
           Text(fmtWhen(at), style: const TextStyle(fontSize: 12)),
         ]),
       );
@@ -664,7 +664,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(entryStatusName(context, me.status),
-                    style: const TextStyle(color: NxColors.textDim)),
+                    style: TextStyle(color: NxThemeColors.of(context).muted)),
               ),
             FilledButton.icon(
               style: FilledButton.styleFrom(
@@ -692,7 +692,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
                     context.tx('ثبت‌نام بعد از تأیید برگزارکننده قطعی می‌شود.',
                         'An organizer approves each registration.'),
                     style:
-                        const TextStyle(color: NxColors.textDim, fontSize: 12)),
+                        TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
               ),
           ]);
     } else {
@@ -701,7 +701,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
             ? context.tx(
                 'ثبت‌نام هنوز باز نشده', 'Registration has not opened yet')
             : context.tx('ثبت‌نام بسته است', 'Registration is closed'),
-        style: const TextStyle(color: NxColors.textDim),
+        style: TextStyle(color: NxThemeColors.of(context).muted),
       );
     }
     return GlassPanel(child: body);
@@ -726,7 +726,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
             children: <Widget>[
               Row(children: <Widget>[
                 Text(context.tx('وقت آمادگی: ', 'Ready window: '),
-                    style: const TextStyle(color: NxColors.textDim)),
+                    style: TextStyle(color: NxThemeColors.of(context).muted)),
                 if (m.readyDeadline != null)
                   CountdownText(
                       to: m.readyDeadline!,
@@ -739,7 +739,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
                         ? Icons.check_circle_rounded
                         : Icons.hourglass_empty_rounded,
                     size: 18,
-                    color: oppReady ? NxColors.success : NxColors.textDim),
+                    color: oppReady ? NxColors.success : NxThemeColors.of(context).muted),
                 const SizedBox(width: 4),
                 Text(
                     oppReady
@@ -783,7 +783,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
       default:
         action = Row(children: <Widget>[
           Text(context.tx('شروع تا ', 'Starts in '),
-              style: const TextStyle(color: NxColors.textDim)),
+              style: TextStyle(color: NxThemeColors.of(context).muted)),
           if (m.scheduledAt != null && t.status == 'live')
             CountdownText(
                 to: m.scheduledAt!,
@@ -811,7 +811,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
               const Spacer(),
               Text(roundName(context, m, lastW, firstW),
                   style:
-                      const TextStyle(color: NxColors.textDim, fontSize: 12)),
+                      TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
             ]),
             const SizedBox(height: 10),
             Row(children: <Widget>[
@@ -829,7 +829,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
                           ? context.tx('دو بازی', '2 legs')
                           : 'Bo${m.bestOf}')
                       : 'Bo1',
-                  style: const TextStyle(color: NxColors.textDim)),
+                  style: TextStyle(color: NxThemeColors.of(context).muted)),
               if (m.games > 0)
                 Text('  ${iAmP1 ? m.w1 : m.w2} - ${iAmP1 ? m.w2 : m.w1}',
                     style: const TextStyle(fontWeight: FontWeight.w900)),
@@ -877,7 +877,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
           child: Text(
               context.tx('جدول بعد از قرعه‌کشی ساخته می‌شود',
                   'The table appears after the draw'),
-              style: const TextStyle(color: NxColors.textDim)));
+              style: TextStyle(color: NxThemeColors.of(context).muted)));
     }
     final List<int?> groups = _table
         .map((StandingRow r) => r.groupNo)
@@ -920,7 +920,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
         fontSize: 12.5,
         fontWeight: bold ? FontWeight.w900 : FontWeight.w600,
         color: header
-            ? NxColors.textDim
+            ? NxThemeColors.of(context).muted
             : (r?.userId == _me ? NxColors.turquoise : NxColors.iceWhite));
     Widget c(String s, {double w = 28, bool bold = false}) => SizedBox(
         width: w, child: Text(s, textAlign: TextAlign.center, style: st(bold)));
@@ -954,7 +954,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
     if (_matches.isEmpty) {
       return Center(
           child: Text(context.tx('هنوز بازی‌ای ساخته نشده', 'No matches yet'),
-              style: const TextStyle(color: NxColors.textDim)));
+              style: TextStyle(color: NxThemeColors.of(context).muted)));
     }
     final List<TMatch> sorted = List<TMatch>.of(_matches)
       ..sort((TMatch a, TMatch b) {
@@ -998,8 +998,8 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(roundName(context, m, lastW, firstW),
-                          style: const TextStyle(
-                              color: NxColors.textDim, fontSize: 11)),
+                          style: TextStyle(
+                              color: NxThemeColors.of(context).muted, fontSize: 11)),
                       const SizedBox(height: 2),
                       Text(
                           '${_pname(m.p1, m.p1Set)}  vs  ${_pname(m.p2, m.p2Set)}',
@@ -1027,7 +1027,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
 
   (String, Color) _matchStatus(BuildContext context, TMatch m) =>
       switch (m.status) {
-        'pending' => (context.tx('منتظر', 'Waiting'), NxColors.textDim),
+        'pending' => (context.tx('منتظر', 'Waiting'), NxThemeColors.of(context).muted),
         'scheduled' => (
             context.tx('زمان‌بندی', 'Scheduled'),
             NxColors.electricBlue
@@ -1045,11 +1045,11 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
             NxColors.gold
           ),
         'walkover' => (context.tx('واگذار', 'Walkover'), NxColors.violet),
-        'bye' => ('BYE', NxColors.textDim),
+        'bye' => ('BYE', NxThemeColors.of(context).muted),
         'disputed' => (context.tx('اختلاف', 'Disputed'), NxColors.danger),
-        'void' => (context.tx('باطل', 'Void'), NxColors.textDim),
-        'skipped' => (context.tx('لازم نشد', 'Not needed'), NxColors.textDim),
-        _ => (m.status, NxColors.textDim),
+        'void' => (context.tx('باطل', 'Void'), NxThemeColors.of(context).muted),
+        'skipped' => (context.tx('لازم نشد', 'Not needed'), NxThemeColors.of(context).muted),
+        _ => (m.status, NxThemeColors.of(context).muted),
       };
 
   void _matchSheet(BuildContext context, Tournament t, TMatch m) {
@@ -1071,7 +1071,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
               Text(
                   'Bo${m.bestOf}${m.aggregate ? ' · ${ctx.tx('مجموع گل', 'aggregate')}' : ''} · ${ctx.tx('بازی‌ها', 'games')} ${m.games} · ${ctx.tx('گل', 'goals')} ${m.g1}-${m.g2}',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: NxColors.textDim)),
+                  style: TextStyle(color: NxThemeColors.of(context).muted)),
               if (m.scheduledAt != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 6),
@@ -1084,8 +1084,8 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
                   padding: const EdgeInsets.only(top: 6),
                   child: Text(m.resultNote!,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          color: NxColors.textDim, fontSize: 12)),
+                      style: TextStyle(
+                          color: NxThemeColors.of(context).muted, fontSize: 12)),
                 ),
               if (m.involves(_me) && !m.isFinal) ...<Widget>[
                 const SizedBox(height: 14),
@@ -1112,7 +1112,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
       return Center(
           child: Text(
               context.tx('هنوز کسی ثبت‌نام نکرده', 'Nobody has registered yet'),
-              style: const TextStyle(color: NxColors.textDim)));
+              style: TextStyle(color: NxThemeColors.of(context).muted)));
     }
     return ListView.builder(
       padding:
@@ -1129,7 +1129,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
               style: const TextStyle(fontWeight: FontWeight.w800)),
           subtitle: Text(
               '${e.seed != null ? '${context.tx('سید', 'Seed')} ${e.seed} · ' : ''}${context.tx('رتبه', 'Rating')} ${e.rating}${e.groupNo != null ? ' · ${context.tx('گروه', 'Group')} ${String.fromCharCode(64 + e.groupNo!)}' : ''}',
-              style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
+              style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
           trailing: e.place != null
               ? NxPill(
                   label: '#${e.place}',

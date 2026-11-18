@@ -67,7 +67,7 @@ class _NexoraAppState extends ConsumerState<NexoraApp> {
     return MaterialApp.router(
       title: 'NEXORA',
       debugShowCheckedModeBanner: false,
-      theme: buildNxTheme(settings.visualTheme),
+      theme: buildNxTheme(settings.visualTheme, settings.appearanceMode),
       locale: settings.locale,
       supportedLocales: const [Locale('fa'), Locale('en')],
       localizationsDelegates: const [

@@ -519,7 +519,7 @@ class NovaNotificationsTab extends ConsumerWidget {
                           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
                             Text(c.tx(n.textFa, n.textEn), style: const TextStyle(height: 1.35)),
                             const SizedBox(height: 2),
-                            Text(novaAgo(c, n.at), style: const TextStyle(color: NxColors.textDim, fontSize: 11)),
+                            Text(novaAgo(c, n.at), style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 11)),
                           ]),
                         ),
                         if (!n.read)
@@ -571,7 +571,7 @@ class _NovaProfileTabState extends ConsumerState<NovaProfileTab> {
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
                     Text(name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 2),
-                    Text(profile.explorerId, style: const TextStyle(color: NxColors.textDim, letterSpacing: 1.2)),
+                    Text(profile.explorerId, style: TextStyle(color: NxThemeColors.of(context).muted, letterSpacing: 1.2)),
                     if (profile.bio.isNotEmpty) ...<Widget>[
                       const SizedBox(height: 4),
                       Text(profile.bio, maxLines: 2, overflow: TextOverflow.ellipsis),
@@ -649,7 +649,7 @@ class _Stat extends StatelessWidget {
   Widget build(BuildContext context) => Expanded(
         child: Column(children: <Widget>[
           Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-          Text(label, style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
+          Text(label, style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
         ]),
       );
 }

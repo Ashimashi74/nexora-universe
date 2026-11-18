@@ -578,7 +578,7 @@ class _TournamentWizardPageState extends ConsumerState<TournamentWizardPage> {
               context.tx(
                   'کمتر از توان ۲ = استراحت (bye) خودکار برای سیدهای بالا.',
                   'Not a power of 2 → automatic byes for the top seeds.'),
-              style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
+              style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
           if (_format == TFormat.singleElim ||
               _format == TFormat.twoLegs ||
               _format == TFormat.groupsKo)
@@ -655,7 +655,7 @@ class _TournamentWizardPageState extends ConsumerState<TournamentWizardPage> {
                 context.tx(
                     'می‌توانی ماه‌ها جلوتر برنامه بریزی. تغییر زمان‌ها به همه‌ی شرکت‌کننده‌ها اعلام می‌شود.',
                     'You can schedule months ahead. Time changes notify every participant.'),
-                style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
+                style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
           ]);
 
   Widget _stepRules(BuildContext context) =>
@@ -681,7 +681,7 @@ class _TournamentWizardPageState extends ConsumerState<TournamentWizardPage> {
         Text(
             context.tx('مساوی در حذفی ← بازی گل طلایی',
                 'Knockout draw → golden-goal decider'),
-            style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
+            style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
         if (_format.isLeague || _format == TFormat.groupsKo) ...<Widget>[
           _stepper(context.tx('امتیاز برد', 'Points for a win'), _ptsWin, 0, 10,
               (int v) => _ptsWin = v),
@@ -709,7 +709,7 @@ class _TournamentWizardPageState extends ConsumerState<TournamentWizardPage> {
           Text(
               context.tx('جایزه‌ی ثابت فقط توسط ادمین تعیین می‌شود.',
                   'Fixed prizes are set by admins only.'),
-              style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
+              style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
         _stepper(
             context.tx('سهم ورودیه‌ها در جایزه', 'Entry fees into the pool'),
             _poolPct,
@@ -725,7 +725,7 @@ class _TournamentWizardPageState extends ConsumerState<TournamentWizardPage> {
             context.tx(
                 'ورودیه‌ها تا پایان تورنمنت امانت می‌مانند؛ لغو = بازپرداخت کامل.',
                 'Entry fees are held in escrow until the end; cancel = full refund.'),
-            style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
+            style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
       ]),
       _section(context.tx('تقسیم بین رتبه‌ها', 'Split by place'), <Widget>[
         for (int i = 0; i < _dist.length; i++)
@@ -805,7 +805,7 @@ class _TournamentWizardPageState extends ConsumerState<TournamentWizardPage> {
               context.tx(
                   'هر حساب فقط یک‌بار؛ ظرفیت پر = لیست انتظار با جایگزینی خودکار.',
                   'One registration per account; full = waitlist with automatic replacement.'),
-              style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
+              style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
         ]),
         if (_editing == null &&
             (_regMode == 'code' ||
@@ -836,7 +836,7 @@ class _TournamentWizardPageState extends ConsumerState<TournamentWizardPage> {
                         'کدها ۸ حرفی‌اند، بدون 0/O/1/I، با لینک nexora://t/<code>. بعداً در مدیریت هم می‌سازی یا باطل می‌کنی.',
                         '8-character codes without 0/O/1/I, deep link nexora://t/<code>. Create or revoke more later in Manage.'),
                     style:
-                        const TextStyle(color: NxColors.textDim, fontSize: 12)),
+                        TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
               ]),
       ]);
 
@@ -894,7 +894,7 @@ class _TournamentWizardPageState extends ConsumerState<TournamentWizardPage> {
               SizedBox(
                   width: 150,
                   child:
-                      Text(k, style: const TextStyle(color: NxColors.textDim))),
+                      Text(k, style: TextStyle(color: NxThemeColors.of(context).muted))),
               Expanded(
                   child: Text(v,
                       style: const TextStyle(fontWeight: FontWeight.w700))),

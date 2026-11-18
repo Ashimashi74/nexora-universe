@@ -423,7 +423,7 @@ class _OracleCorePageState extends ConsumerState<OracleCorePage> {
                       'تا آن موقع می‌توانی سؤالت را تایپ کنی؛ ORACLE همه‌ی کارها را آفلاین انجام می‌دهد.',
                       'Until then, type your question; ORACLE does everything else offline.'),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: NxColors.textDim),
+                  style: TextStyle(color: NxThemeColors.of(context).muted),
                 ),
                 const SizedBox(height: NxSpace.md),
                 FilledButton(

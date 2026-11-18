@@ -206,7 +206,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
             tabAlignment: TabAlignment.start,
             indicatorColor: tAccent(context),
             labelColor: tAccent(context),
-            unselectedLabelColor: NxColors.textDim,
+            unselectedLabelColor: NxThemeColors.of(context).muted,
             dividerColor: Colors.transparent,
             tabs: <Widget>[
               for (final (String l, Widget _) in tabs) Tab(text: l)
@@ -260,7 +260,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
                 if (next != null)
                   Row(children: <Widget>[
                     Text('${momentLabel(context, next.$1)} ',
-                        style: const TextStyle(color: NxColors.textDim)),
+                        style: TextStyle(color: NxThemeColors.of(context).muted)),
                     CountdownText(
                         to: next.$2,
                         style: TextStyle(
@@ -270,7 +270,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
                 Text(
                     '${context.tx('امانت', 'Escrow')}: ${t.escrowCoins}🪙 ${t.escrowGems}💎 · ${context.tx('پرداخت شد', 'paid out')}: ${t.paidOut ? '✓' : '—'}',
                     style:
-                        const TextStyle(color: NxColors.textDim, fontSize: 12)),
+                        TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
               ]),
         ),
         const SizedBox(height: 12),
@@ -377,7 +377,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
     if (queue.isEmpty) {
       return Center(
           child: Text(context.tx('کسی در صف نیست', 'Nobody is waiting'),
-              style: const TextStyle(color: NxColors.textDim)));
+              style: TextStyle(color: NxThemeColors.of(context).muted)));
     }
     return ListView.builder(
       padding: const EdgeInsets.all(NxSpace.md),
@@ -401,8 +401,8 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
                       Text(
                           '${entryStatusName(context, e.status)} · ${context.tx('رتبه', 'rating')} ${e.rating}'
                           '${e.paidCoins > 0 ? ' · ${e.paidCoins}🪙' : ''}',
-                          style: const TextStyle(
-                              color: NxColors.textDim, fontSize: 12)),
+                          style: TextStyle(
+                              color: NxThemeColors.of(context).muted, fontSize: 12)),
                     ]),
               ),
               IconButton(
@@ -445,7 +445,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
             child: Text(
                 '${list.length} / ${t.capacity} ${context.tx('تأیید شده', 'approved')}'
                 '${t.seeding == 'manual' && preDraw ? ' · ${context.tx('سید دستی: روی بازیکن بزن', 'manual seeding: tap a player')}' : ''}',
-                style: const TextStyle(color: NxColors.textDim)),
+                style: TextStyle(color: NxThemeColors.of(context).muted)),
           );
         }
         final TEntry e = list[i - 1];
@@ -456,7 +456,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
               style: const TextStyle(fontWeight: FontWeight.w800)),
           subtitle: Text(
               '${e.seed != null ? '${context.tx('سید', 'Seed')} ${e.seed} · ' : ''}${context.tx('رتبه', 'Rating')} ${e.rating}',
-              style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
+              style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
           onTap: preDraw
               ? () async {
                   final String? v = await _ask(
@@ -525,8 +525,8 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
                         Text(
                             '${c.uses}/${c.maxUses}${c.expiresAt != null ? ' · ${context.tx('تا', 'until')} ${fmtWhen(c.expiresAt!, withUtc: false)}' : ''}'
                             '${c.requiresApproval ? ' · ${context.tx('با تأیید', 'needs approval')}' : ''}${c.revoked ? ' · ${context.tx('باطل', 'revoked')}' : ''}',
-                            style: const TextStyle(
-                                color: NxColors.textDim, fontSize: 12)),
+                            style: TextStyle(
+                                color: NxThemeColors.of(context).muted, fontSize: 12)),
                       ]),
                 ),
                 IconButton(
@@ -664,8 +664,8 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
                     children: <Widget>[
                       Text(
                           '${roundName(context, m, lastW, firstW)} · ${m.status}${m.resultNote != null ? ' · ${m.resultNote}' : ''}',
-                          style: const TextStyle(
-                              color: NxColors.textDim, fontSize: 11)),
+                          style: TextStyle(
+                              color: NxThemeColors.of(context).muted, fontSize: 11)),
                       Text(
                           '${_names[m.p1] ?? (m.p1Set ? 'BYE' : '—')}  vs  ${_names[m.p2] ?? (m.p2Set ? 'BYE' : '—')}',
                           maxLines: 1,
@@ -917,7 +917,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
                     ? Icons.check_circle_rounded
                     : Icons.schedule_rounded,
                 color:
-                    j['done_at'] != null ? NxColors.success : NxColors.textDim,
+                    j['done_at'] != null ? NxColors.success : NxThemeColors.of(context).muted,
                 size: 18),
             title: Text('${j['kind']}'),
             subtitle: Text(
@@ -965,7 +965,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
             context.tx(
                 'ادمین: همه‌چیز. برگزارکننده: ساخت و اجرای تورنمنت خودش. همکار: اجرای همین تورنمنت.',
                 'Admin: everything. Organizer: creates and runs own tournaments. Runner: runs this tournament.'),
-            style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
+            style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
         const SizedBox(height: 12),
         FilledButton.icon(
           style: FilledButton.styleFrom(backgroundColor: tAccent(context)),

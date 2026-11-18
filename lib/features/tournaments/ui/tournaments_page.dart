@@ -265,7 +265,7 @@ class _TournamentsPageState extends ConsumerState<TournamentsPage>
                   tabAlignment: TabAlignment.start,
                   indicatorColor: tAccent(context),
                   labelColor: tAccent(context),
-                  unselectedLabelColor: NxColors.textDim,
+                  unselectedLabelColor: NxThemeColors.of(context).muted,
                   dividerColor: Colors.transparent,
                   tabs: <Widget>[
                     for (final (TTab t, String label) in tabs)
@@ -307,8 +307,8 @@ class _TournamentsPageState extends ConsumerState<TournamentsPage>
                               Text(
                                   context.tx('${_all.length} تورنمنت در دسترس',
                                       '${_all.length} tournaments available'),
-                                  style: const TextStyle(
-                                      color: NxColors.textDim, fontSize: 12)),
+                                  style: TextStyle(
+                                      color: NxThemeColors.of(context).muted, fontSize: 12)),
                             ]),
                       ),
                       NxPill(
@@ -341,8 +341,8 @@ class _TournamentsPageState extends ConsumerState<TournamentsPage>
 
   Widget _errorView(BuildContext context) => Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-          const Icon(Icons.cloud_off_rounded,
-              size: 46, color: NxColors.textDim),
+          Icon(Icons.cloud_off_rounded,
+              size: 46, color: NxThemeColors.of(context).muted),
           const SizedBox(height: 8),
           Text(context.tx('اتصال برقرار نشد', 'Could not connect')),
           TextButton(
@@ -446,8 +446,8 @@ class _TournamentsPageState extends ConsumerState<TournamentsPage>
                   Text(t?.title ?? '',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          color: NxColors.textDim, fontSize: 12)),
+                      style: TextStyle(
+                          color: NxThemeColors.of(context).muted, fontSize: 12)),
                 ]),
           ),
           if (ready && m.readyDeadline != null)
@@ -474,12 +474,12 @@ class _TournamentsPageState extends ConsumerState<TournamentsPage>
       child: items.isEmpty
           ? ListView(children: <Widget>[
               const SizedBox(height: 80),
-              const Icon(Icons.emoji_events_outlined,
-                  size: 56, color: NxColors.textDim),
+              Icon(Icons.emoji_events_outlined,
+                  size: 56, color: NxThemeColors.of(context).muted),
               const SizedBox(height: 10),
               Center(
                 child: Text(context.tx('چیزی اینجا نیست', 'Nothing here yet'),
-                    style: const TextStyle(color: NxColors.textDim)),
+                    style: TextStyle(color: NxThemeColors.of(context).muted)),
               ),
             ])
           : ListView.builder(
@@ -546,8 +546,8 @@ class TournamentCard extends StatelessWidget {
                           '${g == null ? t.game : context.tx(g.nameFa, g.nameEn)} · ${formatName(context, t.format)}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                              color: NxColors.textDim, fontSize: 12)),
+                          style: TextStyle(
+                              color: NxThemeColors.of(context).muted, fontSize: 12)),
                     ]),
               ),
               NxPill(label: st, color: sc),
@@ -584,12 +584,12 @@ class TournamentCard extends StatelessWidget {
             if (next != null) ...<Widget>[
               const SizedBox(height: 10),
               Row(children: <Widget>[
-                const Icon(Icons.timer_outlined,
-                    size: 16, color: NxColors.textDim),
+                Icon(Icons.timer_outlined,
+                    size: 16, color: NxThemeColors.of(context).muted),
                 const SizedBox(width: 6),
                 Text('${momentLabel(context, next.$1)} ',
                     style:
-                        const TextStyle(color: NxColors.textDim, fontSize: 12)),
+                        TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
                 CountdownText(
                     to: next.$2,
                     style: TextStyle(
@@ -599,7 +599,7 @@ class TournamentCard extends StatelessWidget {
                 const Spacer(),
                 Text(fmtWhen(next.$2, withUtc: false),
                     style:
-                        const TextStyle(color: NxColors.textDim, fontSize: 11)),
+                        TextStyle(color: NxThemeColors.of(context).muted, fontSize: 11)),
               ]),
             ],
           ]),

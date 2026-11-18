@@ -594,7 +594,7 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
             Text(
                 context.tx('الان اتاق بازی نیست؛ یکی بساز یا «بازی سریع» بزن.',
                     'No open rooms right now — create one or tap Quick match.'),
-                style: const TextStyle(color: NxColors.textDim)),
+                style: TextStyle(color: NxThemeColors.of(context).muted)),
           for (final Map<String, dynamic> r in _open)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
@@ -798,7 +798,7 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
             radius: 16,
             backgroundColor: p == null
                 ? NxColors.glass
-                : (present ? NxColors.success : NxColors.textDim),
+                : (present ? NxColors.success : NxThemeColors.of(context).muted),
             child: Text('${s + 1}',
                 style: const TextStyle(fontWeight: FontWeight.w800)),
           ),
@@ -812,7 +812,7 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
                       : p.name),
               style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  color: p == null ? NxColors.textDim : null),
+                  color: p == null ? NxThemeColors.of(context).muted : null),
             ),
           ),
           if (p != null && r['host'] == p.userId)
@@ -832,7 +832,7 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
                 p.ready
                     ? Icons.check_circle_rounded
                     : Icons.hourglass_empty_rounded,
-                color: p.ready ? NxColors.success : NxColors.textDim),
+                color: p.ready ? NxColors.success : NxThemeColors.of(context).muted),
           ],
         ]),
       ),

@@ -18,6 +18,10 @@ class AppSettings extends ChangeNotifier {
       (e) => e.name == _store.getString(_kVisualTheme),
       orElse: () => NxVisualTheme.gold,
     );
+    _appearanceMode = NxAppearanceMode.values.firstWhere(
+      (e) => e.name == _store.getString(_kAppearanceMode),
+      orElse: () => NxAppearanceMode.dark,
+    );
     _sound = _store.getBool(_kSound) ?? true;
     _haptics = _store.getBool(_kHaptics) ?? true;
     _journeySeen = _store.getBool(_kJourney) ?? false;
@@ -29,6 +33,7 @@ class AppSettings extends ChangeNotifier {
   static const _kReduced = 'settings.reduced_motion';
   static const _kLang = 'settings.lang';
   static const _kVisualTheme = 'settings.visual_theme';
+  static const _kAppearanceMode = 'settings.appearance_mode';
   static const _kSound = 'settings.sound';
   static const _kHaptics = 'settings.haptics';
   static const _kJourney = 'settings.journey_seen';
@@ -38,6 +43,7 @@ class AppSettings extends ChangeNotifier {
   late bool _reducedMotion;
   late String _languageCode;
   late NxVisualTheme _visualTheme;
+  late NxAppearanceMode _appearanceMode;
   late bool _sound;
   late bool _haptics;
   late bool _journeySeen;
@@ -47,6 +53,7 @@ class AppSettings extends ChangeNotifier {
   bool get reducedMotion => _reducedMotion;
   String get languageCode => _languageCode;
   NxVisualTheme get visualTheme => _visualTheme;
+  NxAppearanceMode get appearanceMode => _appearanceMode;
   bool get isFa => _languageCode == 'fa';
   Locale get locale => Locale(_languageCode);
   bool get sound => _sound;
@@ -86,6 +93,13 @@ class AppSettings extends ChangeNotifier {
     if (_visualTheme == v) return;
     _visualTheme = v;
     _store.setString(_kVisualTheme, v.name);
+    notifyListeners();
+  }
+
+  set appearanceMode(NxAppearanceMode v) {
+    if (_appearanceMode == v) return;
+    _appearanceMode = v;
+    _store.setString(_kAppearanceMode, v.name);
     notifyListeners();
   }
 

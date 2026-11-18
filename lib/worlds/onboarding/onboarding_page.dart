@@ -175,7 +175,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             Icon(Icons.badge_rounded, color: visual.accent),
             const SizedBox(width: 10),
             Text('Explorer ID',
-                style: const TextStyle(color: NxColors.textDim)),
+                style: TextStyle(color: NxThemeColors.of(context).muted)),
             const Spacer(),
             Flexible(
                 child: Text(p.explorerId,

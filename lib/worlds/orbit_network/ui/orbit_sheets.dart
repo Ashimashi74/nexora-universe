@@ -82,7 +82,7 @@ class OrbitBadgePicker extends StatelessWidget {
                 border: Border.all(color: sel ? WorldPalette.orbit.primary : NxColors.glassBorder, width: sel ? 2 : 1),
               ),
               child: id.isEmpty
-                  ? const Icon(Icons.block_rounded, color: NxColors.textDim)
+                  ? Icon(Icons.block_rounded, color: NxThemeColors.of(context).muted)
                   : Image.asset(AppAssets.clubBadge(id),
                       cacheWidth: 150, fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.shield_rounded)),
             ),
@@ -178,7 +178,7 @@ class _ChatEditorState extends ConsumerState<_ChatEditor> {
             channel
                 ? context.tx('در کانال فقط مدیران منتشر می‌کنند.', 'In a channel only admins publish.')
                 : context.tx('گروه برای گفت‌وگوی چندنفره است.', 'Groups are for multi-person conversations.'),
-            style: const TextStyle(color: NxColors.textDim, fontSize: 12),
+            style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12),
           ),
           const SizedBox(height: 12),
           TextField(
@@ -338,7 +338,7 @@ class _OrbitFriendPickerState extends ConsumerState<OrbitFriendPicker> {
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Text(
             context.tx('هنوز دوستی نداری؛ از بخش «مخاطبان» دوست پیدا کن.', 'No friends yet — find some in Contacts.'),
-            style: const TextStyle(color: NxColors.textDim, fontSize: 12),
+            style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12),
           ),
         )
       else
@@ -413,7 +413,7 @@ class _SharedInboxSheet extends ConsumerWidget {
                         context.tx('چیزی در صف نیست. در Nova Gallery روی «ارسال به Orbit» بزن تا پست اینجا بیاید.',
                             'Nothing waiting. Tap "Share to Orbit" on a Nova Gallery post and it lands here.'),
                         textAlign: TextAlign.center,
-                        style: const TextStyle(color: NxColors.textDim),
+                        style: TextStyle(color: NxThemeColors.of(context).muted),
                       ),
                     ]),
                   ),

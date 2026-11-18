@@ -102,7 +102,7 @@ class AccountStatusCard extends ConsumerWidget {
             ],
           ]),
         ),
-        const Icon(Icons.chevron_right_rounded, color: NxColors.textDim),
+        Icon(Icons.chevron_right_rounded, color: NxThemeColors.of(context).muted),
       ]),
     );
   }
@@ -292,8 +292,8 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                           : context.tx(
                               'حساب مهمان فعلی‌ات با همین پیشرفت به حساب دائمی تبدیل می‌شود.',
                               'Your current guest account becomes permanent, keeping all progress.'),
-                      style: const TextStyle(
-                          color: NxColors.textDim, fontSize: 12),
+                      style: TextStyle(
+                          color: NxThemeColors.of(context).muted, fontSize: 12),
                     ),
                     const SizedBox(height: 12),
                     TextField(

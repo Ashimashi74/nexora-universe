@@ -30,7 +30,7 @@ Future<void> showOrbitOnlineOnly(BuildContext context,
           c.tx('تماس‌ها از طریق LiveKit و سرور NEXORA برقرار می‌شوند؛ تا آن زمان هیچ تماسی شبیه‌سازی نمی‌شود.',
               'Calls run through LiveKit and the NEXORA server; until then no call is simulated.'),
           textAlign: TextAlign.center,
-          style: const TextStyle(color: NxColors.textDim, fontSize: 12),
+          style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12),
         ),
       ]),
     ),
@@ -89,12 +89,12 @@ class OrbitDeliveryIcon extends StatelessWidget {
         return Tooltip(
           message: context.tx(
               'روی دستگاه ذخیره شد؛ بعد از اتصال سرور ارسال می‌شود', 'Saved on device; sends once the server is connected'),
-          child: const Icon(Icons.schedule_rounded, size: 14, color: NxColors.textDim),
+          child: Icon(Icons.schedule_rounded, size: 14, color: NxThemeColors.of(context).muted),
         );
       case OrbitDelivery.sent:
-        return const Icon(Icons.done_rounded, size: 14, color: NxColors.textDim);
+        return Icon(Icons.done_rounded, size: 14, color: NxThemeColors.of(context).muted);
       case OrbitDelivery.delivered:
-        return const Icon(Icons.done_all_rounded, size: 14, color: NxColors.textDim);
+        return Icon(Icons.done_all_rounded, size: 14, color: NxThemeColors.of(context).muted);
       case OrbitDelivery.read:
         return const Icon(Icons.done_all_rounded, size: 14, color: NxColors.turquoise);
     }
@@ -185,16 +185,16 @@ class OrbitMessageBubble extends StatelessWidget {
                   ),
                 ]),
                 Text(replyTo!.preview(fa: context.isFa),
-                    maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: NxColors.textDim)),
+                    maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: NxThemeColors.of(context).muted)),
               ]),
             ),
           ),
         if (m.deleted)
           Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
-            const Icon(Icons.block_rounded, size: 14, color: NxColors.textDim),
+            Icon(Icons.block_rounded, size: 14, color: NxThemeColors.of(context).muted),
             const SizedBox(width: 4),
             Text(context.tx('این پیام حذف شد', 'This message was deleted'),
-                style: const TextStyle(fontStyle: FontStyle.italic, color: NxColors.textDim)),
+                style: TextStyle(fontStyle: FontStyle.italic, color: NxThemeColors.of(context).muted)),
           ])
         else ...<Widget>[
           if (m.kind == OrbitMessageKind.art) _ArtBody(assetRef: '${m.payload['asset'] ?? ''}'),
@@ -219,9 +219,9 @@ class OrbitMessageBubble extends StatelessWidget {
           if (m.editedAt != null && !m.deleted)
             Padding(
               padding: const EdgeInsetsDirectional.only(end: 4),
-              child: Text(context.tx('ویرایش‌شده', 'edited'), style: const TextStyle(fontSize: 10, color: NxColors.textDim)),
+              child: Text(context.tx('ویرایش‌شده', 'edited'), style: TextStyle(fontSize: 10, color: NxThemeColors.of(context).muted)),
             ),
-          Text(orbitTime(m.createdAt), style: const TextStyle(fontSize: 10, color: NxColors.textDim)),
+          Text(orbitTime(m.createdAt), style: TextStyle(fontSize: 10, color: NxThemeColors.of(context).muted)),
           if (mine) ...<Widget>[const SizedBox(width: 3), OrbitDeliveryIcon(delivery: m.delivery)],
         ]),
       ],
@@ -401,7 +401,7 @@ class OrbitInviteCard extends StatelessWidget {
           style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
         ),
         if (note.isNotEmpty)
-          Text(note, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
+          Text(note, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12)),
         const SizedBox(height: 6),
         FilledButton.icon(
           style: FilledButton.styleFrom(backgroundColor: accent, padding: const EdgeInsets.symmetric(vertical: 10)),

@@ -127,8 +127,8 @@ class _GamesGrid extends StatelessWidget {
                       Text(
                           context.tx('حذفی، لیگ، گروهی و سوئیسی با جایزه',
                               'Knockout, league, groups and swiss with prizes'),
-                          style: const TextStyle(
-                              color: NxColors.textDim, fontSize: 12)),
+                          style: TextStyle(
+                              color: NxThemeColors.of(context).muted, fontSize: 12)),
                     ]),
               ),
               const Icon(Icons.chevron_right_rounded),
@@ -252,8 +252,8 @@ class _Records extends StatelessWidget {
                             return Text(
                                 context.tx(
                                     'هنوز بازی نکرده‌ای', 'Not played yet'),
-                                style: const TextStyle(
-                                    color: NxColors.textDim, fontSize: 12));
+                                style: TextStyle(
+                                    color: NxThemeColors.of(context).muted, fontSize: 12));
                           }
                           final rate = s.played == 0
                               ? 0
@@ -262,8 +262,8 @@ class _Records extends StatelessWidget {
                             context.tx(
                                 'بازی ${s.played} · برد ${s.won} · باخت ${s.lost} · مساوی ${s.draw} · ٪$rate',
                                 'Played ${s.played} · W ${s.won} · L ${s.lost} · D ${s.draw} · $rate%'),
-                            style: const TextStyle(
-                                color: NxColors.textDim, fontSize: 12),
+                            style: TextStyle(
+                                color: NxThemeColors.of(context).muted, fontSize: 12),
                           );
                         }),
                       ]),

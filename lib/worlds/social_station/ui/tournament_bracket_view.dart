@@ -59,7 +59,7 @@ Future<void> createCommunityTournament(BuildContext context, WidgetRef ref, Comm
             Text(
               sc.tx('بازی‌ها روی همین دستگاه انجام می‌شوند و نتیجه را بعد از هر بازی ثبت می‌کنی.',
                   'Matches are played on this device; you enter each result after playing.'),
-              style: const TextStyle(color: NxColors.textDim, fontSize: 12),
+              style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12),
             ),
             const SizedBox(height: 8),
             Wrap(spacing: 8, runSpacing: 8, children: <Widget>[
@@ -158,7 +158,7 @@ class CommunityTournamentsTab extends ConsumerWidget {
                   const SizedBox(height: 2),
                   Text(
                     '${gameLabel(context, t.gameId)} · ${t.bracket.players.length} ${context.tx('بازیکن', 'players')}',
-                    style: const TextStyle(color: NxColors.textDim, fontSize: 12),
+                    style: TextStyle(color: NxThemeColors.of(context).muted, fontSize: 12),
                   ),
                   const SizedBox(height: 8),
                   ClipRRect(
@@ -175,7 +175,7 @@ class CommunityTournamentsTab extends ConsumerWidget {
                     t.finished
                         ? '${context.tx('قهرمان', 'Champion')}: ${t.bracket.champion}'
                         : '${t.bracket.playedMatches}/${t.bracket.totalMatches} ${context.tx('بازی انجام شده', 'matches played')}',
-                    style: TextStyle(color: t.finished ? NxColors.gold : NxColors.textDim, fontSize: 12, fontWeight: FontWeight.w700),
+                    style: TextStyle(color: t.finished ? NxColors.gold : NxThemeColors.of(context).muted, fontSize: 12, fontWeight: FontWeight.w700),
                   ),
                 ]),
               ),
@@ -295,7 +295,7 @@ class TournamentPage extends ConsumerWidget {
             borderColor: NxColors.gold,
             child: Column(children: <Widget>[
               const Icon(Icons.emoji_events_rounded, color: NxColors.gold, size: 64),
-              Text(context.tx('قهرمان', 'Champion'), style: const TextStyle(color: NxColors.textDim)),
+              Text(context.tx('قهرمان', 'Champion'), style: TextStyle(color: NxThemeColors.of(context).muted)),
               Text(tour.bracket.champion ?? '', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: NxColors.gold)),
             ]),
           )
@@ -435,7 +435,7 @@ class _MatchCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontWeight: won ? FontWeight.w900 : FontWeight.w600,
-                  color: name == null ? NxColors.textDim : (won ? NxColors.gold : NxColors.iceWhite),
+                  color: name == null ? NxThemeColors.of(context).muted : (won ? NxColors.gold : NxColors.iceWhite),
                   fontSize: 13,
                 )),
           ),

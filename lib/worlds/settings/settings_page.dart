@@ -33,19 +33,47 @@ class SettingsPage extends ConsumerWidget {
         children: [
           _section(context, context.tx('تم ظاهری', 'Appearance')),
           GlassPanel(
+            child: SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: Icon(
+                s.appearanceMode == NxAppearanceMode.light
+                    ? Icons.light_mode_rounded
+                    : Icons.dark_mode_rounded,
+                color: visual.accent,
+              ),
+              title: Text(context.tx('حالت روشن', 'Light appearance')),
+              subtitle: Text(context.tx(
+                'پس‌زمینه‌ها و اجزای اصلی برنامه را روشن می‌کند.',
+                'Use light surfaces and colors across the app.',
+              )),
+              value: s.appearanceMode == NxAppearanceMode.light,
+              onChanged: (light) => s.appearanceMode =
+                  light ? NxAppearanceMode.light : NxAppearanceMode.dark,
+            ),
+          ),
+          const SizedBox(height: NxSpace.sm),
+          GlassPanel(
             child: Column(children: [
               _appearanceOption(
                 context,
                 settings: s,
                 theme: NxVisualTheme.gold,
                 title: 'طلایی لوکس / Gold Luxe',
-                description:
-                    'سرمه‌ای عمیق با جزئیات طلایی فلزی و سطوح براق. / Deep navy with metallic gold accents and polished surfaces.',
-                colors: const [
-                  Color(0xFF050A14),
-                  Color(0xFFF3C56B),
-                  Color(0xFFB77D35)
-                ],
+                description: context.tx(
+                  'جزئیات طلایی فلزی؛ سازگار با حالت روشن و تیره.',
+                  'Metallic gold accents, adapted for light and dark modes.',
+                ),
+                colors: s.appearanceMode == NxAppearanceMode.light
+                    ? const [
+                        Color(0xFFF4F6FA),
+                        Color(0xFF805700),
+                        Color(0xFF875323),
+                      ]
+                    : const [
+                        Color(0xFF050A14),
+                        Color(0xFFF3C56B),
+                        Color(0xFFB77D35),
+                      ],
               ),
               const SizedBox(height: 10),
               _appearanceOption(
@@ -53,13 +81,21 @@ class SettingsPage extends ConsumerWidget {
                 settings: s,
                 theme: NxVisualTheme.neon,
                 title: 'نئون کیهانی / Cosmic Neon',
-                description:
-                    'پس‌زمینه‌ی تیره با درخشش آبی، فیروزه‌ای و بنفش. / Dark space with electric blue, cyan and violet glow.',
-                colors: const [
-                  Color(0xFF030713),
-                  Color(0xFF2FBFFF),
-                  Color(0xFF9958FF)
-                ],
+                description: context.tx(
+                  'درخشش آبی و بنفش؛ سازگار با حالت روشن و تیره.',
+                  'Electric blue and violet accents, adapted for light and dark modes.',
+                ),
+                colors: s.appearanceMode == NxAppearanceMode.light
+                    ? const [
+                        Color(0xFFF3F7FC),
+                        Color(0xFF00699D),
+                        Color(0xFF6338B3),
+                      ]
+                    : const [
+                        Color(0xFF030713),
+                        Color(0xFF2FBFFF),
+                        Color(0xFF9958FF),
+                      ],
               ),
             ]),
           ),
@@ -84,7 +120,8 @@ class SettingsPage extends ConsumerWidget {
                 context.tx(
                     'کیفیت کمتر = ستاره، ذره و جلوه‌ی کمتر و باتری بیشتر.',
                     'Lower quality = fewer stars, particles and effects, better battery.'),
-                style: const TextStyle(color: NxColors.textDim, fontSize: 12),
+                style: TextStyle(
+                    color: NxThemeColors.of(context).muted, fontSize: 12),
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
@@ -152,7 +189,8 @@ class SettingsPage extends ConsumerWidget {
                 context.tx(
                     'یک نسخه از داده‌ها همیشه روی همین گوشی می‌ماند (کار آفلاین).',
                     'A copy of your data always stays on this phone (works offline).'),
-                style: const TextStyle(color: NxColors.textDim, fontSize: 12),
+                style: TextStyle(
+                    color: NxThemeColors.of(context).muted, fontSize: 12),
               ),
               const SizedBox(height: 10),
               const AccountStatusCard(),
@@ -202,7 +240,8 @@ class SettingsPage extends ConsumerWidget {
                 'NEXORA · YOUR UNIVERSE. YOUR IDENTITY. YOUR EXPERIENCE.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    color: NxColors.textDim.withValues(alpha: 0.6),
+                    color:
+                        NxThemeColors.of(context).muted.withValues(alpha: 0.6),
                     fontSize: 10)),
           ),
         ],

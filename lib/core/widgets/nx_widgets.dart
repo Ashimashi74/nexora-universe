@@ -333,10 +333,10 @@ class XpBar extends ConsumerWidget {
             style: const TextStyle(fontWeight: FontWeight.w800)),
         const SizedBox(width: 8),
         Text(context.tx(p.rankTitleFa, p.rankTitleEn),
-            style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
+            style: TextStyle(color: visual.muted, fontSize: 12)),
         const Spacer(),
         Text('${p.xpIntoLevel}/${ProfileService.xpForLevel(p.level)} XP',
-            style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
+            style: TextStyle(color: visual.muted, fontSize: 12)),
       ]),
       const SizedBox(height: 6),
       ClipRRect(

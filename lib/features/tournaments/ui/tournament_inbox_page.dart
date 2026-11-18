@@ -75,7 +75,7 @@ class _TournamentInboxPageState extends ConsumerState<TournamentInboxPage> {
                       Center(
                           child: Text(
                               context.tx('اعلانی نداری', 'No notifications'),
-                              style: const TextStyle(color: NxColors.textDim))),
+                              style: TextStyle(color: NxThemeColors.of(context).muted))),
                     ])
                   : ListView.builder(
                       padding: const EdgeInsets.all(NxSpace.md),

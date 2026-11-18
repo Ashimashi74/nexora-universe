@@ -194,7 +194,7 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
                                       ? const Color(0xFFC0C8D8)
                                       : i == 2
                                           ? const Color(0xFFCD8A55)
-                                          : NxColors.textDim;
+                                          : NxThemeColors.of(context).muted;
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 8),
                                 child: GlassPanel(

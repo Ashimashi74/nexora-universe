@@ -391,7 +391,7 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
         const SizedBox(height: 10),
         Text(
             '${context.tx('بازی آنلاین ثبت شد', 'Online match recorded')} · $reward 🪙',
-            style: const TextStyle(color: NxColors.textDim)),
+            style: TextStyle(color: NxThemeColors.of(context).muted)),
         if (widget.tournamentMatchId != null)
           Padding(
             padding: const EdgeInsets.only(top: 6),

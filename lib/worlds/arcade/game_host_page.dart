@@ -203,7 +203,7 @@ class _GameHostPageState extends ConsumerState<GameHostPage> {
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(summary,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(color: NxColors.textDim)),
+                    style: TextStyle(color: NxThemeColors.of(context).muted)),
               ),
             if (a != null) ...[
               const SizedBox(height: 14),
