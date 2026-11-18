@@ -227,7 +227,12 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
         ? OrbitMessageKind.photo
         : (mime.startsWith('audio/') ? OrbitMessageKind.audio : OrbitMessageKind.file);
     try {
-      final Map<String, dynamic> media = await online.uploadChatAttachment(file.bytes!, fileName: file.name, mime: mime);
+      final Map<String, dynamic> media = await online.uploadChatAttachment(
+        file.bytes!,
+        chatId: widget.chatId,
+        fileName: file.name,
+        mime: mime,
+      );
       final String caption = _text.text.trim();
       _text.clear();
       final String name = orbitMyName(context, ref.read(profileProvider));

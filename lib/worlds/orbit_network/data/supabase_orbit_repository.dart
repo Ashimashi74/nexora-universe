@@ -62,7 +62,7 @@ class SupabaseOrbitRepository implements OrbitRepository {
   String get me => c.auth.currentUser!.id;
 
   static const String kPending = 'orbit.pending.v1';
-  static const String bucket = 'nx-media';
+  static const String bucket = 'nx-chat-media';
 
   final Map<String, OrbitChat> _chats = <String, OrbitChat>{};
   final Map<String, OrbitMessage?> _last = <String, OrbitMessage?>{};
@@ -561,21 +561,22 @@ class SupabaseOrbitRepository implements OrbitRepository {
   }
 
   /// Uploads a chat attachment under the caller's private folder and returns
-  /// the public Storage URL used by the message card.
+  /// a seven-day signed URL plus the canonical path stored in the message.
   Future<Map<String, dynamic>> uploadChatAttachment(
     List<int> bytes, {
+    required String chatId,
     required String fileName,
     required String mime,
   }) async {
     final String safe = fileName.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
-    final String path = '$me/chat/${DateTime.now().millisecondsSinceEpoch}_$safe';
+    final String path = '$me/chat/$chatId/${DateTime.now().millisecondsSinceEpoch}_$safe';
     await c.storage.from(bucket).uploadBinary(
           path,
           Uint8List.fromList(bytes),
           fileOptions: FileOptions(contentType: mime, upsert: false),
         );
     return <String, dynamic>{
-      'url': c.storage.from(bucket).getPublicUrl(path),
+      'url': await c.storage.from(bucket).createSignedUrl(path, 60 * 60 * 24 * 7),
       'name': fileName,
       'mime': mime,
       'size': bytes.length,

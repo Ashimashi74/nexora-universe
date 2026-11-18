@@ -45,7 +45,7 @@ Schema: `supabase/migrations/20261115000200_nx_social.sql` (applied live). Only 
   change (member: posts + events/RSVP; moderator: + tournaments/local players; admin/owner: all). Role change / kick / delete /
   join-by-code / join-public / leave are role-checked RPCs. Discover sheet lists public communities.
   Known limit: within the parts a role may edit, a modified client could rewrite others' posts (no per-post server check).
-- **Orbit chat media**: photos, audio/music and documents now upload to `nx-media/<uid>/chat/` with an 8 MiB/MIME allow-list, are sent as typed `photo`/`audio`/`file` messages in direct chats, groups and channels, and render as image/file cards with external open actions. The server RPC and Storage policies are in `20261119000100_nx_chat_media.sql`.
+- **Orbit chat media**: photos, audio/music and documents upload to the private `nx-chat-media/<uid>/chat/<chat_uuid>/` bucket with an 8 MiB/MIME allow-list. Read/write/delete policies require the correct owner and chat membership; messages store the canonical path plus a seven-day signed URL. Nova's public `nx-media` bucket remains separate for public posts. The server RPC and Storage policies are in `20261119000100_nx_chat_media.sql`.
 
 ## ORACLE remote (M5)
 - `RemoteOracleEngine` → existing `oracle-chat` Edge Function (unchanged). Contract: POST `{messages, ctx}` with the user JWT →
