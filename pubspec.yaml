@@ -113,3 +113,13 @@ flutter:
     - assets/ui/nx2/frames/
     - assets/ui/nx2/oracle/
     - assets/ui/nx2/tiles/
+    - assets/ui/anix/avatars/
+    - assets/ui/anix/bg/
+    - assets/ui/anix/buttons/
+    - assets/ui/anix/card/
+    - assets/ui/anix/frames/
+    - assets/ui/anix/modal/
+    - assets/ui/anix/nav/
+    - assets/ui/anix/rank/
+    - assets/ui/anix/toggle/
+    - assets/ui/anix/tooltip/
