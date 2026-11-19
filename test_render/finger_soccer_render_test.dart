@@ -55,6 +55,9 @@ void main() {
         scrollable: find.descendant(of: find.byType(ListView).first, matching: find.byType(Scrollable)).first);
     await tester.pump();
     expect(board, findsWidgets);
+    // pick Nish (the formation the reference player used) so the match frames compare with the reference kickoff
+    await tester.tap(board.at(6));
+    await tester.pump();
     await shoot(tester, 'final/finger_soccer_formations.png');
 
     final Finder start = find.text('START MATCH');
@@ -72,6 +75,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 16));
     }
     expect(p.e.phase, 'aim');
+    await shoot(tester, 'final/finger_soccer_kickoff.png');
     final BmBody ball = p.e.ball!;
     final List<BmBody> mine = p.e.bodies.where((BmBody b) => b.team == 0 && !identical(b, ball)).toList()
       ..sort((BmBody a, BmBody b) =>
@@ -90,7 +94,7 @@ void main() {
     // Mid-drag: reference aim arrow, pull dots and pull circle, with the turn rings on our discs.
     await shoot(tester, 'final/finger_soccer_aim.png');
     await gst.up();
-    await _run(tester, 120);
+    await tester.pump(const Duration(milliseconds: 16));
     // Pieces in motion: ball streak, disc water ribbon, rings staying on through the shot.
     await shoot(tester, 'final/finger_soccer_motion.png');
     await _run(tester, kMatchMs);
