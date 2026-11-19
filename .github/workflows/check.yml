@@ -34,6 +34,8 @@ jobs:
         run: |
           set +e
           mkdir -p shots
+          sudo mkdir -p /workspace/work && sudo ln -sfn $FLUTTER_ROOT /workspace/work/flutter_sdk && sudo ln -sfn $PWD /workspace/work/anix
+          sudo apt-get install -y -qq fonts-dejavu-core >/dev/null 2>&1
           flutter test test_render/finger_soccer_render_test.dart --dart-define=SHOTS=$PWD/shots > render.txt 2>&1
           tail -20 render.txt
           ls -la shots
