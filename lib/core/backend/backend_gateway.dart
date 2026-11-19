@@ -8,6 +8,7 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../online/room_voice.dart';
 import '../online/online_service.dart';
 import 'supabase_backend.dart';
 
@@ -57,5 +58,8 @@ class OfflineBackend extends BackendGateway {
 final backendProvider = Provider<BackendGateway>((ref) {
   final OnlineService online = ref.watch(onlineProvider);
   if (!online.configured) return OfflineBackend();
-  return SupabaseBackend(online);
+  final SupabaseBackend be = SupabaseBackend(online);
+  // Online game rooms / matches: mic + speaker controls get their voice grant through this backend.
+  GameVoice.instance.grant = be.liveKitGameGrant;
+  return be;
 });

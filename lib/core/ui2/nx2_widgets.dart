@@ -477,6 +477,19 @@ class _BarPainter extends CustomPainter {
 }
 
 /// Coin / level pill in the HUD.
+/// Gem colour (الماس) used by every gem balance / price.
+const Color kGemColor = Color(0xFF3BD0FF);
+
+/// Gem balance pill (same frame as the coin pill, diamond icon, cyan).
+class Nx2GemStat extends StatelessWidget {
+  const Nx2GemStat({super.key, required this.gems, this.onTap});
+  final int gems;
+  final VoidCallback? onTap;
+  @override
+  Widget build(BuildContext context) =>
+      Nx2Stat(value: '$gems', icon: Icons.diamond_rounded, color: kGemColor, onTap: onTap);
+}
+
 class Nx2Stat extends StatelessWidget {
   const Nx2Stat(
       {super.key,
@@ -917,6 +930,8 @@ class Nx2TopBar extends ConsumerWidget implements PreferredSizeWidget {
           if (showWallet) ...<Widget>[
             const SizedBox(width: 4),
             Nx2Stat(value: '${p.coins}'),
+            const SizedBox(width: 4),
+            Nx2GemStat(gems: p.gems),
           ],
           const SizedBox(width: 10),
         ]),

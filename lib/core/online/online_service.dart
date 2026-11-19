@@ -33,7 +33,11 @@ Future<void> initOnline() async {
 /// * A guest can upgrade to email + password and keeps the same account (same uid, same progress).
 /// * Offline / no config: [status] stays [BackendStatus.offline] and every world keeps working locally.
 class OnlineService extends ChangeNotifier {
+  /// The app's online service (one per app; used outside the widget tree).
+  static OnlineService? current;
+
   OnlineService() {
+    current = this;
     if (!_ready) return;
     _sub = client!.auth.onAuthStateChange.listen((AuthState s) {
       _status = s.session != null ? BackendStatus.online : BackendStatus.offline;

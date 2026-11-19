@@ -9,6 +9,7 @@ import '../../../core/audio/sfx_service.dart';
 import '../../../core/online/cloud_profile_sync.dart';
 import '../../../core/online/match_link.dart';
 import '../../../core/online/online_service.dart';
+import '../../../core/online/room_voice.dart';
 import '../../../core/profile/profile_service.dart';
 import '../../../core/settings/app_settings.dart';
 import '../../../core/theme/nx_theme.dart';
@@ -335,6 +336,13 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
               left: 0,
               right: 0,
               child: OracleTutorialBanner(gameId: widget.gameId),
+            ),
+          // In-match voice: mic mute/unmute + speaker on/off (same LiveKit room as the lobby).
+          if (_result == null)
+            PositionedDirectional(
+              bottom: MediaQuery.paddingOf(context).bottom + 10,
+              end: 10,
+              child: RoomVoiceBar(id: widget.matchId, match: true, compact: true),
             ),
           if (_result != null)
             Positioned.fill(child: _overlay(context, _result!)),

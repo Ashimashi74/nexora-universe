@@ -8,6 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../core/online/online_service.dart';
+import '../../../core/online/room_voice.dart';
 import '../../../core/online/social_api.dart';
 import '../../../core/settings/app_settings.dart';
 import '../../../core/theme/nx_theme.dart';
@@ -692,6 +693,11 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
         padding: const EdgeInsets.all(NxSpace.md),
         children: <Widget>[
           if (_error != null) _errorBox(),
+          // Room voice: join / leave, mic mute-unmute, speaker on-off (LiveKit 'nxg-game-<room>').
+          Padding(
+            padding: const EdgeInsets.only(bottom: NxSpace.sm),
+            child: Center(child: RoomVoiceBar(key: ValueKey<String>('voice-${r['id']}'), id: '${r['id'] ?? _roomId}')),
+          ),
           GlassPanel(
             borderColor: visual.accent.withValues(alpha: 0.56),
             child: Row(children: <Widget>[

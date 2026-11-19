@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../profile/profile_service.dart';
 import '../storage/local_store.dart';
 import 'online_service.dart';
+import '../economy/gem_shop.dart';
 
 /// Keeps the local identity (offline cache) and the server profile in sync.
 ///
@@ -72,7 +73,7 @@ class CloudProfileSync {
       final String? lastUid = _store.getString(_kUid);
       final Map<String, dynamic>? prof = await c
           .from('profiles')
-          .select('username, xp, coins, avatar, avatar_url, avatar_path')
+          .select('username, xp, coins, gems, avatar, avatar_url, avatar_path')
           .eq('id', uid)
           .maybeSingle();
       final Map<String, dynamic>? nx = await c.from('nx_profiles').select('data, avatar_core').eq('id', uid).maybeSingle();
@@ -88,7 +89,8 @@ class CloudProfileSync {
           });
           _applyWalletJson(r);
         } else if (prof != null) {
-          _profile.applyWallet(xp: (prof['xp'] as num?)?.toInt(), coins: (prof['coins'] as num?)?.toInt());
+          _profile.applyWallet(
+              xp: (prof['xp'] as num?)?.toInt(), coins: (prof['coins'] as num?)?.toInt(), gems: (prof['gems'] as num?)?.toInt());
         }
         _applyAvatarFromProfile(prof);
         if (otherAccount) {
@@ -105,13 +107,16 @@ class CloudProfileSync {
           avatar: nx['avatar_core'] as String?,
         );
         if (prof != null) {
-          _profile.applyWallet(xp: (prof['xp'] as num?)?.toInt(), coins: (prof['coins'] as num?)?.toInt());
+          _profile.applyWallet(
+              xp: (prof['xp'] as num?)?.toInt(), coins: (prof['coins'] as num?)?.toInt(), gems: (prof['gems'] as num?)?.toInt());
         }
         _applyAvatarFromProfile(prof);
         await _upload();
       }
       await _store.setString(_kUid, uid);
       _linkedUid = uid;
+      // Gems: welcome grant (once per account) + the server balance, and the shop's live gem prices.
+      unawaited(GemShop.instance.refresh());
       await flush();
     } catch (e) {
       debugPrint('cloud link failed: $e');
@@ -124,7 +129,8 @@ class CloudProfileSync {
 
   void _applyWalletJson(dynamic r) {
     if (r is Map) {
-      _profile.applyWallet(xp: (r['xp'] as num?)?.toInt(), coins: (r['coins'] as num?)?.toInt());
+      _profile.applyWallet(
+          xp: (r['xp'] as num?)?.toInt(), coins: (r['coins'] as num?)?.toInt(), gems: (r['gems'] as num?)?.toInt());
     }
   }
 

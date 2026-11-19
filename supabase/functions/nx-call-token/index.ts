@@ -5,6 +5,8 @@
 // POST { kind: 'room', room: <nx_rooms.id on the games project> } → voice token for a ROOM's stage
 // ('nxg-room-<id>'): members only (nx_room_members on the games project, read with the caller's own token);
 // manager and speakers publish audio unless the manager muted them, listeners (spectators) only subscribe.
+// POST { kind: 'game', room: <nx_rooms.id> | <nx_matches.id>, match?: true } → voice for an online GAME room / match
+// ('nxg-game-<room id>'): seated players / match players only, all may publish.
 // Secrets (already on the project): LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { AccessToken } from "npm:livekit-server-sdk@2";
@@ -36,6 +38,44 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const room = String(body.room ?? body.room_id ?? "");
     if (!UUID.test(room)) return json({ error: "room required" }, 400);
+
+    if (body.kind === "game") {
+      // Voice inside an online GAME room (lobby + the match it starts): { kind: 'game', room: <nx_rooms.id> } or
+      // { kind: 'game', room: <nx_matches.id>, match: true }. Seated players (nx_room_players) or the match's players
+      // publish; everyone else is refused. Lobby and match share one LiveKit room ('nxg-game-<room id>').
+      const gUrl = Deno.env.get("GAMES_SUPABASE_URL") ?? "https://eyzafhrefnqlwcjpcdyg.supabase.co";
+      const gKey = Deno.env.get("GAMES_SUPABASE_ANON_KEY") ??
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5emFmaHJlZm5xbHdjanBjZHlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ4OTUzNjcsImV4cCI6MjExMDQ3MTM2N30.YfdEhbEbvbQ738snwc5C47LYx-NYRXywX66dgMEZh-M";
+      const gs = createClient(gUrl, gKey, {
+        global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
+        auth: { persistSession: false },
+      });
+      let key2 = room;
+      let ok = false;
+      if (body.match === true) {
+        const { data: mt } = await gs.from("nx_matches").select("room_id, players").eq("id", room).maybeSingle();
+        if (mt && Array.isArray(mt.players) && mt.players.includes(u.user.id)) {
+          ok = true;
+          key2 = mt.room_id ?? room;
+        }
+      } else {
+        const { data: rp2 } = await gs.from("nx_room_players").select("seat").eq("room_id", room)
+          .eq("user_id", u.user.id).maybeSingle();
+        ok = !!rp2;
+      }
+      if (!ok) return json({ error: "not_member" }, 403);
+      const { data: gp } = await sb.from("profiles").select("username, avatar").eq("id", u.user.id).maybeSingle();
+      const lk = `nxg-game-${key2}`;
+      const gat = new AccessToken(key, secret, {
+        identity: u.user.id,
+        name: gp?.username ?? "Pilot",
+        ttl: "15m",
+        metadata: JSON.stringify({ avatar: gp?.avatar ?? null, role: "player" }),
+      });
+      gat.addGrant({ room: lk, roomJoin: true, canPublish: true, canSubscribe: true, canPublishData: true });
+      return json({ url, token: await gat.toJwt(), room: lk, identity: u.user.id, name: gp?.username ?? "Pilot",
+        canPublish: true, role: "player", ttl: 900 });
+    }
 
     if (body.kind === "room") {
       const gUrl = Deno.env.get("GAMES_SUPABASE_URL") ?? "https://eyzafhrefnqlwcjpcdyg.supabase.co";

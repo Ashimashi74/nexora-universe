@@ -44,6 +44,8 @@ class _AdminPageState extends ConsumerState<AdminPage> {
       if (a.can(AdminPerm.tournaments)) const _Tab('tournaments', 'تورنمنت', 'Tournaments', Icons.emoji_events_rounded),
       if (a.can(AdminPerm.moderation)) const _Tab('moderation', 'نظارت', 'Moderation', Icons.shield_rounded),
       if (a.can(AdminPerm.moderation)) const _Tab('reports', 'گزارش‌ها', 'Reports', Icons.flag_rounded),
+      if (a.can(AdminPerm.users)) const _Tab('banned', 'مسدودها', 'Banned', Icons.block_rounded),
+      if (a.can(AdminPerm.shop)) const _Tab('shop', 'فروشگاه', 'Shop & prices', Icons.storefront_rounded),
       if (a.can(AdminPerm.rooms)) const _Tab('rooms', 'اتاق‌ها', 'Rooms', Icons.meeting_room_rounded),
       if (a.can(AdminPerm.rooms)) const _Tab('matches', 'بازی‌های زنده', 'Live matches', Icons.sports_esports_rounded),
       if (a.can(AdminPerm.announcements)) const _Tab('announcements', 'اطلاعیه', 'Announcements', Icons.campaign_rounded),
@@ -85,6 +87,8 @@ class _AdminPageState extends ConsumerState<AdminPage> {
               'tournaments' => const _TournamentsTab(),
               'moderation' => const _ModerationTab(),
               'rooms' => const _RoomsTab(),
+              'banned' => const _BannedTab(),
+              'shop' => const _ShopTab(),
               'reports' => const _ReportsTab(),
               'matches' => const _MatchesTab(),
               'announcements' => const _AnnouncementsTab(),
@@ -434,6 +438,14 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                 Text('🔇 ${context.tx('ساکت تا', 'muted until')} ${_shortTime(u['muted_until'])} ${u['mute_reason'] ?? ''}',
                     style: const TextStyle(color: NxColors.gold, fontSize: 12)),
               Wrap(spacing: 6, children: <Widget>[
+                if (a.can(AdminPerm.users))
+                  TextButton.icon(
+                      onPressed: () async {
+                        await showPlayerSheet(context, ref, '${u['id']}');
+                        unawaited(_search());
+                      },
+                      icon: const Icon(Icons.manage_accounts_rounded, size: 18),
+                      label: Text(context.tx('پروفایل', 'Profile'))),
                 if (a.can(AdminPerm.currency))
                   TextButton.icon(
                       onPressed: () => _grant(u),
@@ -705,11 +717,13 @@ class _RoomsTab extends ConsumerWidget {
           final List<dynamic> rows = (d['rooms'] as List<dynamic>?) ?? const <dynamic>[];
           if (rows.isEmpty) {
             return ListView(children: <Widget>[
+              _broadcastButton(context, ref),
               const SizedBox(height: 80),
               Center(child: Text(context.tx('اتاق فعالی نیست', 'No active rooms'))),
             ]);
           }
           return ListView(padding: const EdgeInsets.symmetric(vertical: 10), children: <Widget>[
+            _broadcastButton(context, ref),
             for (final dynamic e in rows)
               Builder(builder: (BuildContext context) {
                 final Map<String, dynamic> r = Map<String, dynamic>.from(e as Map);
@@ -728,6 +742,40 @@ class _RoomsTab extends ConsumerWidget {
                         '${st['category'] != null ? ' · ${st['category']}' : ''} · ${r['host_name'] ?? ''}',
                         style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
                   ])),
+                  PopupMenuButton<String>(
+                    tooltip: context.tx('بیشتر', 'More'),
+                    icon: const Icon(Icons.more_vert_rounded, color: NxColors.turquoise),
+                    onSelected: (String v) async {
+                      final AdminApi api = _api(ref);
+                      final String id = '${r['id']}';
+                      Map<String, dynamic>? x;
+                      if (v == 'msg') {
+                        final String? t = await _ask(context, context.tx('پیام مدیریت به این اتاق', 'Admin message to this room'));
+                        if (t == null || t.trim().isEmpty) return;
+                        x = await api.roomMessage(id, t.trim());
+                      } else if (v == 'private') {
+                        x = await api.roomUpdate(id, private: r['is_private'] != true);
+                      } else if (v == 'seats') {
+                        final String? t = await _ask(context, context.tx('تعداد صندلی (۲ تا ۲۱)', 'Seats (2-21)'),
+                            initial: '${r['seats'] ?? 2}');
+                        final int? n = int.tryParse(t?.trim() ?? '');
+                        if (n == null) return;
+                        x = await api.roomUpdate(id, seats: n);
+                      } else if (v == 'clear') {
+                        x = await api.roomClearChat(id);
+                      }
+                      if (x != null && context.mounted) await _toast(context, x);
+                      reload();
+                    },
+                    itemBuilder: (BuildContext c) => <PopupMenuEntry<String>>[
+                      PopupMenuItem<String>(value: 'msg', child: Text(c.tx('ارسال پیام مدیریت', 'Send admin message'))),
+                      PopupMenuItem<String>(
+                          value: 'private',
+                          child: Text(r['is_private'] == true ? c.tx('عمومی کن', 'Make public') : c.tx('خصوصی کن', 'Make private'))),
+                      PopupMenuItem<String>(value: 'seats', child: Text(c.tx('تغییر صندلی‌ها', 'Change seats'))),
+                      PopupMenuItem<String>(value: 'clear', child: Text(c.tx('پاک کردن چت', 'Clear chat'))),
+                    ],
+                  ),
                   IconButton(
                     tooltip: context.tx('اعضا / اخراج', 'Members / kick'),
                     icon: const Icon(Icons.group_rounded, color: NxColors.turquoise),
@@ -1057,4 +1105,378 @@ class _AuditTab extends ConsumerWidget {
           ],
         ),
       );
+}
+
+
+// ------------------------------------------------------------------ admin v3: broadcast, banned, shop, player
+Widget _broadcastButton(BuildContext context, WidgetRef ref) => Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: FilledButton.icon(
+        onPressed: () async {
+          final String? t = await _ask(context, context.tx('پیام به همه‌ی اتاق‌های باز', 'Message to every open room'));
+          if (t == null || t.trim().isEmpty) return;
+          final Map<String, dynamic> r = await _api(ref).roomsBroadcast(t.trim());
+          if (context.mounted) {
+            await _toast(context, r, okFa: 'به ${r['rooms'] ?? 0} اتاق ارسال شد', okEn: 'Sent to ${r['rooms'] ?? 0} rooms');
+          }
+        },
+        icon: const Icon(Icons.campaign_rounded),
+        label: Text(context.tx('اعلان در همه‌ی اتاق‌ها', 'Broadcast to all rooms')),
+      ),
+    );
+
+class _BannedTab extends ConsumerWidget {
+  const _BannedTab();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => _Loader(
+        load: () => _api(ref).banned(),
+        build: (BuildContext context, Map<String, dynamic> d, VoidCallback reload) {
+          final List<dynamic> rows = (d['users'] as List<dynamic>?) ?? const <dynamic>[];
+          return ListView(padding: const EdgeInsets.symmetric(vertical: 10), children: <Widget>[
+            if (rows.isEmpty)
+              Padding(
+                  padding: const EdgeInsets.all(40),
+                  child: Center(child: Text(context.tx('هیچ کاربری مسدود نیست', 'Nobody is banned')))),
+            for (final dynamic e in rows)
+              Builder(builder: (BuildContext context) {
+                final Map<String, dynamic> u = Map<String, dynamic>.from(e as Map);
+                return _card(
+                    child: Row(children: <Widget>[
+                  const Icon(Icons.block_rounded, color: NxColors.danger),
+                  const SizedBox(width: 10),
+                  Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+                    Text('${u['username'] ?? 'Pilot'}', style: const TextStyle(fontWeight: FontWeight.w900)),
+                    Text('${u['ban_reason'] ?? ''} · ${_shortTime(u['banned_at'])}',
+                        style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
+                  ])),
+                  TextButton(
+                    onPressed: () => showPlayerSheet(context, ref, '${u['id']}'),
+                    child: Text(context.tx('پروفایل', 'Profile')),
+                  ),
+                  TextButton.icon(
+                    onPressed: () async {
+                      final Map<String, dynamic> r = await _api(ref).ban('${u['id']}', false, null);
+                      if (context.mounted) await _toast(context, r);
+                      reload();
+                    },
+                    icon: const Icon(Icons.lock_open_rounded, size: 18),
+                    label: Text(context.tx('رفع', 'Unban')),
+                  ),
+                ]));
+              }),
+          ]);
+        },
+      );
+}
+
+/// Shop & prices: every catalog item (finger-soccer teams in gems, store items in coins). Edit price, currency, on/off.
+class _ShopTab extends ConsumerStatefulWidget {
+  const _ShopTab();
+  @override
+  ConsumerState<_ShopTab> createState() => _ShopTabState();
+}
+
+class _ShopTabState extends ConsumerState<_ShopTab> {
+  String _q = '';
+  int _key = 0;
+
+  Future<void> _edit(Map<String, dynamic>? it, VoidCallback reload) async {
+    final TextEditingController id = TextEditingController(text: '${it?['item_id'] ?? 'fs_team:'}');
+    final TextEditingController price = TextEditingController(text: '${it?['price'] ?? 150}');
+    final TextEditingController name = TextEditingController(text: '${it?['name'] ?? ''}');
+    String currency = '${it?['currency'] ?? 'gems'}';
+    bool active = it?['active'] != false;
+    final bool? ok = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext ctx) => StatefulBuilder(
+        builder: (BuildContext ctx, StateSetter set) => AnixDialog(
+          title: Text(it == null ? ctx.tx('آیتم جدید', 'New item') : '${it['item_id']}'),
+          content: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+            if (it == null)
+              TextField(controller: id, decoration: InputDecoration(labelText: ctx.tx('شناسه', 'Item id'))),
+            TextField(controller: name, decoration: InputDecoration(labelText: ctx.tx('نام', 'Name'))),
+            TextField(
+                controller: price,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(labelText: ctx.tx('قیمت', 'Price'))),
+            const SizedBox(height: 8),
+            SegmentedButton<String>(
+              segments: <ButtonSegment<String>>[
+                ButtonSegment<String>(value: 'gems', label: Text(ctx.tx('الماس', 'Gems')), icon: const Icon(Icons.diamond_rounded)),
+                ButtonSegment<String>(value: 'coins', label: Text(ctx.tx('سکه', 'Coins')), icon: const Icon(Icons.toll_rounded)),
+              ],
+              selected: <String>{currency},
+              onSelectionChanged: (Set<String> v) => set(() => currency = v.first),
+            ),
+            SwitchListTile(
+              value: active,
+              onChanged: (bool v) => set(() => active = v),
+              title: Text(ctx.tx('فروشی است', 'For sale')),
+            ),
+          ]),
+          actions: <Widget>[
+            if (it != null)
+              TextButton(
+                onPressed: () async {
+                  final Map<String, dynamic> r = await _api(ref).deleteItem('${it['item_id']}');
+                  if (ctx.mounted) Navigator.pop(ctx, false);
+                  if (mounted) await _toast(context, r);
+                  reload();
+                },
+                child: Text(ctx.tx('حذف', 'Delete'), style: const TextStyle(color: NxColors.danger)),
+              ),
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(ctx.tx('انصراف', 'Cancel'))),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(ctx.tx('ذخیره', 'Save'))),
+          ],
+        ),
+      ),
+    );
+    if (ok == true) {
+      final Map<String, dynamic> r = await _api(ref).setPrice(id.text.trim(), int.tryParse(price.text.trim()) ?? -1,
+          currency: currency, active: active, name: name.text.trim().isEmpty ? null : name.text.trim());
+      if (mounted) await _toast(context, r);
+      reload();
+    }
+    id.dispose();
+    price.dispose();
+    name.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => _Loader(
+        key: ValueKey<int>(_key),
+        load: () => _api(ref).catalog(),
+        build: (BuildContext context, Map<String, dynamic> d, VoidCallback reload) {
+          final List<Map<String, dynamic>> rows = ((d['items'] as List<dynamic>?) ?? const <dynamic>[])
+              .map((dynamic e) => Map<String, dynamic>.from(e as Map))
+              .where((Map<String, dynamic> m) =>
+                  _q.isEmpty || '${m['item_id']} ${m['name'] ?? ''}'.toLowerCase().contains(_q.toLowerCase()))
+              .toList();
+          return ListView(padding: const EdgeInsets.symmetric(vertical: 10), children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Row(children: <Widget>[
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search_rounded), hintText: context.tx('جستجوی آیتم', 'Search items')),
+                    onSubmitted: (String v) => setState(() {
+                      _q = v.trim();
+                      _key++;
+                    }),
+                  ),
+                ),
+                IconButton(
+                  tooltip: context.tx('آیتم جدید', 'New item'),
+                  icon: const Icon(Icons.add_circle_rounded, color: NxColors.gold),
+                  onPressed: () => _edit(null, reload),
+                ),
+              ]),
+            ),
+            for (final Map<String, dynamic> it in rows)
+              _card(
+                child: InkWell(
+                  onTap: () => _edit(it, reload),
+                  child: Row(children: <Widget>[
+                    Icon(it['currency'] == 'gems' ? Icons.diamond_rounded : Icons.toll_rounded,
+                        color: it['currency'] == 'gems' ? const Color(0xFF3BD0FF) : NxColors.gold),
+                    const SizedBox(width: 10),
+                    Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+                      Text('${it['name'] ?? it['item_id']}', style: const TextStyle(fontWeight: FontWeight.w900)),
+                      Text('${it['item_id']}${it['active'] == false ? ' · ${context.tx('غیرفعال', 'off')}' : ''}',
+                          style: const TextStyle(color: NxColors.textDim, fontSize: 11)),
+                    ])),
+                    Text(it['price'] == 0 ? context.tx('رایگان', 'Free') : '${it['price']}',
+                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                    const Icon(Icons.edit_rounded, size: 16, color: NxColors.textDim),
+                  ]),
+                ),
+              ),
+          ]);
+        },
+      );
+}
+
+/// Full player view + edit: wallet (set exact or add/take), inventory (give / take / remove), profile fields, gem
+/// ledger and the audit trail. Every action is an admin RPC checked server-side.
+Future<void> showPlayerSheet(BuildContext context, WidgetRef ref, String userId) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: NxColors.navyDeep,
+    builder: (BuildContext c) => SizedBox(
+      height: MediaQuery.sizeOf(c).height * .88,
+      child: _PlayerSheet(userId: userId),
+    ),
+  );
+}
+
+class _PlayerSheet extends ConsumerStatefulWidget {
+  const _PlayerSheet({required this.userId});
+  final String userId;
+  @override
+  ConsumerState<_PlayerSheet> createState() => _PlayerSheetState();
+}
+
+class _PlayerSheetState extends ConsumerState<_PlayerSheet> {
+  Map<String, dynamic>? _d;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_load());
+  }
+
+  Future<void> _load() async {
+    final Map<String, dynamic> d = await _api(ref).player(widget.userId);
+    if (mounted) setState(() => _d = d);
+  }
+
+  Future<void> _done(Map<String, dynamic> r) async {
+    if (mounted) await _toast(context, r);
+    await _load();
+  }
+
+  Future<void> _setWallet() async {
+    final Map<String, dynamic> d = _d!;
+    final TextEditingController coins = TextEditingController(text: '${d['coins']}');
+    final TextEditingController gems = TextEditingController(text: '${d['gems']}');
+    final TextEditingController xp = TextEditingController(text: '${d['xp']}');
+    final bool? ok = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext ctx) => AnixDialog(
+        title: Text(ctx.tx('تنظیم دقیق موجودی', 'Set exact balances')),
+        content: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+          TextField(controller: coins, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: ctx.tx('سکه', 'Coins'))),
+          TextField(controller: gems, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: ctx.tx('الماس', 'Gems'))),
+          TextField(controller: xp, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'XP')),
+        ]),
+        actions: <Widget>[
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(ctx.tx('انصراف', 'Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(ctx.tx('ذخیره', 'Save'))),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await _done(await _api(ref).setWallet(widget.userId,
+          coins: int.tryParse(coins.text.trim()), gems: int.tryParse(gems.text.trim()), xp: int.tryParse(xp.text.trim())));
+    }
+    coins.dispose();
+    gems.dispose();
+    xp.dispose();
+  }
+
+  Future<void> _addItem() async {
+    final String? it = await _ask(context, context.tx('شناسه‌ی آیتم یا تیم (مثل fs_team:club0)', 'Item / team id (e.g. fs_team:club0)'));
+    if (it == null || it.trim().isEmpty) return;
+    await _done(await _api(ref).grantItem(widget.userId, it.trim(), true, 'admin panel'));
+  }
+
+  Future<void> _editBio() async {
+    final String? b = await _ask(context, context.tx('بیو', 'Bio'), initial: '${_d?['bio'] ?? ''}');
+    if (b == null) return;
+    await _done(await _api(ref).editProfile(widget.userId, <String, dynamic>{'bio': b}, 'admin panel'));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final Map<String, dynamic>? d = _d;
+    final AdminAccess a = ref.watch(adminAccessProvider);
+    if (d == null) return const Center(child: CircularProgressIndicator());
+    if (d['ok'] != true) return Center(child: Text(adminErrorText(d['error'] as String?, context.isFa)));
+    final List<String> inv = ((d['inv'] as List<dynamic>?) ?? const <dynamic>[]).map((dynamic e) => '$e').toList()..sort();
+    final List<dynamic> tx = (d['gem_tx'] as List<dynamic>?) ?? const <dynamic>[];
+    final List<dynamic> audit = (d['audit'] as List<dynamic>?) ?? const <dynamic>[];
+    final bool banned = d['banned'] == true;
+    return ListView(padding: const EdgeInsets.only(bottom: 30), children: <Widget>[
+      ListTile(
+        leading: Icon(banned ? Icons.block_rounded : Icons.person_rounded, color: banned ? NxColors.danger : NxColors.turquoise),
+        title: Text('${d['username'] ?? 'Pilot'}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+        subtitle: Text('${d['email'] ?? (d['guest'] == true ? 'guest' : '')} · ${d['role']} · ${_shortTime(d['created_at'])}'),
+        trailing: IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _load),
+      ),
+      _card(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+          Text('🪙 ${d['coins']}   💎 ${d['gems']}   ⭐ XP ${d['xp']} · Lv ${d['level']}',
+              style: const TextStyle(fontWeight: FontWeight.w900)),
+          if (banned) Text('⛔ ${d['ban_reason'] ?? ''}', style: const TextStyle(color: NxColors.danger)),
+          if (d['muted_until'] != null) Text('🔇 ${_shortTime(d['muted_until'])}', style: const TextStyle(color: NxColors.gold)),
+          Wrap(spacing: 6, children: <Widget>[
+            if (a.can(AdminPerm.currency))
+              TextButton.icon(onPressed: _setWallet, icon: const Icon(Icons.edit_rounded, size: 18), label: Text(context.tx('موجودی', 'Wallet'))),
+            if (a.can(AdminPerm.users) && d['role'] != 'owner')
+              TextButton.icon(
+                onPressed: () async {
+                  String? reason;
+                  if (!banned) {
+                    reason = await _ask(context, context.tx('دلیل مسدودسازی', 'Ban reason'));
+                    if (reason == null) return;
+                  }
+                  await _done(await _api(ref).ban(widget.userId, !banned, reason));
+                },
+                icon: Icon(banned ? Icons.lock_open_rounded : Icons.block_rounded, size: 18),
+                label: Text(banned ? context.tx('رفع مسدودی', 'Unban') : context.tx('مسدود', 'Ban')),
+              ),
+            if (a.can(AdminPerm.users))
+              TextButton.icon(onPressed: _editBio, icon: const Icon(Icons.notes_rounded, size: 18), label: Text(context.tx('بیو', 'Bio'))),
+            if (a.can(AdminPerm.users))
+              TextButton.icon(
+                onPressed: () async {
+                  final String? n = await _ask(context, context.tx('نام جدید', 'New name'), initial: '${d['username'] ?? ''}');
+                  if (n == null || n.trim().isEmpty) return;
+                  await _done(await _api(ref).rename(widget.userId, n.trim(), 'admin panel'));
+                },
+                icon: const Icon(Icons.badge_rounded, size: 18),
+                label: Text(context.tx('نام', 'Rename')),
+              ),
+          ]),
+        ]),
+      ),
+      _card(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+          Row(children: <Widget>[
+            Expanded(
+                child: Text('${context.tx('کوله‌پشتی', 'Inventory')} (${inv.length})',
+                    style: const TextStyle(fontWeight: FontWeight.w900))),
+            if (a.can(AdminPerm.currency))
+              IconButton(icon: const Icon(Icons.add_rounded, color: NxColors.gold), onPressed: _addItem),
+            if (a.can(AdminPerm.currency) && inv.isNotEmpty)
+              IconButton(
+                tooltip: context.tx('خالی کردن', 'Clear all'),
+                icon: const Icon(Icons.delete_sweep_rounded, color: NxColors.danger),
+                onPressed: () async => _done(await _api(ref).setInventory(widget.userId, const <String>[], 'admin clear')),
+              ),
+          ]),
+          Wrap(spacing: 6, runSpacing: 6, children: <Widget>[
+            for (final String it in inv)
+              InputChip(
+                label: Text(it, style: const TextStyle(fontSize: 11)),
+                onDeleted: a.can(AdminPerm.currency)
+                    ? () async => _done(await _api(ref).grantItem(widget.userId, it, false, 'admin panel'))
+                    : null,
+              ),
+          ]),
+        ]),
+      ),
+      _card(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+          Text(context.tx('تراکنش‌های الماس', 'Gem ledger'), style: const TextStyle(fontWeight: FontWeight.w900)),
+          if (tx.isEmpty) Text(context.tx('خالی', 'Empty'), style: const TextStyle(color: NxColors.textDim)),
+          for (final dynamic e in tx)
+            Text('${(e as Map)['delta']} → ${e['balance']} · ${e['reason']}${e['item'] != null ? ' · ${e['item']}' : ''} · ${_shortTime(e['created_at'])}',
+                style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
+        ]),
+      ),
+      _card(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+          Text(context.tx('سابقه‌ی مدیریت', 'Admin history'), style: const TextStyle(fontWeight: FontWeight.w900)),
+          for (final dynamic e in audit)
+            Text('${(e as Map)['action']} · ${_shortTime(e['created_at'])}',
+                style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
+        ]),
+      ),
+    ]);
+  }
 }

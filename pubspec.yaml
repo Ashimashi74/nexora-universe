@@ -120,6 +120,7 @@ flutter:
     - assets/ui/anix/bg/
     - assets/ui/anix/buttons/
     - assets/ui/anix/card/
+    - assets/ui/anix/bracket/
     - assets/ui/anix/frames/
     - assets/ui/anix/icons/
     - assets/ui/anix/scenes/

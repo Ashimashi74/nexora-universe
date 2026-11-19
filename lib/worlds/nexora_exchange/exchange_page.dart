@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/catalog/catalog.dart';
+import '../../core/economy/gem_shop.dart';
+import '../../games/finger_soccer/core/bm_data.dart';
+import '../../games/finger_soccer/core/bm_engine.dart';
 import '../../core/profile/achievements.dart';
 import '../../core/profile/profile_service.dart';
 import '../../core/settings/app_settings.dart';
@@ -130,7 +133,7 @@ class _ExchangePageState extends ConsumerState<ExchangePage> {
   Widget build(BuildContext context) {
     final List<CatalogItem> featured = featuredForDate(_day);
     final NxThemeColors visual = NxThemeColors.of(context);
-    final int tabCount = _kTabs.length + 1;
+    final int tabCount = _kTabs.length + 2;
     return NxWorldScaffold(
       title: 'ANIX EXCHANGE',
       palette: WorldPalette.exchange,
@@ -179,6 +182,11 @@ class _ExchangePageState extends ConsumerState<ExchangePage> {
                     unselectedLabelColor: visual.muted,
                     dividerColor: Colors.transparent,
                     tabs: <Widget>[
+                      Tab(
+                        icon: const Icon(Icons.diamond_rounded, size: 18, color: kGemColor),
+                        text: context.tx('تیم‌ها · الماس', 'Teams · Gems'),
+                        iconMargin: EdgeInsets.zero,
+                      ),
                       for (final ItemCategory c in _kTabs)
                         Tab(
                             icon: Icon(_categoryIcon(c), size: 18),
@@ -197,6 +205,7 @@ class _ExchangePageState extends ConsumerState<ExchangePage> {
           ],
           body: TabBarView(
             children: <Widget>[
+              const _GemTeamsTab(),
               for (final ItemCategory c in _kTabs) _CategoryGrid(category: c),
               const _HistoryTab(),
             ],
@@ -341,6 +350,12 @@ class _WalletPanel extends ConsumerWidget {
                             color: visual.accent,
                             fontSize: 30,
                             fontWeight: FontWeight.w900)),
+                    Row(children: <Widget>[
+                      const Icon(Icons.diamond_rounded, size: 18, color: kGemColor),
+                      const SizedBox(width: 4),
+                      Text('${context.tx('الماس', 'Gems')}: ${_digits(context, '${p.gems}')}',
+                          style: const TextStyle(color: kGemColor, fontSize: 15, fontWeight: FontWeight.w900)),
+                    ]),
                     Text(
                         '${context.tx('سطح', 'Level')} ${_digits(context, '${p.level}')} · ${context.tx(p.rankTitleFa, p.rankTitleEn)}',
                         style: TextStyle(color: visual.text, fontSize: 12)),
@@ -1320,6 +1335,194 @@ class _HistoryTab extends ConsumerWidget {
                 ),
               ),
             ),
+        ],
+      );
+    });
+  }
+}
+
+
+// ---------------------------------------------------------------- gem shop: finger-soccer teams
+
+/// Finger-soccer teams for gems (الماس). Prices come from the server catalog (admins edit them); purchases go through
+/// nx_buy_with_gems, which deducts the gems and unlocks the team server-side.
+class _GemTeamsTab extends ConsumerStatefulWidget {
+  const _GemTeamsTab();
+  @override
+  ConsumerState<_GemTeamsTab> createState() => _GemTeamsTabState();
+}
+
+class _GemTeamsTabState extends ConsumerState<_GemTeamsTab> {
+  final GemShop shop = GemShop.instance;
+  int _cat = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    shop.addListener(_on);
+    if (!shop.loaded) unawaited(shop.refresh());
+  }
+
+  @override
+  void dispose() {
+    shop.removeListener(_on);
+    super.dispose();
+  }
+
+  void _on() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _buy(BmTeam t) async {
+    final ProfileService p = ref.read(profileProvider);
+    final int price = shop.teamPrice(t.id);
+    final bool? ok = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext ctx) => AnixDialog(
+        title: Text(t.name),
+        content: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+          SizedBox(height: 90, child: Image.asset(t.asset, cacheWidth: 200)),
+          const SizedBox(height: 8),
+          Text(ctx.tx('خرید با ${_digits(ctx, '$price')} الماس؟\nموجودی بعد از خرید: ${_digits(ctx, '${p.gems - price}')}',
+              'Buy for $price gems?\nBalance after purchase: ${p.gems - price}')),
+        ]),
+        actions: <Widget>[
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(ctx.tx('انصراف', 'Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(ctx.tx('خرید', 'Buy'))),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final GemBuyResult r = await shop.buyTeam(t.id);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(r.ok ? context.tx('${t.name} باز شد ✓', '${t.name} unlocked ✓') : gemErrorText(r.error, context.isFa))));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ProfileService p = ref.watch(profileProvider);
+    final NxThemeColors visual = NxThemeColors.of(context);
+    final List<BmTeam> teams = kBmTeams.where((BmTeam t) => t.cat == kBmCats[_cat][0]).toList()
+      ..sort((BmTeam a, BmTeam b) => shop.teamPrice(a.id).compareTo(shop.teamPrice(b.id)));
+    return Builder(builder: (BuildContext ctx) {
+      return CustomScrollView(
+        key: const PageStorageKey<String>('exchange.gemteams'),
+        slivers: <Widget>[
+          SliverOverlapInjector(handle: NestedScrollView.sliverOverlapAbsorberHandleFor(ctx)),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(NxSpace.md, NxSpace.sm, NxSpace.md, 0),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: Stack(children: <Widget>[
+                  AspectRatio(
+                    aspectRatio: 16 / 7,
+                    child: Image.asset(AnixAssets.sceneHubGate, fit: BoxFit.cover, cacheWidth: 1000),
+                  ),
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: <Color>[Colors.transparent, Colors.black.withValues(alpha: .75)],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 12,
+                    right: 12,
+                    bottom: 10,
+                    child: Row(children: <Widget>[
+                      Expanded(
+                        child: Text(context.tx('تیم‌های گل کوچیک', 'Finger-soccer teams'),
+                            style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w900)),
+                      ),
+                      Nx2GemStat(gems: p.gems),
+                      const SizedBox(width: 6),
+                      FilledButton.tonalIcon(
+                        onPressed: shop.online
+                            ? () async {
+                                final ScaffoldMessengerState m = ScaffoldMessenger.of(context);
+                                final String got = context.tx('الماس روزانه', 'Daily gems');
+                                final String none = context.tx('امروز گرفته‌ای', 'Already claimed today');
+                                final int g = await shop.claimDaily();
+                                m.showSnackBar(SnackBar(content: Text(g > 0 ? '$got: +$g' : none)));
+                              }
+                            : null,
+                        icon: const Icon(Icons.card_giftcard_rounded, size: 16),
+                        label: Text(context.tx('روزانه', 'Daily')),
+                      ),
+                    ]),
+                  ),
+                ]),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(NxSpace.md, NxSpace.sm, NxSpace.md, 0),
+              child: Wrap(spacing: 8, children: <Widget>[
+                for (int i = 0; i < kBmCats.length; i++)
+                  ChoiceChip(
+                    label: Text(context.tx(kBmCats[i][2] as String, kBmCats[i][1] as String)),
+                    selected: _cat == i,
+                    onSelected: (_) => setState(() => _cat = i),
+                  ),
+                if (!shop.online)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6),
+                    child: Text(context.tx('برای خرید با الماس وارد حساب شو.', 'Sign in to buy with gems.'),
+                        style: TextStyle(color: visual.muted, fontSize: 12)),
+                  ),
+              ]),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(NxSpace.md, NxSpace.sm, NxSpace.md, NxSpace.xl),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 130, mainAxisSpacing: 8, crossAxisSpacing: 8, childAspectRatio: .72),
+              delegate: SliverChildBuilderDelegate((BuildContext c, int i) {
+                final BmTeam t = teams[i];
+                final bool owned = shop.ownsTeam(t.id);
+                final int price = shop.teamPrice(t.id);
+                return InkWell(
+                  borderRadius: BorderRadius.circular(14),
+                  onTap: owned || shop.busy || !shop.teamForSale(t.id) ? null : () => _buy(t),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(14),
+                      color: visual.surface.withValues(alpha: .7),
+                      border: Border.all(color: owned ? Nx2.success.withValues(alpha: .7) : kGemColor.withValues(alpha: .45)),
+                    ),
+                    child: Column(children: <Widget>[
+                      Expanded(child: Image.asset(t.asset, cacheWidth: 160)),
+                      Text(t.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: visual.text, fontSize: 11, fontWeight: FontWeight.w800)),
+                      Text('⚡${t.power} 🎯${t.accuracy}', style: TextStyle(color: visual.muted, fontSize: 10)),
+                      const SizedBox(height: 3),
+                      if (owned)
+                        Text(price == 0 ? context.tx('رایگان', 'Free') : context.tx('خریداری شد', 'Owned'),
+                            style: const TextStyle(color: Nx2.success, fontSize: 11, fontWeight: FontWeight.w900))
+                      else
+                        Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
+                          const Icon(Icons.diamond_rounded, size: 13, color: kGemColor),
+                          const SizedBox(width: 2),
+                          Text(_digits(context, '$price'),
+                              style: const TextStyle(color: kGemColor, fontSize: 12, fontWeight: FontWeight.w900)),
+                        ]),
+                    ]),
+                  ),
+                );
+              }, childCount: teams.length),
+            ),
+          ),
         ],
       );
     });

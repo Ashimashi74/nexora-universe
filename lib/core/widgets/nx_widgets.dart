@@ -240,6 +240,8 @@ class WalletChip extends ConsumerWidget {
     return Row(mainAxisSize: MainAxisSize.min, children: [
       Nx2Stat(value: '${p.coins}'),
       const SizedBox(width: 6),
+      Nx2GemStat(gems: p.gems),
+      const SizedBox(width: 6),
       Nx2Stat(value: '${p.level}', icon: Icons.bolt_rounded, color: Nx2.cyan),
     ]);
   }

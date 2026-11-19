@@ -44,8 +44,10 @@ BmConfig _cfg({bool mirror = false, String mode = 'bot'}) => BmConfig(
 void main() {
   test('constants, fields and the art-measured goal geometry', () {
     expect(K, 1.27);
-    expect(PR, 56.0); // table-football scale: disc diameter ~1/8.5 of the playing width
-    expect(BR / PR, closeTo(.48, .01)); // ball = 48% of the disc diameter
+    expect(PR, 75.0); // finger-soccer proportions: disc diameter ~1/6 of the playing width
+    expect(BR / PR, closeTo(.5, .01)); // ball = half the disc diameter
+    expect(PF1, greaterThan(520)); // anti-drift: more felt friction than the old tuning
+    expect(PF2, greaterThan(1.1));
     expect(STEP, 1 / 240);
     expect(kBmFields.length, 36);
     expect(NB, 4);
@@ -79,6 +81,7 @@ void main() {
         expect(g.x2, closeTo(g.px2 - g.pr, 1e-6), reason: f.id);
         expect(g.pr, greaterThan(4), reason: f.id);
         expect(g.x2 - g.x1, greaterThan(6 * BR), reason: f.id);
+        expect(g.x2 - g.x1, greaterThan(2.3 * 2 * PR), reason: f.id); // mouth stays ~2.5 discs wide
         expect(g.px1, greaterThan(e.Fl + PR), reason: f.id);
         expect(g.px2, lessThan(e.Fr - PR), reason: f.id);
       }
