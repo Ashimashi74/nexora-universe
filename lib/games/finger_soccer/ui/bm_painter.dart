@@ -58,10 +58,16 @@ class BmView {
   double s = 1, ox = 0, oy = 0;
   Size size = Size.zero;
 
+  /// Screen space taken by the scoreboard/status bar above and the gesture bar below (logical px).
+  /// The world is centred in what is left; [topHudClearance] stays the minimum gap under the HUD.
+  double insetTop = 0, insetBottom = 0;
+
   void layout(BmEngine e, Size sz) {
     size = sz;
     final BmFieldS f = e.field;
-    final double W = sz.width, H = sz.height;
+    final double W = sz.width, fullH = sz.height;
+    final double top = math.max(insetTop, topHudClearance);
+    final double H = fullH - top - insetBottom;
     if (W < 50 || H < 50) return;
     final double worldWidth = f.R - f.L + 56 * FS;
     final double worldHeight = (f.B - f.T) + 2 * e.GGh * kBmGoalArtScale + 48;
@@ -69,7 +75,7 @@ class BmView {
     ox = W / 2 - e.CX * s;
     // Keep the scoreboard clear of the top goal while preserving the same
     // world-to-screen mapping for rendering and pointer input.
-    oy = H / 2 - e.CY * s + topHudClearance;
+    oy = top + H / 2 - e.CY * s;
   }
 
   Offset toWorld(Offset p) => Offset((p.dx - ox) / s, (p.dy - oy) / s);

@@ -64,6 +64,20 @@ void main() {
     expect(e.GOALS[0].x2 - e.GOALS[0].x1, 338);
   });
 
+  test('pitch (goals included) is centred between the scoreboard and the gesture bar', () {
+    final BmEngine e = BmEngine(_Hooks(), rng: math.Random(1))..startMatch(_cfg());
+    final BmView view = BmView()
+      ..insetTop = 32 + 64
+      ..insetBottom = 20 + 8
+      ..layout(e, const Size(360, 800));
+    final double half = ((e.Fb - e.Ft) / 2 + e.GGh * kBmGoalArtScale + 24) * view.s;
+    final double cy = e.CY * view.s + view.oy;
+    expect(cy - half, greaterThanOrEqualTo(96 - 0.01));
+    expect(cy + half, lessThanOrEqualTo(800 - 28 + 0.01));
+    expect(cy, closeTo((96 + 772) / 2, 0.5));
+    expect(e.CX * view.s + view.ox, closeTo(180, 0.01));
+  });
+
   test('phone layout fills the screen while physics radii stay unchanged', () {
     final BmEngine e = BmEngine(_Hooks(), rng: math.Random(1))..startMatch(_cfg());
     final double discPhysicsRadius = e.bodies.first.r;

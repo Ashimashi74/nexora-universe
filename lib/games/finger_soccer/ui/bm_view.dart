@@ -21,6 +21,12 @@ const String _a = 'assets/games/bermuda/';
 
 /// Online match settings (config.js MATCH_SECONDS / TURN_SECONDS).
 const int kBmMatchSeconds = 300;
+
+/// Width reserved at each side of the top row for the host's exit / ORACLE buttons (6dp + 48dp + 4dp).
+const double kBmHostButtonLane = 58;
+
+/// Height of the match scoreboard (team chips + clock) below the status bar.
+const double kBmScoreboardHeight = 64;
 const double kBmOnlineTurnSeconds = 10;
 
 class BermudaView extends StatefulWidget {
@@ -672,6 +678,11 @@ class _BermudaViewState extends State<BermudaView>
       return _setupScreen(context);
     }
     final double dpr = math.min(MediaQuery.devicePixelRatioOf(context), 1.75);
+    // Layout only: centre the pitch (goals included) in the space between the scoreboard and the
+    // gesture bar, so neither the HUD nor the system bars cover it.
+    final EdgeInsets pad = MediaQuery.paddingOf(context);
+    view.insetTop = pad.top + kBmScoreboardHeight;
+    view.insetBottom = pad.bottom + 8;
     final bool fancy = launch.fancyEffects && !launch.reducedMotion;
     return Directionality(
       textDirection: TextDirection.ltr,
@@ -801,7 +812,9 @@ class _BermudaViewState extends State<BermudaView>
         final NxThemeColors visual = NxThemeColors.of(context);
         final double screenWidth = MediaQuery.sizeOf(context).width;
         // A wide, shallow HUD gives names and scores room without covering the pitch.
-        final double sw = math.max(0, math.min(screenWidth - 28, 620));
+        // The host's exit + ORACLE buttons (48dp at 6dp from each edge) sit in the top corners:
+        // keep the scoreboard between them instead of under them.
+        final double sw = math.max(0, math.min(screenWidth - 2 * kBmHostButtonLane, 620));
         final bool aim = e.phase == 'aim';
         String clock = '';
         bool low = false;
@@ -1128,8 +1141,13 @@ class _BermudaViewState extends State<BermudaView>
         child: SafeArea(
           child: AbsorbPointer(
             absorbing: waiting,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
+            // The host overlays its exit + ORACLE buttons (48dp) in the top corners: start the lobby below
+            // them, and pin START/READY under the list so it is reachable without scrolling at 360x800.
+            child: Column(
+              children: <Widget>[
+                Expanded(
+                  child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 56, 16, 16),
               children: <Widget>[
                 Container(
                   padding: const EdgeInsets.fromLTRB(16, 17, 16, 16),
@@ -1465,8 +1483,11 @@ class _BermudaViewState extends State<BermudaView>
                       ],
                     ),
                   ),
+                  ],
+                  ),
+                ),
                 Padding(
-                  padding: const EdgeInsets.only(top: 16),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                   child: waiting
                       ? Container(
                           padding: const EdgeInsets.symmetric(vertical: 16),
@@ -1504,6 +1525,8 @@ class _BermudaViewState extends State<BermudaView>
                               elevation: 5,
                               shadowColor: visual.accent.withValues(alpha: .30),
                               textStyle: const TextStyle(
+                                  fontFamily: kNxFont,
+                                  fontFamilyFallback: kNxFontFallback,
                                   fontWeight: FontWeight.w900,
                                   fontSize: 15,
                                   letterSpacing: .5),
