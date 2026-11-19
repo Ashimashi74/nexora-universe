@@ -85,15 +85,24 @@ jobs:
             exit 0
           fi
           if [ ! -f ~/.android/debug.keystore ]; then
-            echo "ERROR: NEXORA_KEYSTORE_B64 is not configured and the signing-key cache is unavailable." >&2
-            echo "Configure the same keystore used by the installed NEXORA APK before publishing another update." >&2
-            exit 1
+            # First build in this repo: mint one signing identity and save it to the cache once (never rotated after).
+            echo "::warning::No signing key found; generating this repo's permanent key (first run only)."
+            keytool -genkeypair -v -keystore ~/.android/debug.keystore -storepass android -keypass android \
+              -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=ANIX,O=ANIX,C=US" >/dev/null 2>&1
+            echo "KEY_NEW=true" >> $GITHUB_ENV
           fi
           if ! keytool -list -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey >/dev/null 2>&1; then
             echo "ERROR: NEXORA_KEYSTORE_B64 is invalid or does not contain alias androiddebugkey." >&2
             exit 1
           fi
           keytool -list -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey | grep -E 'SHA256:' || true
+
+      - name: Save new signing key (first run only)
+        if: env.KEY_NEW == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: nxg-signing-key-v1
 
       - name: Generate Android platform (if missing)
         run: |
