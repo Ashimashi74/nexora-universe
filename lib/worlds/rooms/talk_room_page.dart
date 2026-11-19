@@ -10,6 +10,8 @@ import '../../core/backend/backend_gateway.dart';
 import '../../core/backend/supabase_backend.dart';
 import '../../core/online/online_config.dart';
 import '../../core/online/online_service.dart';
+import '../../core/online/room_voice.dart';
+import '../../core/economy/gem_shop.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/ui2/anix_kit.dart';
 import '../../core/ui2/nx2_widgets.dart';
@@ -86,7 +88,7 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
 
   // voice
   lk.Room? _voice;
-  bool _voiceBusy = false, _mic = false, _canPublish = false;
+  bool _voiceBusy = false, _mic = false, _canPublish = false, _speaker = true;
   String? _voiceError;
 
   RoomMember? get _myMember {
@@ -312,9 +314,10 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
       room.addListener(_onVoice);
       await room.connect('${g?['url'] ?? OnlineConfig.liveKitUrl}', token);
       _voice = room;
-      try {
-        await lk.Hardware.instance.setSpeakerphoneOn(true);
-      } catch (_) {}
+      await setRoomIncomingAudio(room, _speaker);
+      room.createListener().on<lk.TrackSubscribedEvent>((lk.TrackSubscribedEvent _) async {
+        if (!_speaker) await setRoomIncomingAudio(room, false);
+      });
     } catch (e) {
       _voiceError = '$e';
     } finally {
@@ -335,6 +338,13 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
   }
 
   void _onVoice() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _setSpeaker(bool on) async {
+    _speaker = on;
+    final lk.Room? v = _voice;
+    if (v != null) await setRoomIncomingAudio(v, on);
     if (mounted) setState(() {});
   }
 
@@ -493,13 +503,28 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
           Text(context.tx('صحنه‌ی صدا', 'Voice stage'),
               style: const TextStyle(color: Nx2.text, fontWeight: FontWeight.w900)),
           const Spacer(),
-          if (live)
-            IconButton(
-              visualDensity: VisualDensity.compact,
-              tooltip: context.tx('میکروفون', 'Microphone'),
-              onPressed: () => _setMic(!_mic),
-              icon: Icon(_mic ? Icons.mic_rounded : Icons.mic_off_rounded, color: _mic ? Nx2.success : Nx2.muted),
-            ),
+          // Mic (mute / unmute) and speaker (on / off) are always visible with their state; using either while
+          // outside the call joins it first.
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            tooltip: _mic
+                ? context.tx('میکروفون روشن (بی‌صدا کن)', 'Mic on (tap to mute)')
+                : context.tx('میکروفون خاموش', 'Mic muted'),
+            onPressed: _voiceBusy
+                ? null
+                : () async {
+                    if (!live) await _joinVoice();
+                    await _setMic(!_mic);
+                  },
+            icon: Icon(_mic ? Icons.mic_rounded : Icons.mic_off_rounded, color: _mic ? Nx2.success : Nx2.danger),
+          ),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            tooltip: _speaker ? context.tx('بلندگو روشن', 'Speaker on') : context.tx('بلندگو خاموش', 'Speaker off'),
+            onPressed: () => _setSpeaker(!_speaker),
+            icon: Icon(_speaker ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+                color: _speaker ? Nx2.success : Nx2.danger),
+          ),
           TextButton.icon(
             onPressed: _voiceBusy ? null : (live ? _leaveVoice : _joinVoice),
             icon: Icon(live ? Icons.call_end_rounded : Icons.headset_mic_rounded,
@@ -943,7 +968,9 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
       _fsTeamSeeded = true;
       unawaited(SharedPreferences.getInstance().then((SharedPreferences p) {
         final String? t = p.getString('bm.team');
-        if (t != null && kBmTeams.any((BmTeam x) => x.id == t) && mounted) return save(<String, dynamic>{'team': t});
+        if (t != null && kBmTeams.any((BmTeam x) => x.id == t) && GemShop.instance.ownsTeam(t) && mounted) {
+          return save(<String, dynamic>{'team': t});
+        }
         return null;
       }).catchError((Object _) => null));
     }
@@ -968,7 +995,15 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
               children: <Widget>[
                 for (final BmTeam t in kBmTeams.where((BmTeam t) => t.cat == cat[0]))
                   GestureDetector(
-                    onTap: () => unawaited(save(<String, dynamic>{'team': t.id})),
+                    // Locked teams (not bought with gems) can't be picked here; buy them in the game / shop.
+                    onTap: () {
+                      if (!GemShop.instance.ownsTeam(t.id)) {
+                        _snack(context.tx('این تیم قفل است (${GemShop.instance.teamPrice(t.id)} الماس) — از فروشگاه بخرش.',
+                            'Locked team (${GemShop.instance.teamPrice(t.id)} gems) — buy it in the shop.'));
+                        return;
+                      }
+                      unawaited(save(<String, dynamic>{'team': t.id}));
+                    },
                     child: Container(
                       width: 56,
                       margin: const EdgeInsets.only(right: 6, top: 4),
@@ -977,9 +1012,12 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: team == t.id ? Nx2.magenta : Colors.white24, width: team == t.id ? 2.5 : 1),
                       ),
-                      child: Image.asset(t.asset, fit: BoxFit.contain, cacheWidth: 140,
-                          errorBuilder: (_, __, ___) => Center(
-                              child: Text(t.name, style: const TextStyle(color: Nx2.text, fontSize: 9)))),
+                      child: Opacity(
+                        opacity: GemShop.instance.ownsTeam(t.id) ? 1 : .4,
+                        child: Image.asset(t.asset, fit: BoxFit.contain, cacheWidth: 140,
+                            errorBuilder: (_, __, ___) => Center(
+                                child: Text(t.name, style: const TextStyle(color: Nx2.text, fontSize: 9)))),
+                      ),
                     ),
                   ),
               ],

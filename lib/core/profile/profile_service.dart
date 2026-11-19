@@ -60,8 +60,12 @@ class AwardOutcome {
 /// and the server becomes the source of truth for XP (P21).
 class ProfileService extends ChangeNotifier {
   ProfileService(this._store) {
+    current = this;
     _load();
   }
+
+  /// The app's profile (one per app; used by code outside the widget tree, e.g. the finger-soccer team picker).
+  static ProfileService? current;
 
   final LocalStore _store;
   static const _key = 'profile.v1';
@@ -78,7 +82,9 @@ class ProfileService extends ChangeNotifier {
   String portrait = '01-vanguard';
   int xp = 0;
   int coins = 0;
-  int crystals = 0;
+  /// Gems (الماس): the premium currency. Server-owned (public.profiles.gems): only RPCs change it (welcome / daily
+  /// gems, tournament prizes, admin grants, team purchases); the app just mirrors the balance.
+  int gems = 0;
   final Map<String, String> equipped = {}; // slot -> itemId
   final Set<String> inventory = {};
   final Set<String> achievements = {};
@@ -116,7 +122,7 @@ class ProfileService extends ChangeNotifier {
     portrait = j['portrait'] as String? ?? '01-vanguard';
     xp = (j['xp'] as num?)?.toInt() ?? 0;
     coins = (j['coins'] as num?)?.toInt() ?? 0;
-    crystals = (j['crystals'] as num?)?.toInt() ?? 0;
+    gems = (j['gems'] as num?)?.toInt() ?? 0;
     orbitTheme = j['orbitTheme'] as String? ?? 'aurora';
     claimedDaily = j['claimedDaily'] as String? ?? '';
     streak = (j['streak'] as num?)?.toInt() ?? 0;
@@ -148,7 +154,7 @@ class ProfileService extends ChangeNotifier {
         'portrait': portrait,
         'xp': xp,
         'coins': coins,
-        'crystals': crystals,
+        'gems': gems,
         'orbitTheme': orbitTheme,
         'claimedDaily': claimedDaily,
         'streak': streak,
@@ -255,8 +261,12 @@ class ProfileService extends ChangeNotifier {
   }
 
   /// Server is the source of truth for XP and coins once signed in (P21).
-  void applyWallet({int? xp, int? coins}) {
+  void applyWallet({int? xp, int? coins, int? gems}) {
     bool changed = false;
+    if (gems != null && gems != this.gems) {
+      this.gems = gems;
+      changed = true;
+    }
     if (xp != null && xp != this.xp) {
       this.xp = xp;
       changed = true;
@@ -579,7 +589,7 @@ class ProfileService extends ChangeNotifier {
     bio = '';
     xp = 0;
     coins = 0;
-    crystals = 0;
+    gems = 0;
     _load();
     notifyListeners();
   }

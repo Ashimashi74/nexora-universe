@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/settings/app_settings.dart';
+import '../../../core/ui2/anix_kit.dart';
 import '../../../core/theme/nx_theme.dart';
 import '../data/models.dart';
 import 't_common.dart';
 
 /// Live elimination bracket: columns of rounds with connector lines, pan + pinch zoom (InteractiveViewer).
 /// Painting is one CustomPaint for the lines + lightweight positioned cards, so 64-player brackets stay smooth.
-class BracketView extends StatelessWidget {
+/// Art: the ANIX bracket kit (assets/ui/anix/bracket: gold / silver / blue match pills, status badges, champion crest
+/// over the podium). It opens zoomed to fit the screen (it used to open as a tiny line drawing on black).
+class BracketView extends StatefulWidget {
   const BracketView({
     super.key,
     required this.matches,
@@ -21,13 +24,34 @@ class BracketView extends StatelessWidget {
   final String? me;
   final void Function(TMatch m)? onTap;
 
-  static const double cardW = 176;
-  static const double cardH = 62;
-  static const double colGap = 46;
-  static const double rowGap = 14;
+  static const double cardW = 200;
+  static const double cardH = 72;
+  static const double colGap = 54;
+  static const double rowGap = 18;
+
+  @override
+  State<BracketView> createState() => _BracketViewState();
+}
+
+class _BracketViewState extends State<BracketView> {
+  final TransformationController _tc = TransformationController();
+  Size? _fittedFor;
+
+  List<TMatch> get matches => widget.matches;
+  Map<String, String> get names => widget.names;
+  String? get me => widget.me;
+  void Function(TMatch m)? get onTap => widget.onTap;
+
+  @override
+  void dispose() {
+    _tc.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    const double cardW = BracketView.cardW, cardH = BracketView.cardH, colGap = BracketView.colGap,
+        rowGap = BracketView.rowGap;
     final List<TMatch> w =
         matches.where((TMatch m) => m.bracket == 'W').toList();
     final List<TMatch> l =
@@ -73,15 +97,64 @@ class BracketView extends StatelessWidget {
       for (final TMatch m in matches) m.id: m
     };
 
-    return InteractiveViewer(
+    final double crest = finals.isNotEmpty ? 150 : 0;
+    final double totalW = width + 48, totalH = height + 80 + crest;
+    final Offset? gf = finals.isNotEmpty ? pos[finals.first.id] : null;
+    return LayoutBuilder(builder: (BuildContext context, BoxConstraints box) {
+      final Size view = box.biggest;
+      if (_fittedFor != view && view.width.isFinite && view.height.isFinite) {
+        _fittedFor = view;
+        // Fit the whole bracket (never smaller than 0.55 so names stay readable; pan for the rest).
+        final double k = (view.width / totalW).clamp(0.55, 1.4).toDouble();
+        final double k2 = (view.height / totalH).clamp(0.55, 1.4).toDouble();
+        final double sc = k < k2 ? k : k2;
+        final double dx = totalW * sc < view.width ? (view.width - totalW * sc) / 2 : 0;
+        final double dy = totalH * sc < view.height ? (view.height - totalH * sc) / 2 : 0;
+        _tc.value = Matrix4.identity()
+          ..translateByDouble(dx, dy, 0, 1)
+          ..scaleByDouble(sc, sc, 1, 1);
+      }
+      return Stack(children: <Widget>[
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(0, -.2),
+                radius: 1.1,
+                colors: <Color>[const Color(0xFF1A1440), NxThemeColors.of(context).background],
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          child: IgnorePointer(
+            child: Opacity(
+              opacity: .35,
+              child: Image.asset(AnixAssets.sceneArenaPodium, fit: BoxFit.fitWidth, cacheWidth: 900),
+            ),
+          ),
+        ),
+        InteractiveViewer(
+      transformationController: _tc,
       constrained: false,
       minScale: 0.3,
       maxScale: 2.5,
       boundaryMargin: const EdgeInsets.all(240),
       child: SizedBox(
-        width: width + 48,
-        height: height + 80,
+        width: totalW,
+        height: totalH,
         child: Stack(children: <Widget>[
+          if (gf != null)
+            Positioned(
+              left: 24 + gf.dx + (cardW - 120) / 2,
+              top: 28 + gf.dy - 140 < 0 ? 0 : 28 + gf.dy - 140,
+              width: 120,
+              height: 132,
+              child: Image.asset(AnixAssets.bracket('crest_champion'), fit: BoxFit.contain, cacheWidth: 300),
+            ),
           Positioned.fill(
             child: RepaintBoundary(
               child: CustomPaint(
@@ -142,7 +215,9 @@ class BracketView extends StatelessWidget {
               ),
         ]),
       ),
-    );
+    ),
+      ]);
+    });
   }
 }
 
@@ -290,26 +365,43 @@ class _MatchCard extends StatelessWidget {
       ]);
     }
 
+    final bool done = m.winner != null;
+    final String badge = live ? 'ic_play' : (done ? 'ic_check' : (m.p1 == null || m.p2 == null ? 'flat_lock' : 'ic_clock'));
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+          padding: const EdgeInsets.fromLTRB(30, 6, 10, 6),
           decoration: BoxDecoration(
-            color: live
-                ? accentSecondary.withValues(alpha: 0.14)
-                : const Color(0x1AFFFFFF),
-            borderRadius: BorderRadius.circular(10),
+            gradient: LinearGradient(colors: <Color>[
+              (mine ? const Color(0xFF0E2A5A) : const Color(0xFF15122E)).withValues(alpha: .96),
+              const Color(0xFF0B0A1C).withValues(alpha: .96),
+            ]),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: mine
-                  ? accent
-                  : (live ? accentSecondary : NxThemeColors.of(context).border),
-              width: mine || live ? 1.6 : 1,
+                  ? const Color(0xFF3B8CFF)
+                  : (live ? accentSecondary : (done ? const Color(0xFFE2B04A) : const Color(0xFF8A8FA6))),
+              width: mine || live ? 2 : 1.4,
             ),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                  color: (mine ? const Color(0xFF3B8CFF) : (done ? const Color(0xFFE2B04A) : Colors.black))
+                      .withValues(alpha: .28),
+                  blurRadius: 10),
+            ],
           ),
-          child: Column(
+          child: Stack(clipBehavior: Clip.none, children: <Widget>[
+            Positioned(
+              left: -28,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                  child: Image.asset(AnixAssets.bracket(badge), width: 22, height: 22, cacheWidth: 64)),
+            ),
+            Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 if (title != null)
@@ -323,6 +415,7 @@ class _MatchCard extends StatelessWidget {
                 const Divider(height: 6, thickness: 0.6),
                 row(m.p2, m.p2Set, s2, m.winner != null && m.winner == m.p2),
               ]),
+          ]),
         ),
       ),
     );

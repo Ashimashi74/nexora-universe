@@ -71,6 +71,13 @@ class AnixAssets {
   static const String sceneHubPanorama = '$_r/scenes/hub_panorama.webp';
   static const String scenePortalBlue = '$_r/scenes/portal_blue.webp';
   static const String scenePortalGold = '$_r/scenes/portal_gold.webp';
+  /// Owner art 2026-11: hub gate panorama (landscape), arena portal card and the champions' podium.
+  static const String sceneHubGate = '$_r/scenes/hub_gate.webp';
+  static const String sceneArenaPortal = '$_r/scenes/arena_portal_card.webp';
+  static const String sceneArenaPodium = '$_r/scenes/arena_podium.webp';
+
+  /// Tournament bracket kit (owner art 2026-11): match pills, slot / status icons, champion crest, progress rail.
+  static String bracket(String name) => '$_r/bracket/$name.webp';
 
   /// Painted icon for a menu route (null = keep the vector icon).
   static String? iconForRoute(String path) => switch (path) {

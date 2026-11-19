@@ -17,7 +17,8 @@ class AdminPerm {
   static const String announcements = 'announcements';
   static const String oracle = 'oracle';
   static const String admins = 'admins';
-  static const List<String> all = <String>[users, currency, tournaments, moderation, rooms, announcements, oracle, admins];
+  static const String shop = 'shop';
+  static const List<String> all = <String>[users, currency, tournaments, moderation, rooms, announcements, oracle, shop, admins];
 
   static String label(String p, bool fa) => switch (p) {
         users => fa ? 'کاربران و مسدودسازی' : 'Users & bans',
@@ -28,6 +29,7 @@ class AdminPerm {
         announcements => fa ? 'اطلاعیه‌ها' : 'Announcements',
         oracle => fa ? 'تنظیمات اوراکل' : 'ORACLE config',
         admins => fa ? 'مدیریت ادمین‌ها' : 'Admin management',
+        shop => fa ? 'فروشگاه و قیمت‌ها' : 'Shop & prices',
         _ => p,
       };
 }
@@ -127,8 +129,34 @@ class AdminApi {
       _auth('nx_owner_users', <String, dynamic>{'p_q': q, 'p_limit': 60, 'p_offset': 0});
   Future<Map<String, dynamic>> ban(String user, bool ban, String? reason) =>
       _auth('nx_owner_ban', <String, dynamic>{'p_user': user, 'p_ban': ban, 'p_reason': reason});
+  /// Grant (+) / take (-) coins and gems: permission 'currency' (non-owners capped per call server-side).
   Future<Map<String, dynamic>> grant(String user, int coins, int gems, String? reason) => _auth(
-      'nx_owner_grant', <String, dynamic>{'p_user': user, 'p_coins': coins, 'p_gems': gems, 'p_reason': reason});
+      'nx_admin_grant_wallet', <String, dynamic>{'p_user': user, 'p_coins': coins, 'p_gems': gems, 'p_reason': reason});
+
+  // ---- admin powers v3 (gems, shop, full player view/edit, rooms broadcast)
+  Future<Map<String, dynamic>> setWallet(String user, {int? coins, int? gems, int? xp, String? reason}) =>
+      _auth('nx_admin_set_wallet', <String, dynamic>{
+        'p_user': user, 'p_coins': coins, 'p_gems': gems, 'p_xp': xp, 'p_reason': reason});
+  Future<Map<String, dynamic>> player(String user) => _auth('nx_admin_player', <String, dynamic>{'p_user': user});
+  Future<Map<String, dynamic>> setInventory(String user, List<String> items, String? reason) =>
+      _auth('nx_admin_set_inventory', <String, dynamic>{'p_user': user, 'p_items': items, 'p_reason': reason});
+  Future<Map<String, dynamic>> editProfile(String user, Map<String, dynamic> patch, String? reason) =>
+      _auth('nx_admin_edit_profile', <String, dynamic>{'p_user': user, 'p_patch': patch, 'p_reason': reason});
+  Future<Map<String, dynamic>> banned() => _auth('nx_admin_banned', <String, dynamic>{'p_limit': 300});
+  Future<Map<String, dynamic>> catalog() => _auth('nx_admin_catalog');
+  Future<Map<String, dynamic>> setPrice(String item, int price,
+          {String currency = 'gems', bool active = true, String? name, String? kind}) =>
+      _auth('nx_admin_set_price', <String, dynamic>{
+        'p_item': item, 'p_price': price, 'p_currency': currency, 'p_active': active, 'p_name': name, 'p_kind': kind});
+  Future<Map<String, dynamic>> deleteItem(String item) => _auth('nx_admin_delete_item', <String, dynamic>{'p_item': item});
+  Future<Map<String, dynamic>> roomMessage(String room, String text) =>
+      _games('nx_admin_room_message', <String, dynamic>{'p_room': room, 'p_text': text});
+  Future<Map<String, dynamic>> roomsBroadcast(String text) =>
+      _games('nx_admin_rooms_broadcast', <String, dynamic>{'p_text': text});
+  Future<Map<String, dynamic>> roomUpdate(String room, {bool? private, int? seats, String? title}) =>
+      _games('nx_admin_room_update', <String, dynamic>{'p_room': room, 'p_private': private, 'p_seats': seats, 'p_title': title});
+  Future<Map<String, dynamic>> roomClearChat(String room) =>
+      _games('nx_admin_room_clear_chat', <String, dynamic>{'p_room': room});
   Future<Map<String, dynamic>> admins() => _auth('nx_admin_list');
   /// Redeems an owner-issued, single-use tournament-admin invitation code.
   /// The database validates expiry, account status, rate limits and ownership.
@@ -197,7 +225,7 @@ class AdminApi {
 const Map<String, List<String>> kAdminRolePresets = <String, List<String>>{
   'admin': <String>[
     AdminPerm.users, AdminPerm.currency, AdminPerm.tournaments, AdminPerm.moderation, AdminPerm.rooms,
-    AdminPerm.announcements, AdminPerm.oracle,
+    AdminPerm.announcements, AdminPerm.oracle, AdminPerm.shop,
   ],
   'mod': <String>[AdminPerm.users, AdminPerm.moderation, AdminPerm.rooms],
   'player': <String>[],
@@ -222,6 +250,12 @@ String adminErrorText(String? e, bool fa) => switch (e) {
       'bad_code' => fa ? 'کد دعوت معتبر نیست' : 'Invalid admin invitation code',
       'expired' => fa ? 'کد دعوت منقضی شده است' : 'This invitation code has expired',
       'used' => fa ? 'کد دعوت قبلاً استفاده شده است' : 'This invitation code has already been used',
+      'amount_too_large' => fa ? 'مقدار بیش از حد مجاز است' : 'Amount too large',
+      'zero_amount' => fa ? 'مقدار صفر است' : 'Amount is zero',
+      'bad_price' => fa ? 'قیمت نامعتبر است' : 'Invalid price',
+      'bad_amount' => fa ? 'مقدار نامعتبر است' : 'Invalid amount',
+      'bad_text' => fa ? 'متن خالی یا خیلی بلند است' : 'Text empty or too long',
+      'bad_field' => fa ? 'فیلد نامعتبر است' : 'Invalid field',
       'insufficient_balance' => fa ? 'موجودی کافی نیست' : 'Insufficient balance',
       'not_found' => fa ? 'پیدا نشد' : 'Not found',
       'tournament_room' => fa ? 'اتاق تورنمنت — از ابزار بازی‌های تورنمنت استفاده کن' : 'Tournament room — use the match tools',

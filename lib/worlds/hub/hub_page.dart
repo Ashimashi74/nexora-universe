@@ -244,6 +244,8 @@ class _Hud extends StatelessWidget {
           wiggle: coinPoke,
           onTap: () => context.push('/world/nexora_exchange'),
         ),
+        const SizedBox(width: 4),
+        Nx2GemStat(gems: profile.gems, onTap: () => context.push('/world/nexora_exchange')),
         const SizedBox(width: 6),
         Nx2IconButton(
           icon: Icons.search_rounded,

@@ -9,15 +9,17 @@ import 'bm_data.dart';
 // ---------------------------------------------------------------- constants (game.js line 4-6)
 // PR / BR are the radii of the DRAWN disc and ball (rim of the normalised sprites, see kBmDiscArtFill /
 // kBmBallArtFill): the collider is exactly what the player sees.
-// Table-football scale (owner request 2026-11): disc diameter = 112 world units, about 1/8.5 of the playing width
-// (880-945 on every pitch), so pieces read like a real finger-soccer set; the ball is 48% of the disc diameter.
-const double K = 1.27, PR = 56.0, BR = 27.0, STEP = 1 / 240, LMAX = 320;
+// Finger-soccer proportions (owner request 2026-11, v2): on the old 112-unit discs the pitch looked huge and the pieces
+// tiny. Disc diameter is now 150 world units, about 1/6 of the playing width (880-945 on every pitch) like a real
+// table set; the ball is half the disc diameter. The goal sprite grows with them (kBmGoalArtScale) so the mouth stays
+// about 2.7 discs wide, and the view fits the whole world to any phone (BmView.layout).
+const double K = 1.27, PR = 75.0, BR = 37.5, STEP = 1 / 240, LMAX = 320;
 /// Ball spin / curve keeps the original tuning radius so the bigger collider does not change curl after bounces.
 const double SPIN_R = 28.8;
 /// Visual scale of the goal sprite (assets/games/bermuda/goals/white.webp, the only goal art): drawn at full size so
 /// the mouth (inner width between the two side tubes) is about three discs wide. Posts, side nets and back net are
 /// built from the drawn sprite.
-const double kBmGoalArtScale = 1.0;
+const double kBmGoalArtScale = 1.2;
 const int NB = 4;
 /// Weighty pieces (owner request 2026-11): discs are heavy (mass 8) and the ball lighter (2.6) but not a ping-pong
 /// ball. BKICK keeps a disc striking the ball launching it 5% harder than plain elastic transfer.
@@ -26,9 +28,15 @@ const double BALL_M = 2.6;
 const double BKICK = 1.05;
 /// Disc sliding friction (constant + speed-proportional part), disc<->disc restitution and the disc speed cap after
 /// touching the ball: heavier felt so shots stop where they are aimed instead of skating around.
-const double HV = 4, PF1 = 520, PF2 = 1.1, PV0 = 600, EPP = .30, PCAP = 190;
+/// Anti-drift tuning (owner request 2026-11, v2): pieces skated too far and kept jittering after every shot. Felt
+/// friction is ~60% higher (PF1 520 -> 840, PF2 1.1 -> 1.9) so a disc glides ~40% less, disc<->disc and rail bounces
+/// are deader, and a slow disc snaps to rest sooner (kBmDiscStop). Launch speed (fire) is untouched, so shot power
+/// and the ball's speed off a strike are exactly as before.
+const double HV = 4, PF1 = 840, PF2 = 1.9, PV0 = 600, EPP = .22, PCAP = 190;
 /// Wall / post restitution of a disc (a heavy wooden puck loses most of its speed into the rail).
-const double kBmDiscWallE = .45;
+const double kBmDiscWallE = .38;
+/// Below this speed (world units/s, times K) a sliding disc stops dead instead of creeping.
+const double kBmDiscStop = 16;
 
 /// Largest aim error (radians, one side) at accuracy 1; accuracy 10 shoots exactly where the player aims.
 const double kBmMaxAimError = 0.11;
@@ -693,7 +701,7 @@ class BmEngine {
           final double fb = b.boost > 0 ? .35 : 1;
           if (b.boost > 0) b.boost -= dt;
           final double ns = sp - (PF1 * K * _mn(1, sp / (PV0 * K)) + sp * PF2) * fb * dt;
-          if (ns < 8 * K) {
+          if (ns < kBmDiscStop * K) {
             b.vx = 0;
             b.vy = 0;
           } else {

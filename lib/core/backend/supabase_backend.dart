@@ -82,6 +82,20 @@ class SupabaseBackend extends BackendGateway {
     }
   }
 
+  /// Voice grant for an online GAME room (lobby) or match: `nx-call-token` kind 'game'.
+  Future<Map<String, dynamic>?> liveKitGameGrant(String id, {bool match = false}) async {
+    final SupabaseClient? c = _c;
+    if (c == null || c.auth.currentSession == null) return null;
+    try {
+      final FunctionResponse r = await c.functions
+          .invoke('nx-call-token', body: <String, dynamic>{'kind': 'game', 'room': id, if (match) 'match': true});
+      final dynamic d = r.data;
+      return d is Map ? Map<String, dynamic>.from(d) : null;
+    } catch (e) {
+      return <String, dynamic>{'error': '$e'};
+    }
+  }
+
   /// ORACLE remote replies through the `nx-oracle` Edge Function (key lives server-side).
   @override
   Future<String?> oracleRemote(String prompt, {required String languageCode}) async {

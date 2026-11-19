@@ -8,6 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:nexora/core/theme/nx_theme.dart';
+import 'package:nexora/core/economy/gem_shop.dart';
+import 'package:nexora/core/profile/profile_service.dart';
+import 'package:nexora/core/ui2/anix_kit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:nexora/games/core/game_contract.dart';
@@ -79,7 +82,7 @@ class _BermudaViewState extends State<BermudaView>
 
   // setup
   String stage = 'setup'; // setup | waiting | match
-  late _Setup my = _Setup('club0', 0, 0, 0);
+  late _Setup my = _Setup(kDefaultTeam, 0, 0, 0);
   int _cat = 0;
   BmConfig? cfg;
 
@@ -135,9 +138,10 @@ class _BermudaViewState extends State<BermudaView>
   Future<void> _loadPrefs() async {
     try {
       final SharedPreferences p = await SharedPreferences.getInstance();
-      final String t = p.getString('bm.team') ?? 'club0';
+      final String t = p.getString('bm.team') ?? kDefaultTeam;
       my = _Setup(
-          kBmTeams.any((BmTeam x) => x.id == t) ? t : 'club0',
+          // Only an owned (or free) team can be fielded; locked teams fall back to the default free team.
+          GemShop.instance.usableTeam(kBmTeams.any((BmTeam x) => x.id == t) ? t : kDefaultTeam),
           (p.getInt('bm.form') ?? 0).clamp(0, kBmForms.length - 1).toInt(),
           (p.getInt('bm.field') ?? 0).clamp(0, kBmFields.length - 1).toInt(),
           (p.getInt('bm.ball') ?? 0).clamp(0, NB - 1).toInt());
@@ -603,7 +607,7 @@ class _BermudaViewState extends State<BermudaView>
   void _sendSetup() {
     final NetLink? net = launch.net;
     if (net == null) return;
-    _setups[mySeat] = _Setup(my.team, my.form, my.field, my.ball);
+    _setups[mySeat] = _Setup(GemShop.instance.usableTeam(my.team), my.form, my.field, my.ball);
     net.send(_setups[mySeat]!.toJson());
     stage = 'waiting';
     _maybeStartOnline();
@@ -1113,6 +1117,55 @@ class _BermudaViewState extends State<BermudaView>
     );
   }
 
+  /// Locked team: confirm + buy with gems (server-side deduct and unlock). True when the team is now owned.
+  Future<bool> _buyTeam(BmTeam t) async {
+    final GemShop shop = GemShop.instance;
+    final int price = shop.teamPrice(t.id);
+    final bool fa = Localizations.localeOf(context).languageCode == 'fa';
+    final int bal = ProfileService.current?.gems ?? 0;
+    final bool? ok = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext c) => AlertDialog(
+        backgroundColor: const Color(0xFF120A33),
+        title: Row(children: <Widget>[
+          SizedBox(width: 40, height: 40, child: Image.asset(t.asset, cacheWidth: 96)),
+          const SizedBox(width: 10),
+          Expanded(child: Text(t.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
+        ]),
+        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.asset(AnixAssets.sceneArenaPortal, height: 110, width: double.infinity, fit: BoxFit.cover, cacheWidth: 600),
+          ),
+          const SizedBox(height: 10),
+          Text(fa ? 'این تیم قفل است. با $price الماس بازش کن؟' : 'This team is locked. Unlock it for $price gems?',
+              style: const TextStyle(color: Colors.white)),
+          const SizedBox(height: 6),
+          Row(children: <Widget>[
+            const Icon(Icons.diamond_rounded, size: 16, color: Color(0xFF3BD0FF)),
+            const SizedBox(width: 4),
+            Text(fa ? 'موجودی: $bal' : 'Balance: $bal', style: const TextStyle(color: Color(0xFFBFB3E6))),
+          ]),
+        ]),
+        actions: <Widget>[
+          TextButton(onPressed: () => Navigator.pop(c, false), child: Text(fa ? 'انصراف' : 'Cancel')),
+          FilledButton.icon(
+            onPressed: bal >= price ? () => Navigator.pop(c, true) : null,
+            icon: const Icon(Icons.diamond_rounded, size: 16),
+            label: Text(fa ? 'خرید با $price' : 'Buy for $price'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return false;
+    final GemBuyResult r = await shop.buyTeam(t.id);
+    if (!mounted) return r.ok;
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+        content: Text(r.ok ? (fa ? '${t.name} باز شد ✓' : '${t.name} unlocked ✓') : gemErrorText(r.error, fa))));
+    if (r.ok) setState(() {});
+    return r.ok;
+  }
+
   // ------------------------------------------------------------------ setup screen
   Widget _setupScreen(BuildContext context) {
     final bool waiting = stage == 'waiting' || (online && !_netReady);
@@ -1296,12 +1349,17 @@ class _BermudaViewState extends State<BermudaView>
                           itemBuilder: (BuildContext c, int i) {
                             final BmTeam t = teams[i];
                             final bool on = t.id == my.team;
+                            final bool owned = GemShop.instance.ownsTeam(t.id);
                             return GestureDetector(
-                              onTap: () => setState(() {
-                                my.team = t.id;
-                                audio.sfx('ui');
-                                unawaited(_savePrefs());
-                              }),
+                              onTap: () async {
+                                if (!owned && !await _buyTeam(t)) return;
+                                if (!mounted) return;
+                                setState(() {
+                                  my.team = t.id;
+                                  audio.sfx('ui');
+                                  unawaited(_savePrefs());
+                                });
+                              },
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 160),
                                 width: 82,
@@ -1331,8 +1389,38 @@ class _BermudaViewState extends State<BermudaView>
                                 child: Column(
                                   children: <Widget>[
                                     Expanded(
-                                        child: Image.asset(t.asset,
-                                            cacheWidth: 128)),
+                                        child: Stack(
+                                      alignment: Alignment.center,
+                                      children: <Widget>[
+                                        Opacity(
+                                            opacity: owned ? 1 : .45,
+                                            child: Image.asset(t.asset, cacheWidth: 128)),
+                                        if (!owned)
+                                          Positioned(
+                                            bottom: 0,
+                                            child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xE60B1230),
+                                                borderRadius: BorderRadius.circular(8),
+                                                border: Border.all(color: const Color(0xFF3BD0FF)),
+                                              ),
+                                              child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+                                                const Icon(Icons.diamond_rounded, size: 10, color: Color(0xFF3BD0FF)),
+                                                const SizedBox(width: 2),
+                                                Text('${GemShop.instance.teamPrice(t.id)}',
+                                                    style: const TextStyle(
+                                                        color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w900)),
+                                              ]),
+                                            ),
+                                          ),
+                                        if (!owned)
+                                          const Positioned(
+                                              top: 0,
+                                              right: 0,
+                                              child: Icon(Icons.lock_rounded, size: 14, color: Color(0xFFE2B04A))),
+                                      ],
+                                    )),
                                     const SizedBox(height: 3),
                                     Text(t.name,
                                         maxLines: 1,
