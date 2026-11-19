@@ -43,7 +43,9 @@ class _AdminPageState extends ConsumerState<AdminPage> {
       if (a.can(AdminPerm.admins)) const _Tab('admins', 'ادمین‌ها', 'Admins', Icons.admin_panel_settings_rounded),
       if (a.can(AdminPerm.tournaments)) const _Tab('tournaments', 'تورنمنت', 'Tournaments', Icons.emoji_events_rounded),
       if (a.can(AdminPerm.moderation)) const _Tab('moderation', 'نظارت', 'Moderation', Icons.shield_rounded),
+      if (a.can(AdminPerm.moderation)) const _Tab('reports', 'گزارش‌ها', 'Reports', Icons.flag_rounded),
       if (a.can(AdminPerm.rooms)) const _Tab('rooms', 'اتاق‌ها', 'Rooms', Icons.meeting_room_rounded),
+      if (a.can(AdminPerm.rooms)) const _Tab('matches', 'بازی‌های زنده', 'Live matches', Icons.sports_esports_rounded),
       if (a.can(AdminPerm.announcements)) const _Tab('announcements', 'اطلاعیه', 'Announcements', Icons.campaign_rounded),
       if (a.can(AdminPerm.oracle)) const _Tab('oracle', 'اوراکل', 'ORACLE', Icons.psychology_alt_rounded),
       if (a.can(AdminPerm.admins)) const _Tab('audit', 'گزارش', 'Audit log', Icons.receipt_long_rounded),
@@ -83,6 +85,8 @@ class _AdminPageState extends ConsumerState<AdminPage> {
               'tournaments' => const _TournamentsTab(),
               'moderation' => const _ModerationTab(),
               'rooms' => const _RoomsTab(),
+              'reports' => const _ReportsTab(),
+              'matches' => const _MatchesTab(),
               'announcements' => const _AnnouncementsTab(),
               'oracle' => const _OracleTab(),
               _ => const _AuditTab(),
@@ -141,7 +145,7 @@ String _shortTime(Object? iso) {
 
 /// Loads a JSON result once and shows a list; pull to refresh.
 class _Loader extends StatefulWidget {
-  const _Loader({required this.load, required this.build});
+  const _Loader({super.key, required this.load, required this.build});
   final Future<Map<String, dynamic>> Function() load;
   final Widget Function(BuildContext context, Map<String, dynamic> data, VoidCallback reload) build;
 
@@ -291,6 +295,88 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
     reason.dispose();
   }
 
+  Future<void> _mute(Map<String, dynamic> u) async {
+    final bool muted = u['muted_until'] != null;
+    int minutes = 0;
+    String? reason;
+    if (!muted) {
+      final int? m = await showDialog<int>(
+        context: context,
+        builder: (BuildContext ctx) => SimpleDialog(
+          title: Text(ctx.tx('سکوت چت برای ${u['username'] ?? ''}', 'Mute ${u['username'] ?? ''}')),
+          children: <Widget>[
+            for (final (int v, String fa, String en) in const <(int, String, String)>[
+              (15, '۱۵ دقیقه', '15 minutes'), (60, '۱ ساعت', '1 hour'), (1440, '۱ روز', '1 day'),
+              (10080, '۱ هفته', '1 week'), (525600, 'دائمی (۱ سال)', 'Permanent (1 year)'),
+            ])
+              SimpleDialogOption(onPressed: () => Navigator.pop(ctx, v), child: Text(ctx.tx(fa, en))),
+          ],
+        ),
+      );
+      if (m == null || !mounted) return;
+      minutes = m;
+      reason = await _ask(context, context.tx('دلیل سکوت', 'Mute reason'));
+      if (reason == null) return;
+    }
+    final Map<String, dynamic> r = await _api(ref).mute('${u['id']}', minutes, reason);
+    if (mounted) await _toast(context, r);
+    unawaited(_search());
+  }
+
+  Future<void> _item(Map<String, dynamic> u) async {
+    final TextEditingController item = TextEditingController();
+    bool grant = true;
+    final bool? ok = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext ctx) => StatefulBuilder(
+        builder: (BuildContext ctx, StateSetter set) => AnixDialog(
+          title: Text(ctx.tx('آیتم / تیم برای ${u['username'] ?? ''}', 'Item / team for ${u['username'] ?? ''}')),
+          content: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+            TextField(
+                controller: item,
+                decoration: InputDecoration(
+                    labelText: ctx.tx('شناسه‌ی آیتم یا تیم', 'Item or team id'), hintText: 'lux0 · club12 · nx_green')),
+            const SizedBox(height: 8),
+            SegmentedButton<bool>(
+              segments: <ButtonSegment<bool>>[
+                ButtonSegment<bool>(value: true, label: Text(ctx.tx('اهدا', 'Give'))),
+                ButtonSegment<bool>(value: false, label: Text(ctx.tx('پس‌گرفتن', 'Take'))),
+              ],
+              selected: <bool>{grant},
+              onSelectionChanged: (Set<bool> v) => set(() => grant = v.first),
+            ),
+          ]),
+          actions: <Widget>[
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(ctx.tx('انصراف', 'Cancel'))),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: Text(ctx.tx('ثبت', 'Apply'))),
+          ],
+        ),
+      ),
+    );
+    if (ok == true) {
+      final Map<String, dynamic> r = await _api(ref).grantItem('${u['id']}', item.text.trim(), grant, null);
+      if (mounted) await _toast(context, r);
+    }
+    item.dispose();
+  }
+
+  Future<void> _rename(Map<String, dynamic> u) async {
+    final String? n =
+        await _ask(context, context.tx('نام کاربری جدید', 'New username'), initial: '${u['username'] ?? ''}');
+    if (n == null || n.trim().isEmpty) return;
+    final Map<String, dynamic> r = await _api(ref).rename('${u['id']}', n.trim(), null);
+    if (mounted) await _toast(context, r);
+    unawaited(_search());
+  }
+
+  Future<void> _resetPassword(Map<String, dynamic> u) async {
+    final String? t = await _ask(context, context.tx('رمز موقت (حداقل ۸ نویسه)', 'Temporary password (8+ chars)'),
+        hint: context.tx('بازیکن بعد از ورود باید عوضش کند', 'The player must change it after signing in'));
+    if (t == null || t.isEmpty) return;
+    final Map<String, dynamic> r = await _api(ref).resetPassword('${u['id']}', t);
+    if (mounted) await _toast(context, r, okFa: 'رمز موقت ثبت شد؛ همه‌ی نشست‌ها بسته شد', okEn: 'Temporary password set; sessions closed');
+  }
+
   Future<void> _ban(Map<String, dynamic> u) async {
     final bool banned = u['banned'] == true;
     String? reason;
@@ -344,6 +430,9 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                   style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
               if (banned && (u['ban_reason'] ?? '').toString().isNotEmpty)
                 Text('⛔ ${u['ban_reason']}', style: const TextStyle(color: NxColors.danger, fontSize: 12)),
+              if (u['muted_until'] != null)
+                Text('🔇 ${context.tx('ساکت تا', 'muted until')} ${_shortTime(u['muted_until'])} ${u['mute_reason'] ?? ''}',
+                    style: const TextStyle(color: NxColors.gold, fontSize: 12)),
               Wrap(spacing: 6, children: <Widget>[
                 if (a.can(AdminPerm.currency))
                   TextButton.icon(
@@ -359,7 +448,31 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
                   TextButton.icon(
                       onPressed: () => showAdminEditor(context, ref, u),
                       icon: const Icon(Icons.admin_panel_settings_rounded, size: 18),
-                      label: Text(context.tx('دسترسی', 'Access'))),
+                      label: Text(context.tx('نقش', 'Role'))),
+                if (u['role'] != 'owner')
+                  PopupMenuButton<String>(
+                    tooltip: context.tx('بیشتر', 'More'),
+                    icon: const Icon(Icons.more_horiz_rounded),
+                    onSelected: (String v) => switch (v) {
+                      'mute' => _mute(u),
+                      'item' => _item(u),
+                      'rename' => _rename(u),
+                      'password' => _resetPassword(u),
+                      _ => null,
+                    },
+                    itemBuilder: (BuildContext c) => <PopupMenuEntry<String>>[
+                      if (a.can(AdminPerm.users))
+                        PopupMenuItem<String>(
+                            value: 'mute',
+                            child: Text(u['muted_until'] != null ? c.tx('رفع سکوت', 'Unmute') : c.tx('سکوت چت', 'Mute chat'))),
+                      if (a.can(AdminPerm.currency))
+                        PopupMenuItem<String>(value: 'item', child: Text(c.tx('اهدای آیتم / تیم', 'Give item / team'))),
+                      if (a.can(AdminPerm.users))
+                        PopupMenuItem<String>(value: 'rename', child: Text(c.tx('تغییر اجباری نام', 'Force rename'))),
+                      if (a.can(AdminPerm.users) && u['guest'] != true)
+                        PopupMenuItem<String>(value: 'password', child: Text(c.tx('رمز موقت', 'Reset password'))),
+                    ],
+                  ),
               ]),
             ]));
           },
@@ -382,6 +495,22 @@ Future<void> showAdminEditor(BuildContext context, WidgetRef ref, Map<String, dy
         title: Text(ctx.tx('دسترسی ${u['username'] ?? ''}', 'Access · ${u['username'] ?? ''}')),
         content: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+            // Role presets (admin / moderator / player) fill the permission boxes; the owner can still fine-tune.
+            Wrap(spacing: 6, children: <Widget>[
+              for (final MapEntry<String, List<String>> e in kAdminRolePresets.entries)
+                ActionChip(
+                  label: Text(switch (e.key) {
+                    'admin' => ctx.tx('ادمین', 'Admin'),
+                    'mod' => ctx.tx('ناظر', 'Moderator'),
+                    _ => ctx.tx('بازیکن', 'Player'),
+                  }),
+                  onPressed: () => set(() {
+                    perms
+                      ..clear()
+                      ..addAll(e.value);
+                  }),
+                ),
+            ]),
             for (final String p in AdminPerm.all)
               AnixCheckboxTile(
                 dense: true,
@@ -600,6 +729,11 @@ class _RoomsTab extends ConsumerWidget {
                         style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
                   ])),
                   IconButton(
+                    tooltip: context.tx('اعضا / اخراج', 'Members / kick'),
+                    icon: const Icon(Icons.group_rounded, color: NxColors.turquoise),
+                    onPressed: () => _showMembers(context, ref, '${r['id']}'),
+                  ),
+                  IconButton(
                     tooltip: context.tx('بستن اتاق', 'Close room'),
                     icon: const Icon(Icons.cancel_rounded, color: NxColors.danger),
                     onPressed: () async {
@@ -615,6 +749,167 @@ class _RoomsTab extends ConsumerWidget {
           ]);
         },
       );
+}
+
+Future<void> _showMembers(BuildContext context, WidgetRef ref, String room) async {
+  await showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    builder: (BuildContext c) => SafeArea(
+      child: SizedBox(
+        height: MediaQuery.sizeOf(c).height * .6,
+        child: _Loader(
+          load: () => _api(ref).roomMembers(room),
+          build: (BuildContext context, Map<String, dynamic> d, VoidCallback reload) => ListView(children: <Widget>[
+            for (final dynamic e in (d['members'] as List<dynamic>?) ?? const <dynamic>[])
+              Builder(builder: (BuildContext context) {
+                final Map<String, dynamic> m = Map<String, dynamic>.from(e as Map);
+                return ListTile(
+                  dense: true,
+                  leading: Icon(m['muted'] == true ? Icons.mic_off_rounded : Icons.person_rounded),
+                  title: Text('${m['username'] ?? m['user_id']}'),
+                  subtitle: Text('${m['role'] ?? ''}'),
+                  trailing: TextButton(
+                    onPressed: () async {
+                      final String? reason = await _ask(context, context.tx('دلیل اخراج', 'Kick reason'));
+                      if (reason == null) return;
+                      final Map<String, dynamic> x = await _api(ref).kick(room, '${m['user_id']}', reason);
+                      if (context.mounted) await _toast(context, x);
+                      reload();
+                    },
+                    child: Text(context.tx('اخراج', 'Kick'), style: const TextStyle(color: NxColors.danger)),
+                  ),
+                );
+              }),
+          ]),
+        ),
+      ),
+    ),
+  );
+}
+
+// ------------------------------------------------------------------ live matches
+class _MatchesTab extends ConsumerWidget {
+  const _MatchesTab();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => _Loader(
+        load: () => _api(ref).liveMatches(),
+        build: (BuildContext context, Map<String, dynamic> d, VoidCallback reload) {
+          final List<dynamic> rows = (d['matches'] as List<dynamic>?) ?? const <dynamic>[];
+          if (rows.isEmpty) {
+            return ListView(children: <Widget>[
+              const SizedBox(height: 80),
+              Center(child: Text(context.tx('بازی زنده‌ای نیست', 'No live matches'))),
+            ]);
+          }
+          return ListView(padding: const EdgeInsets.symmetric(vertical: 10), children: <Widget>[
+            for (final dynamic e in rows)
+              Builder(builder: (BuildContext context) {
+                final Map<String, dynamic> m = Map<String, dynamic>.from(e as Map);
+                final List<dynamic> names = (m['names'] as List<dynamic>?) ?? const <dynamic>[];
+                return _card(
+                    child: Row(children: <Widget>[
+                  const Icon(Icons.sports_esports_rounded, color: NxColors.gold),
+                  const SizedBox(width: 10),
+                  Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+                    Text('${m['game']}${m['tournament'] == true ? ' · 🏆' : ''}',
+                        style: const TextStyle(fontWeight: FontWeight.w900)),
+                    Text('${names.join(' · ')}  ${m['scores'] ?? ''}',
+                        maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: NxColors.textDim, fontSize: 12)),
+                    Text(_shortTime(m['started_at']), style: const TextStyle(color: NxColors.textDim, fontSize: 11)),
+                  ])),
+                  if (m['tournament'] != true)
+                    TextButton(
+                      onPressed: () async {
+                        final String? reason = await _ask(context, context.tx('دلیل پایان بازی', 'Reason'));
+                        if (reason == null) return;
+                        final Map<String, dynamic> x = await _api(ref).endMatch('${m['id']}', reason);
+                        if (context.mounted) await _toast(context, x);
+                        reload();
+                      },
+                      child: Text(context.tx('پایان', 'End'), style: const TextStyle(color: NxColors.danger)),
+                    ),
+                ]));
+              }),
+          ]);
+        },
+      );
+}
+
+// ------------------------------------------------------------------ player reports
+class _ReportsTab extends ConsumerStatefulWidget {
+  const _ReportsTab();
+
+  @override
+  ConsumerState<_ReportsTab> createState() => _ReportsTabState();
+}
+
+class _ReportsTabState extends ConsumerState<_ReportsTab> {
+  String _status = 'open';
+  int _v = 0;
+
+  @override
+  Widget build(BuildContext context) => Column(children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+          child: SegmentedButton<String>(
+            segments: <ButtonSegment<String>>[
+              ButtonSegment<String>(value: 'open', label: Text(context.tx('باز', 'Open'))),
+              ButtonSegment<String>(value: 'resolved', label: Text(context.tx('رسیدگی‌شده', 'Resolved'))),
+              ButtonSegment<String>(value: 'dismissed', label: Text(context.tx('ردشده', 'Dismissed'))),
+            ],
+            selected: <String>{_status},
+            onSelectionChanged: (Set<String> v) => setState(() {
+              _status = v.first;
+              _v++;
+            }),
+          ),
+        ),
+        Expanded(
+          child: _Loader(
+            key: ValueKey<String>('rep_$_status$_v'),
+            load: () => _api(ref).reports(_status),
+            build: (BuildContext context, Map<String, dynamic> d, VoidCallback reload) {
+              final List<dynamic> rows = (d['reports'] as List<dynamic>?) ?? const <dynamic>[];
+              if (rows.isEmpty) {
+                return ListView(children: <Widget>[
+                  const SizedBox(height: 80),
+                  Center(child: Text(context.tx('گزارشی نیست', 'No reports'))),
+                ]);
+              }
+              return ListView(padding: const EdgeInsets.symmetric(vertical: 10), children: <Widget>[
+                for (final dynamic e in rows)
+                  Builder(builder: (BuildContext context) {
+                    final Map<String, dynamic> r = Map<String, dynamic>.from(e as Map);
+                    Future<void> set(String st) async {
+                      final Map<String, dynamic> x = await _api(ref).setReport((r['id'] as num).toInt(), st, null);
+                      if (context.mounted) await _toast(context, x);
+                      reload();
+                    }
+
+                    return _card(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+                      Text('${r['kind']} · ${r['target_name'] ?? r['target_id'] ?? ''}',
+                          style: const TextStyle(fontWeight: FontWeight.w900)),
+                      Text('${r['reason']}'),
+                      Text('${context.tx('از', 'by')} ${r['reporter_name'] ?? ''} · ${_shortTime(r['created_at'])}',
+                          style: const TextStyle(color: NxColors.textDim, fontSize: 11)),
+                      if (_status == 'open')
+                        Wrap(spacing: 6, children: <Widget>[
+                          TextButton(onPressed: () => set('resolved'), child: Text(context.tx('رسیدگی شد', 'Resolve'))),
+                          TextButton(onPressed: () => set('dismissed'), child: Text(context.tx('رد', 'Dismiss'))),
+                        ])
+                      else
+                        TextButton(onPressed: () => set('open'), child: Text(context.tx('بازگشایی', 'Reopen'))),
+                    ]));
+                  }),
+              ]);
+            },
+          ),
+        ),
+      ]);
 }
 
 // ------------------------------------------------------------------ announcements
@@ -690,6 +985,19 @@ class _AnnouncementsTab extends ConsumerWidget {
                     Text('${a['body']}', maxLines: 3, overflow: TextOverflow.ellipsis),
                     Text(_shortTime(a['created_at']), style: const TextStyle(color: NxColors.textDim, fontSize: 11)),
                   ])),
+                  if (live)
+                    IconButton(
+                        tooltip: context.tx('ویرایش', 'Edit'),
+                        icon: const Icon(Icons.edit_rounded, size: 20),
+                        onPressed: () async {
+                          final String? t = await _ask(context, context.tx('عنوان', 'Title'), initial: '${a['title']}');
+                          if (t == null || !context.mounted) return;
+                          final String? b = await _ask(context, context.tx('متن', 'Text'), initial: '${a['body']}');
+                          if (b == null || !context.mounted) return;
+                          final Map<String, dynamic> r = await _api(ref).editAnnouncement((a['id'] as num).toInt(), t, b);
+                          if (context.mounted) await _toast(context, r);
+                          reload();
+                        }),
                   if (live)
                     TextButton(
                         onPressed: () async {

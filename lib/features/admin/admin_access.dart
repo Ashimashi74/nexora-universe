@@ -160,10 +160,56 @@ class AdminApi {
   Future<Map<String, dynamic>> closeRoom(String room, String? reason) =>
       _games('nx_admin_close_room', <String, dynamic>{'p_room': room, 'p_reason': reason});
   Future<Map<String, dynamic>> tournaments() => _games('nx_owner_tournaments', <String, dynamic>{'p_limit': 200});
+
+  // ---- admin powers v2 (server-checked RPCs, both projects where the state lives in both)
+  /// Mute chat / posting for [minutes] (0 = unmute) on the auth project and in room chat on the games project.
+  Future<Map<String, dynamic>> mute(String user, int minutes, String? reason) async {
+    final Map<String, dynamic> a =
+        await _auth('nx_admin_mute', <String, dynamic>{'p_user': user, 'p_minutes': minutes, 'p_reason': reason});
+    if (a['ok'] != true) return a;
+    final Map<String, dynamic> g =
+        await _games('nx_admin_mute', <String, dynamic>{'p_user': user, 'p_minutes': minutes, 'p_reason': reason});
+    return g['ok'] == true ? a : g;
+  }
+
+  Future<Map<String, dynamic>> grantItem(String user, String item, bool grant, String? reason) => _auth(
+      'nx_admin_grant_item', <String, dynamic>{'p_user': user, 'p_item': item, 'p_grant': grant, 'p_reason': reason});
+  Future<Map<String, dynamic>> rename(String user, String name, String? reason) =>
+      _auth('nx_admin_rename', <String, dynamic>{'p_user': user, 'p_name': name, 'p_reason': reason});
+  Future<Map<String, dynamic>> resetPassword(String user, String temp) =>
+      _auth('nx_admin_reset_password', <String, dynamic>{'p_user': user, 'p_temp': temp});
+  Future<Map<String, dynamic>> reports(String status) =>
+      _auth('nx_admin_reports', <String, dynamic>{'p_status': status, 'p_limit': 150});
+  Future<Map<String, dynamic>> setReport(int id, String status, String? note) =>
+      _auth('nx_admin_report_set', <String, dynamic>{'p_id': id, 'p_status': status, 'p_note': note});
+  Future<Map<String, dynamic>> editAnnouncement(int id, String title, String body) =>
+      _auth('nx_admin_announce_edit', <String, dynamic>{'p_id': id, 'p_title': title, 'p_body': body});
+  Future<Map<String, dynamic>> roomMembers(String room) => _games('nx_admin_room_members', <String, dynamic>{'p_room': room});
+  Future<Map<String, dynamic>> kick(String room, String user, String? reason) =>
+      _games('nx_admin_kick', <String, dynamic>{'p_room': room, 'p_user': user, 'p_reason': reason});
+  Future<Map<String, dynamic>> liveMatches() => _games('nx_admin_live_matches', <String, dynamic>{'p_limit': 150});
+  Future<Map<String, dynamic>> endMatch(String match, String? reason) =>
+      _games('nx_admin_end_match', <String, dynamic>{'p_match': match, 'p_reason': reason});
 }
+
+/// Role presets for the Access editor: admin = every permission except managing admins; moderator = users, chat
+/// moderation and rooms; player = none.
+const Map<String, List<String>> kAdminRolePresets = <String, List<String>>{
+  'admin': <String>[
+    AdminPerm.users, AdminPerm.currency, AdminPerm.tournaments, AdminPerm.moderation, AdminPerm.rooms,
+    AdminPerm.announcements, AdminPerm.oracle,
+  ],
+  'mod': <String>[AdminPerm.users, AdminPerm.moderation, AdminPerm.rooms],
+  'player': <String>[],
+};
 
 String adminErrorText(String? e, bool fa) => switch (e) {
       'forbidden' => fa ? 'دسترسی نداری' : 'Not allowed',
+      'name_taken' => fa ? 'این نام قبلاً گرفته شده' : 'That name is taken',
+      'bad_name' => fa ? 'نام باید ۳ تا ۲۰ نویسه باشد' : 'Names are 3-20 characters',
+      'weak_password' => fa ? 'رمز موقت حداقل ۸ نویسه' : 'Temporary password needs 8+ characters',
+      'bad_item' => fa ? 'شناسه‌ی آیتم نامعتبر است' : 'Invalid item id',
+      'not_live' => fa ? 'این بازی در جریان نیست' : 'That match is not live',
       'password_change_required' => fa ? 'اول رمزت را عوض کن' : 'Change your password first',
       'cannot_ban_owner' => fa ? 'مدیر اصلی را نمی‌شود مسدود کرد' : 'The main admin cannot be banned',
       'cannot_ban_admin' => fa ? 'فقط مدیر اصلی می‌تواند ادمین را مسدود کند' : 'Only the main admin can ban an admin',

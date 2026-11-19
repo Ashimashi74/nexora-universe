@@ -727,6 +727,39 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
             Text(m.name, style: const TextStyle(color: Nx2.text, fontSize: 18, fontWeight: FontWeight.w900)),
             const SizedBox(height: 12),
             NovaFollowBar(uid: m.userId, self: m.userId == _me),
+            if (m.userId != _me)
+              TextButton.icon(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  final TextEditingController t = TextEditingController();
+                  final bool? ok = await showDialog<bool>(
+                    context: context,
+                    builder: (BuildContext d) => AlertDialog(
+                      title: Text(context.tx('گزارش ${m.name}', 'Report ${m.name}')),
+                      content: TextField(controller: t, maxLength: 300,
+                          decoration: InputDecoration(hintText: context.tx('چه اتفاقی افتاد؟', 'What happened?'))),
+                      actions: <Widget>[
+                        TextButton(onPressed: () => Navigator.pop(d, false), child: Text(context.tx('انصراف', 'Cancel'))),
+                        FilledButton(onPressed: () => Navigator.pop(d, true), child: Text(context.tx('ارسال', 'Send'))),
+                      ],
+                    ),
+                  );
+                  if (ok == true && t.text.trim().length >= 2) {
+                    try {
+                      await ref.read(onlineProvider).rpc('nx_report_user', <String, dynamic>{
+                        'p_target': m.userId, 'p_kind': 'room', 'p_target_id': widget.roomId, 'p_reason': t.text.trim(),
+                      });
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text(context.tx('گزارش برای مدیران فرستاده شد', 'Report sent to the admins'))));
+                      }
+                    } catch (_) {}
+                  }
+                  t.dispose();
+                },
+                icon: const Icon(Icons.flag_rounded, color: Nx2.muted, size: 18),
+                label: Text(context.tx('گزارش تخلف', 'Report'), style: const TextStyle(color: Nx2.muted)),
+              ),
           ]),
         ),
       ),
