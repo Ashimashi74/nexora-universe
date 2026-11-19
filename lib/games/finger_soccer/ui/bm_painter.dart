@@ -14,7 +14,7 @@ import 'bm_ball.dart';
 // snapshots and online peers keep the same deterministic contract.
 const double kBmPlayerVisualScale = 0.78;
 const double kBmBallVisualScale = 0.78;
-const double kBmGoalArtScale = 0.68;
+const double kBmGoalArtScale = 0.82;
 
 class BmImages {
   ui.Image? field, goal, ball;
@@ -54,8 +54,8 @@ class BmView {
   /// the field, so the complete world (including the top goal) must move down
   /// as one unit instead of moving only the goal artwork.
   static const double topHudClearance = 20;
-  static const double matchWidthFraction = 0.98;
-  static const double matchHeightFraction = 0.90;
+  static const double matchWidthFraction = 0.94;
+  static const double matchHeightFraction = 0.88;
   double s = 1, ox = 0, oy = 0;
   Size size = Size.zero;
 

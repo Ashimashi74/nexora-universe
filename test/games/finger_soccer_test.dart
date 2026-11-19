@@ -71,7 +71,9 @@ void main() {
     expect(matchHeight, greaterThan(800 * 0.70));
     expect(kBmPlayerVisualScale, 0.78);
     expect(kBmBallVisualScale, 0.78);
-    expect(kBmGoalArtScale, 0.68);
+    expect(BmView.matchWidthFraction, 0.94);
+    expect(BmView.matchHeightFraction, 0.88);
+    expect(kBmGoalArtScale, 0.82);
     expect(e.bodies.first.r, discPhysicsRadius);
     expect(e.ball!.r, ballPhysicsRadius);
   });
