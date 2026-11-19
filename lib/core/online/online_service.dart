@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../backend/backend_gateway.dart';
@@ -191,6 +192,10 @@ class OnlineService extends ChangeNotifier {
       if (m.contains('password')) return 'weak_password';
       return e.message;
     }
+    if (e is FunctionException) {
+      if (e.status == 429) return 'rate_limit';
+      if (e.status == 400 || e.status == 401) return 'invalid_login';
+    }
     final String s = '$e';
     if (s.contains('SocketException') || s.contains('Failed host lookup') || s.contains('ClientException') ||
         s.contains('TimeoutException')) {
@@ -248,6 +253,100 @@ class OnlineService extends ChangeNotifier {
       isUsernameLogin(id) ? '${id.trim().toLowerCase()}@$internalDomain' : id.trim();
   static String loginPassword(String id, String password) => isUsernameLogin(id) ? 'nx#$password' : password;
   bool get isInternalAccount => (email ?? '').endsWith('@$internalDomain');
+
+  // ------------------------------------------------------------------ username + password accounts
+  /// Usernames: 3-20 of a-z 0-9 _ . (lower case; what nx-login and the profiles constraint accept).
+  static final RegExp usernamePattern = RegExp(r'^[a-z0-9_.]{3,20}$');
+  static String normalizeUsername(String u) => u.trim().toLowerCase();
+  static bool isValidUsername(String u) => usernamePattern.hasMatch(normalizeUsername(u));
+  static const int minPasswordLength = 8;
+  static const String _kLastUsername = 'nx.auth.lastUsername';
+
+  /// The last username (or e-mail) that signed in on this phone; kept after sign-out to pre-fill the login form.
+  static Future<String?> lastUsername() async {
+    try {
+      return (await SharedPreferences.getInstance()).getString(_kLastUsername);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> _rememberUsername(String id) async {
+    try {
+      await (await SharedPreferences.getInstance()).setString(_kLastUsername, id.trim());
+    } catch (_) {}
+  }
+
+  /// Whether [username] is free (never reveals who owns a taken name). Null = server not reachable.
+  Future<bool?> isUsernameFree(String username) async {
+    final SupabaseClient? c = client;
+    if (c == null) return null;
+    try {
+      final dynamic r = await c.rpc('nx_username_available', params: <String, dynamic>{'p_username': normalizeUsername(username)});
+      return r == true;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// New account with a username and password; the e-mail is optional (only for recovery, never shown to others).
+  /// No codes: the session starts right away and persists on the phone until sign-out.
+  Future<bool> signUpUsername(String username, String password, {String? email}) async {
+    final String u = normalizeUsername(username);
+    final String? mail = (email ?? '').trim().isEmpty ? null : email!.trim();
+    if (!usernamePattern.hasMatch(u)) {
+      lastError = 'bad_username';
+      notifyListeners();
+      return false;
+    }
+    if (password.length < minPasswordLength) {
+      lastError = 'weak_password';
+      notifyListeners();
+      return false;
+    }
+    final bool? free = await isUsernameFree(u);
+    if (free == false) {
+      lastError = 'username_taken';
+      notifyListeners();
+      return false;
+    }
+    final bool? ok = await _run<bool>((SupabaseClient c) async {
+      final AuthResponse r = await c.auth.signUp(
+        email: mail ?? '$u@$internalDomain',
+        password: mail == null ? 'nx#$password' : password,
+        data: <String, dynamic>{'username': u},
+      );
+      if (r.session == null) {
+        // Projects that require e-mail confirmation return no session; sign in right away instead.
+        await c.auth.signInWithPassword(email: mail ?? '$u@$internalDomain', password: mail == null ? 'nx#$password' : password);
+      }
+      return true;
+    });
+    if (ok == true) await _rememberUsername(u);
+    return ok ?? false;
+  }
+
+  /// Login with a username or an e-mail plus password. Usernames go through the nx-login Edge Function, which finds the
+  /// account server-side (internal username account, or the e-mail account owning that username) without ever
+  /// sending an e-mail address to the phone.
+  Future<bool> signInIdentifier(String identifier, String password) async {
+    final String id = identifier.trim();
+    final bool? ok = await _run<bool>((SupabaseClient c) async {
+      if (id.contains('@')) {
+        await c.auth.signInWithPassword(email: id, password: password);
+        return true;
+      }
+      final FunctionResponse r = await c.functions
+          .invoke('nx-login', body: <String, dynamic>{'username': normalizeUsername(id), 'password': password});
+      final dynamic d = r.data;
+      final String? refresh = d is Map ? d['refresh_token'] as String? : null;
+      if (refresh == null) throw const AuthException('Invalid login credentials', code: 'invalid_credentials');
+      await c.auth.setSession(refresh);
+      return true;
+    });
+    if (ok == true) await _rememberUsername(id);
+    return ok ?? false;
+  }
 
   Future<bool> signInEmail(String email, String password) async {
     final bool? ok = await _run<bool>((SupabaseClient c) async {

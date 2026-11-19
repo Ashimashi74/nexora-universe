@@ -172,7 +172,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
         );
         if (sure != true) return;
       }
-      ok = await o.signInEmail(e, p);
+      ok = await o.signInIdentifier(e, p);
     } else {
       ok = await o.registerEmail(e, p,
           username: ref.read(profileProvider).username);

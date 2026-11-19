@@ -31,4 +31,15 @@ void main() {
       expect(OnlineService.isSixDigitEmailOtp('12a456'), isFalse);
     });
   });
+
+  test('username sign-up rules match nx-login and the profiles constraint', () {
+    expect(OnlineService.isValidUsername('ashkan_74'), isTrue);
+    expect(OnlineService.isValidUsername('  Ash.Kan '), isTrue);
+    expect(OnlineService.normalizeUsername('  Ash.Kan '), 'ash.kan');
+    expect(OnlineService.isValidUsername('ab'), isFalse);
+    expect(OnlineService.isValidUsername('a' * 21), isFalse);
+    expect(OnlineService.isValidUsername('bad name'), isFalse);
+    expect(OnlineService.isValidUsername('علی'), isFalse);
+    expect(OnlineService.minPasswordLength, 8);
+  });
 }
