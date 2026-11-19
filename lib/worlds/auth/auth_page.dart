@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/ui2/anix_brand.dart';
 import '../../core/online/cloud_profile_sync.dart';
 import '../../core/online/online_service.dart';
 import '../../core/profile/profile_service.dart';
@@ -164,9 +165,9 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    const OracleAvatar(pose: 'hero_wave', size: 128),
-                    const SizedBox(height: 12),
-                    Text(context.tx('ورود به NEXORA', 'Sign in to NEXORA'), textAlign: TextAlign.center,
+                    const AnixLogo(height: 118),
+                    const SizedBox(height: 14),
+                    Text(context.tx('ورود به ANIX', 'Sign in to ANIX'), textAlign: TextAlign.center,
                         style: TextStyle(color: visual.text, fontSize: 28, fontWeight: FontWeight.w900)),
                     const SizedBox(height: 8),
                     Text(context.tx('ابتدا ایمیل واقعی‌ات را تأیید کن؛ سپس وارد حساب می‌شوی.',

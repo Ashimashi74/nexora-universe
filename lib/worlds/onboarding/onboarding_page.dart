@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/ui2/anix_brand.dart';
 import '../../core/assets/app_assets.dart';
 import '../../core/online/cloud_profile_sync.dart';
 import '../../core/profile/profile_service.dart';
@@ -90,8 +91,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             constraints: BoxConstraints(minHeight: constraints.maxHeight),
             child: Column(
               children: [
-                const SizedBox(height: NxSpace.lg),
-                const OracleAvatar(pose: 'hero_wave', size: 200),
+                const SizedBox(height: NxSpace.md),
+                const AnixLogo(height: 96),
+                const SizedBox(height: NxSpace.sm),
+                const OracleAvatar(pose: 'hero_wave', size: 170),
                 const SizedBox(height: NxSpace.lg),
                 Text(
                     context.tx('سلام اکتشافگر! من ORACLE هستم.',
@@ -167,8 +170,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                 color: visual.text)),
         const SizedBox(height: 6),
         Text(
-          context.tx('این هویت در همه‌ی دنیاهای NEXORA با تو است.',
-              'This identity follows you across every NEXORA world.'),
+          context.tx('این هویت در همه‌ی دنیاهای ANIX با تو است.',
+              'This identity follows you across every ANIX world.'),
           style: TextStyle(color: visual.muted, height: 1.45),
         ),
         const SizedBox(height: NxSpace.lg),
@@ -245,10 +248,10 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                 context.tx(
                     ref.read(settingsProvider).authMode == 'guest'
                         ? 'حالت مهمان فقط آفلاین است؛ پیشرفت و هویت روی همین دستگاه می‌ماند و به سرور وصل نمی‌شود.'
-                        : 'ایمیل تو تأیید شده و هویتت به حساب آنلاین NEXORA متصل می‌شود.',
+                        : 'ایمیل تو تأیید شده و هویتت به حساب آنلاین ANIX متصل می‌شود.',
                     ref.read(settingsProvider).authMode == 'guest'
                         ? 'Guest mode is offline-only. Your identity and progress stay on this device and never connect to the server.'
-                        : 'Your email is verified and your identity will be connected to your NEXORA account.'),
+                        : 'Your email is verified and your identity will be connected to your ANIX account.'),
                 style: const TextStyle(fontSize: 13),
               ),
             ),
@@ -258,7 +261,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
         FilledButton.icon(
           onPressed: _finish,
           icon: const Icon(Icons.rocket_launch_rounded),
-          label: Text(context.tx('ورود به NEXORA', 'Enter NEXORA')),
+          label: Text(context.tx('ورود به ANIX', 'Enter ANIX')),
         ),
       ],
     );

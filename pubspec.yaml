@@ -1,5 +1,5 @@
 name: nexora
-description: NEXORA — a connected cosmic digital universe (offline-first full pack).
+description: ANIX — a connected cosmic games + social universe.
 publish_to: none
 version: 1.0.0+1
 
@@ -75,9 +75,6 @@ flutter:
     - assets/games/finger_soccer/pucks/iso/
     - assets/games/finger_soccer/pucks/thumb/
     - assets/games/finger_soccer/pucks/top/
-    - assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/iso/
-    - assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/thumb/
-    - assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/top/
     - assets/games/shared/discs/
     - assets/games/kart_racing/
     - assets/games/obstacle_race/

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../ui2/anix_brand.dart';
 import '../profile/profile_service.dart';
 import '../settings/app_settings.dart';
 import '../theme/nx_theme.dart';
@@ -26,7 +27,7 @@ class NexoraMenuDestination {
   }) {
     final world = worldById(id);
     if (world == null) {
-      throw ArgumentError.value(id, 'id', 'Unknown NEXORA world');
+      throw ArgumentError.value(id, 'id', 'Unknown ANIX world');
     }
     return NexoraMenuDestination(
       path: path ?? '/world/${world.id}',
@@ -76,8 +77,8 @@ final List<NexoraMenuSection> kNexoraMenuSections = <NexoraMenuSection>[
     destinations: <NexoraMenuDestination>[
       const NexoraMenuDestination(
         path: '/hub',
-        titleFa: 'هاب نکسورا',
-        titleEn: 'NEXORA HUB',
+        titleFa: 'هاب انیکس',
+        titleEn: 'ANIX HUB',
         descriptionFa: 'بازگشت به مرکز جهان‌ها',
         descriptionEn: 'Return to the worlds hub',
         icon: Icons.home_rounded,
@@ -202,24 +203,13 @@ class _NexoraMenuSheet extends ConsumerWidget {
           children: <Widget>[
             Row(
               children: <Widget>[
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: <Color>[visual.accent, visual.accentSecondary],
-                    ),
-                  ),
-                  child: Icon(Icons.blur_circular_rounded,
-                      color: visual.background, size: 25),
-                ),
+                const AnixLogo(height: 42, markOnly: true),
                 const SizedBox(width: 11),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Text('NEXORA',
+                      Text('ANIX',
                           style: TextStyle(
                             color: visual.text,
                             fontWeight: FontWeight.w900,

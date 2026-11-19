@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/media/banner.png" alt="NEXORA" width="100%"/>
+  <img src="docs/media/banner.png" alt="ANIX" width="100%"/>
 </p>
 
 <p align="center">
@@ -8,8 +8,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ashkanshams-dev/Nexora-Online/releases"><img alt="Download APK" src="https://img.shields.io/badge/Download-APK-ff3cac?style=for-the-badge&logo=android&logoColor=white"/></a>
-  <a href="https://github.com/ashkanshams-dev/Nexora-Online/actions/workflows/android.yml"><img alt="Android build" src="https://github.com/ashkanshams-dev/Nexora-Online/actions/workflows/android.yml/badge.svg?branch=redesign"/></a>
+  <a href="https://github.com/ashkanshams-dev/Nexora-Online-Redesign/releases"><img alt="Download APK" src="https://img.shields.io/badge/Download-APK-ff3cac?style=for-the-badge&logo=android&logoColor=white"/></a>
+  <a href="https://github.com/ashkanshams-dev/Nexora-Online-Redesign/actions/workflows/android.yml"><img alt="Android build" src="https://github.com/ashkanshams-dev/Nexora-Online-Redesign/actions/workflows/android.yml/badge.svg?branch=anix-release"/></a>
   <img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.50-02569B?logo=flutter&logoColor=white"/>
   <img alt="Supabase" src="https://img.shields.io/badge/Supabase-Postgres%20%7C%20Realtime%20%7C%20Edge-3ECF8E?logo=supabase&logoColor=white"/>
   <img alt="LiveKit" src="https://img.shields.io/badge/LiveKit-voice%20%26%20video-7B61FF"/>
@@ -21,15 +21,15 @@
 
 ## 📥 Download
 
-Grab the newest **`NEXORA-redesign-universal.apk`** from **[Releases](https://github.com/ashkanshams-dev/Nexora-Online/releases)** (look for the `redesign-*` tags; `arm64-v8a` is smaller and fits most phones).
+Grab the newest **`ANIX-universal.apk`** from **[Releases](https://github.com/ashkanshams-dev/Nexora-Online-Redesign/releases)** (look for the `anix-*` tags; `ANIX-arm64-v8a.apk` is smaller and fits most phones).
 
 1. Download the APK on your phone.
 2. Allow *Install unknown apps* for your browser / file manager when Android asks.
-3. Install and open. Later builds update in place, and the app tells you when a new `redesign-*` build is out.
+3. Install and open. Later builds update in place, and the app tells you when a new `anix-*` build is out.
 
 <div dir="rtl">
 
-**فارسی:** آخرین فایل `NEXORA-redesign-universal.apk` را از بخش [Releases](https://github.com/ashkanshams-dev/Nexora-Online/releases) دانلود و نصب کن. اپ خودش نسخه‌های جدید را خبر می‌دهد.
+**فارسی:** آخرین فایل `ANIX-universal.apk` را از بخش [Releases](https://github.com/ashkanshams-dev/Nexora-Online-Redesign/releases) دانلود و نصب کن. اپ خودش نسخه‌های جدید را خبر می‌دهد.
 
 </div>
 
@@ -86,8 +86,8 @@ No other servers — game state, tournaments and economy are server-authoritativ
 ## 🛠️ Build from source
 
 ```bash
-git clone -b redesign https://github.com/ashkanshams-dev/Nexora-Online.git
-cd Nexora-Online
+git clone -b anix-release https://github.com/ashkanshams-dev/Nexora-Online-Redesign.git
+cd Nexora-Online-Redesign
 flutter create --platforms=android --org com.nexora --project-name nexora .   # generates android/ (CI does the same)
 flutter pub get
 flutter analyze && flutter test
@@ -119,7 +119,7 @@ docs/                  progress, decisions, online setup, release notes
 
 ## 📜 Notes
 
-- The React Native NEXORA app lives on `main`; this Flutter redesign lives on `redesign` and never marks its releases as "latest".
+- ANIX is built from the `anix-release` branch; CI publishes `anix-<build>` prereleases (never "latest"). The Android package id stays `com.nexora.nexora` so new builds install over existing ones signed with the same key.
 - Licensed national pucks/logos are never used — only original skins. "NX Cards" is an UNO-style game, not affiliated with UNO.
 
 <p align="center"><sub>Made with 💜 for the گل‌کوچیک crew · جاااااااااان!</sub></p>

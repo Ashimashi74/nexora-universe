@@ -9,7 +9,7 @@ import 'package:path_provider/path_provider.dart';
 
 /// In-app updater for THIS app only (Flutter redesign line).
 ///
-/// Reads releases of ashkanshams-dev/Nexora-Online and keeps only tags `redesign-<n>` (prerelease or full release)
+/// Reads releases of ashkanshams-dev/Nexora-Online-Redesign and keeps only tags `anix-<n>` (prerelease or full release)
 /// whose notes carry `vc=<versionCode>`. The React Native app's "latest" release is never read.
 /// The current versionCode is injected by CI (`--dart-define=APP_VC=<run number>`, same value as
 /// `--build-number`).
@@ -27,9 +27,9 @@ class AppUpdater extends ChangeNotifier {
   static final AppUpdater instance = AppUpdater._();
 
   static const int currentVc = int.fromEnvironment('APP_VC', defaultValue: 0);
-  static const String repo = 'ashkanshams-dev/Nexora-Online';
-  static const String tagPrefix = 'redesign-';
-  static const String apkName = 'NEXORA-redesign-universal.apk';
+  static const String repo = 'ashkanshams-dev/Nexora-Online-Redesign';
+  static const String tagPrefix = 'anix-';
+  static const String apkName = 'ANIX-universal.apk';
   static const MethodChannel _ch = MethodChannel('nexora/updater');
 
   AppRelease? available;
@@ -59,7 +59,7 @@ class AppUpdater extends ChangeNotifier {
       .replaceAll(RegExp(r'\n{3,}'), '\n\n')
       .trim();
 
-  /// Picks the highest versionCode among this app's `redesign-*` releases (prerelease or full release; drafts skipped).
+  /// Picks the highest versionCode among this app's `anix-*` releases (prerelease or full release; drafts skipped).
   @visibleForTesting
   static AppRelease? pickBest(List<dynamic> releases, int current) {
     AppRelease? best;
@@ -96,7 +96,7 @@ class AppUpdater extends ChangeNotifier {
       final HttpClient c = HttpClient()..connectionTimeout = const Duration(seconds: 12);
       final HttpClientRequest rq = await c.getUrl(Uri.parse('https://api.github.com/repos/$repo/releases?per_page=40'));
       rq.headers.set('Accept', 'application/vnd.github+json');
-      rq.headers.set('User-Agent', 'nexora-app');
+      rq.headers.set('User-Agent', 'anix-app');
       final HttpClientResponse rs = await rq.close().timeout(const Duration(seconds: 20));
       if (rs.statusCode != 200) return;
       final String txt = await rs.transform(utf8.decoder).join();
@@ -133,7 +133,7 @@ class AppUpdater extends ChangeNotifier {
       final File f = File('${upd.path}/nexora-${r.vc}.apk');
       final HttpClient c = HttpClient();
       final HttpClientRequest rq = await c.getUrl(Uri.parse(r.apkUrl));
-      rq.headers.set('User-Agent', 'nexora-app');
+      rq.headers.set('User-Agent', 'anix-app');
       final HttpClientResponse rs = await rq.close();
       if (rs.statusCode != 200) throw Exception('HTTP ${rs.statusCode}');
       final int total = rs.contentLength > 0 ? rs.contentLength : r.size;

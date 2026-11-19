@@ -9,8 +9,8 @@ void main() {
 
   group('NovaText', () {
     test('parses hashtags and mentions, ignoring e-mail style symbols', () {
-      const text = 'Hello #NEXORA and #بازی_شب mail@host.com @Ali.';
-      expect(NovaText.hashtags(text), <String>{'nexora', 'بازی_شب'});
+      const text = 'Hello #ANIX and #بازی_شب mail@host.com @Ali.';
+      expect(NovaText.hashtags(text), <String>{'anix', 'بازی_شب'});
       expect(NovaText.mentions(text), <String>{'ali'});
       final joined = NovaText.parse(text).map((NovaToken t) => t.display).join();
       expect(joined, text);

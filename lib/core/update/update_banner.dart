@@ -39,7 +39,7 @@ class UpdateOverlay extends StatelessWidget {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        fa ? 'نسخه جدید NEXORA آماده است (${r.vc})' : 'New NEXORA update available (${r.vc})',
+                        fa ? 'نسخه جدید ANIX آماده است (${r.vc})' : 'New ANIX update available (${r.vc})',
                         style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
                       ),
                     ),
@@ -70,7 +70,7 @@ class UpdateOverlay extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
                         u.error == 'perm'
-                            ? (fa ? 'اجازه نصب از این برنامه را بدهید و دوباره بزنید.' : 'Allow installs from NEXORA, then tap Update again.')
+                            ? (fa ? 'اجازه نصب از این برنامه را بدهید و دوباره بزنید.' : 'Allow installs from ANIX, then tap Update again.')
                             : (fa ? 'دانلود ناموفق بود؛ دوباره تلاش کنید.' : 'Download failed, tap Update to retry.'),
                         style: const TextStyle(color: Color(0xFFFFB86B), fontSize: 12),
                       ),

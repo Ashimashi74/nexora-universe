@@ -7,6 +7,8 @@ import '../../core/settings/app_settings.dart';
 import '../../core/storage/local_store.dart';
 import '../../core/theme/nx_theme.dart';
 import '../../core/widgets/nx_widgets.dart';
+import '../../core/ui2/anix_brand.dart';
+import '../../core/update/app_updater.dart';
 import '../../core/online/online_service.dart';
 import '../oracle_core/persona/oracle_tour.dart';
 import '../../features/admin/admin_access.dart';
@@ -211,10 +213,29 @@ class SettingsPage extends ConsumerWidget {
               ),
             ]),
           ),
+          _section(context, context.tx('درباره‌ی ANIX', 'About ANIX')),
+          GlassPanel(
+            key: const ValueKey<String>('about_anix'),
+            child: Column(children: <Widget>[
+              const AnixLogo(height: 92),
+              const SizedBox(height: NxSpace.sm),
+              Text(
+                  AppUpdater.currentVc > 0
+                      ? context.tx('نسخه‌ی ۱.۱ · بیلد ${AppUpdater.currentVc}', 'Version 1.1 · build ${AppUpdater.currentVc}')
+                      : context.tx('نسخه‌ی توسعه', 'Development build'),
+                  style: TextStyle(color: visual.muted, fontSize: 12, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 6),
+              Text(
+                  context.tx('بازی‌های آنلاین، چت و تماس، پست و استوری، تورنمنت‌ها و ORACLE — همه در ANIX.',
+                      'Online games, chat & calls, posts & stories, tournaments and ORACLE — all in ANIX.'),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: visual.text, fontSize: 12.5, height: 1.4)),
+            ]),
+          ),
           const SizedBox(height: NxSpace.xl),
           Center(
             child: Text(
-                'NEXORA · YOUR UNIVERSE. YOUR IDENTITY. YOUR EXPERIENCE.',
+                'ANIX · YOUR UNIVERSE. YOUR IDENTITY. YOUR EXPERIENCE.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     color: NxColors.textDim.withValues(alpha: 0.6),

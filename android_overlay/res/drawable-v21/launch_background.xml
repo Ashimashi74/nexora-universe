@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- ANIX launch screen (pre-Android 12): midnight navy with the ANIX logo centred. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/anix_splash_bg" />
+    <item>
+        <bitmap android:gravity="center" android:src="@drawable/anix_splash_logo" />
+    </item>
+</layer-list>
