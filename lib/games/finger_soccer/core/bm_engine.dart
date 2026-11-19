@@ -14,13 +14,16 @@ import 'bm_data.dart';
 // tiny. Disc diameter is now 150 world units, about 1/6 of the playing width (880-945 on every pitch) like a real
 // table set; the ball is half the disc diameter. The goal sprite grows with them (kBmGoalArtScale) so the mouth stays
 // about 2.7 discs wide, and the view fits the whole world to any phone (BmView.layout).
-const double K = 1.27, PR = 75.0, BR = 37.5, STEP = 1 / 240, LMAX = 320;
+// Reference proportions (owner request 2026-11-20, measured on his reference screenshot, pitch 620 px wide): disc
+// ~75 px = 0.12 of the playing width, ball ~35 px = 0.056, goal mouth ~213 px = 0.34. On the 880-unit default pitch
+// that is a 106-unit disc, a 50-unit ball and a 300-unit mouth.
+const double K = 1.27, PR = 53.0, BR = 25.0, STEP = 1 / 240, LMAX = 320;
 /// Ball spin / curve keeps the original tuning radius so the bigger collider does not change curl after bounces.
 const double SPIN_R = 28.8;
 /// Visual scale of the goal sprite (assets/games/bermuda/goals/white.webp, the only goal art): drawn at full size so
 /// the mouth (inner width between the two side tubes) is about three discs wide. Posts, side nets and back net are
 /// built from the drawn sprite.
-const double kBmGoalArtScale = 1.2;
+const double kBmGoalArtScale = 0.92; // mouth = 0.34 of the playing width (reference)
 const int NB = 4;
 /// Weighty pieces (owner request 2026-11): discs are heavy (mass 8) and the ball lighter (2.6) but not a ping-pong
 /// ball. BKICK keeps a disc striking the ball launching it 5% harder than plain elastic transfer.

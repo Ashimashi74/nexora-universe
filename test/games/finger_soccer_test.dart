@@ -44,8 +44,8 @@ BmConfig _cfg({bool mirror = false, String mode = 'bot'}) => BmConfig(
 void main() {
   test('constants, fields and the art-measured goal geometry', () {
     expect(K, 1.27);
-    expect(PR, 75.0); // finger-soccer proportions: disc diameter ~1/6 of the playing width
-    expect(BR / PR, closeTo(.5, .01)); // ball = half the disc diameter
+    expect(PR, 53.0); // reference proportions: disc diameter ~0.12 of the playing width
+    expect(BR / PR, closeTo(.47, .01)); // reference: ball ~0.47 of the disc diameter
     // reference-calibrated felt friction: small constant part, strong speed drag, short launch glide
     expect(PF2, closeTo(5.0, 1e-9));
     expect(PF1 * K / 2.88, closeTo(123, 1));

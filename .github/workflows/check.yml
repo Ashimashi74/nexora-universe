@@ -30,3 +30,16 @@ jobs:
           grep -E "\[E\]|Error:|error:|Expected:|Actual:|FAILED|Some tests failed|All tests passed|Failed to load" test.txt | head -300
           echo "=====TEST-END====="
           exit 0
+      - name: Render finger soccer preview
+        run: |
+          set +e
+          mkdir -p shots
+          flutter test test_render/finger_soccer_render_test.dart --dart-define=SHOTS=$PWD/shots > render.txt 2>&1
+          tail -20 render.txt
+          ls -la shots
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: render-shots
+          path: shots
+          if-no-files-found: ignore

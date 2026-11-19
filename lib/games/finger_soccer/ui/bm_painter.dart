@@ -53,7 +53,7 @@ class BmView {
   /// as one unit instead of moving only the goal artwork.
   static const double topHudClearance = 20;
   static const double matchWidthFraction = 0.94;
-  static const double matchHeightFraction = 0.88;
+  static const double matchHeightFraction = 0.98; // pitch fills the phone width like the reference
   double s = 1, ox = 0, oy = 0;
   Size size = Size.zero;
 
@@ -69,7 +69,7 @@ class BmView {
     final double H = fullH - top - insetBottom;
     if (W < 50 || H < 50) return;
     final double worldWidth = f.R - f.L + 56 * FS;
-    final double worldHeight = (f.B - f.T) + 2 * e.goalVisualDepth + 48;
+    final double worldHeight = (f.B - f.T) + 2 * e.goalVisualDepth + 20;
     s = math.min(W * matchWidthFraction / worldWidth, H * matchHeightFraction / worldHeight);
     ox = W / 2 - e.CX * s;
     // Keep the scoreboard clear of the top goal while preserving the same
