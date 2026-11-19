@@ -1,6 +1,7 @@
 // ignore_for_file: constant_identifier_names, non_constant_identifier_names
 // BERMUDA NXG disc-football engine: a 1:1 port of www/js/game.js (physics, rules, turn flow, AI, fx state).
-// Every constant and formula below is copied verbatim from the JS. Do NOT retune.
+// Formulas follow the JS; the friction / launch / restitution constants are calibrated on the owner's reference
+// recording (2026-11-20, see the comments on each constant). Retune only from new measurements.
 // World = the field image's own pixel space scaled by FS (see geo()).
 import 'dart:math' as math;
 
@@ -32,14 +33,26 @@ const double BKICK = 1.05;
 /// friction is ~60% higher (PF1 520 -> 840, PF2 1.1 -> 1.9) so a disc glides ~40% less, disc<->disc and rail bounces
 /// are deader, and a slow disc snaps to rest sooner (kBmDiscStop). Launch speed (fire) is untouched, so shot power
 /// and the ball's speed off a strike are exactly as before.
-const double HV = 4, PF1 = 840, PF2 = 1.9, PV0 = 600, EPP = .22, PCAP = 190;
+/// Reference calibration (2026-11-20, measured frame by frame on the owner's reference finger-soccer recording, 15 fps,
+/// pitch 325 px wide => 1 px = 2.88 world units): after the launch glide (boost, unchanged .35 x friction for .22 s,
+/// the recording shows ~0.2 s at almost constant speed) a disc slows by 123 px/s^2 + 5.1/s * v (joint fit of 5 shots;
+/// a power-2 shot glides ~200 px and stops in ~0.8 s, simulated 202 px / 0.79 s). PF1 = 123 px/s^2 * 2.88 / K,
+/// PV0 = the 80 px/s ramp.
+const double HV = 4, PF1 = 280, PF2 = 5.0, PV0 = 181, EPP = .22, PCAP = 190;
 /// Wall / post restitution of a disc (a heavy wooden puck loses most of its speed into the rail).
-const double kBmDiscWallE = .38;
+const double kBmDiscWallE = .48; // reference: .45 - .5 normal restitution off the rail
 /// Below this speed (world units/s, times K) a sliding disc stops dead instead of creeping.
-const double kBmDiscStop = 16;
+const double kBmDiscStop = 30; // reference discs stop dead below ~13 px/s
 
 /// Largest aim error (radians, one side) at accuracy 1; accuracy 10 shoots exactly where the player aims.
 const double kBmMaxAimError = 0.11;
+
+/// Launch scale: a full pull at power 10 leaves at ~1720 px/s on the reference (= 4950 world/s).
+const double kBmLaunch = 1.87;
+/// Ball rolling friction: constant part (world/s^2 / K) and linear drag (1/s), see sim().
+const double kBmBallF0 = 23, kBmBallDrag = 1.08;
+/// Speed caps (world/s / K): the reference ball leaves a hard strike at up to ~1725 px/s (4970 world/s).
+const double kBmBallVMax = 4000, kBmDiscVMax = 4200;
 
 /// Field size factor (game.js line 12).
 const double FS = 1.12 * 1.215;
@@ -438,7 +451,7 @@ class BmEngine {
   double _clock = 0;
   void _later(double sec, void Function() f) => _timers.add(MapEntry<double, void Function()>(_clock + sec, f));
 
-  double _eN(bool bl, double vn) => bl ? .74 - .18 * _mn(1, _mx(0, (vn - 270 * K) / (1350 * K))) : kBmDiscWallE;
+  double _eN(bool bl, double vn) => bl ? .72 - .1 * _mn(1, _mx(0, (vn - 270 * K) / (1350 * K))) : kBmDiscWallE;
 
   void walls(BmBody b) {
     final bool bl = b == ball;
@@ -687,13 +700,14 @@ class BmEngine {
       final bool bl = b == bal;
       if (sp > 0) {
         if (bl) {
-          final double f = 570 * K * _mn(1, sp / (480 * K)) + sp * .1, ns = sp - f * dt;
+          // Reference: the ball rolls with ~1.08/s linear drag + ~13 px/s^2 (global fit over 14 free rolls, rms 3.8 px).
+          final double f = kBmBallF0 * K * _mn(1, sp / (300 * K)) + sp * kBmBallDrag, ns = sp - f * dt;
           if (ns < 12 * K) {
             b.vx = 0;
             b.vy = 0;
           } else {
             final double m = _mx(-34, _mn(34, b.spin)) * .034 * dt, cs = math.cos(m), sn = math.sin(m);
-            final double vx = b.vx * cs - b.vy * sn, vy = b.vx * sn + b.vy * cs, k = _mn(ns, 2500 * K) / sp;
+            final double vx = b.vx * cs - b.vy * sn, vy = b.vx * sn + b.vy * cs, k = _mn(ns, kBmBallVMax * K) / sp;
             b.vx = vx * k;
             b.vy = vy * k;
           }
@@ -705,7 +719,7 @@ class BmEngine {
             b.vx = 0;
             b.vy = 0;
           } else {
-            final double k = _mn(ns, 2800 * K) / sp;
+            final double k = _mn(ns, kBmDiscVMax * K) / sp;
             b.vx *= k;
             b.vy *= k;
           }
@@ -831,7 +845,8 @@ class BmEngine {
   }
 
   /// Shot multiplier of a power rating (unchanged ANIX tuning): 1 => 0.65x, 5 => 1.05x, 7 => 1.25x, 10 => 1.55x.
-  static double strikeOf(int power) => .55 + power.clamp(1, 10) * .1;
+  /// Reference calibration: a power-2 side launches at ~0.40x the speed of a power-10 side (700 vs 1720 px/s).
+  static double strikeOf(int power) => .39 + power.clamp(1, 10) * .116;
 
   /// Aim error (radians) of an accuracy rating for a uniform sample u in [-1, 1].
   static double aimErrorOf(int accuracy, double u) => (10 - accuracy.clamp(1, 10)) / 9 * kBmMaxAimError * u;
@@ -841,7 +856,7 @@ class BmEngine {
     // Team stats are physical, applied before launch: power scales the impulse, accuracy bends the aimed direction by
     // a random error (triangular, so most shots stay near the aim). Online the resulting velocity is what is sent, so
     // both phones replay the same shot.
-    final double v = (260 + 1085 * math.pow(p, .8).toDouble()) * K * 1.32 * strikeOf(b.power);
+    final double v = (260 + 1085 * math.pow(p, .8).toDouble()) * K * kBmLaunch * strikeOf(b.power);
     final double err = aimErrorOf(b.accuracy, R_() - R_()), ca = math.cos(err), sa = math.sin(err);
     final double ux = dx / l, uy = dy / l;
     final double vx = (ux * ca - uy * sa) * v, vy = (ux * sa + uy * ca) * v;
