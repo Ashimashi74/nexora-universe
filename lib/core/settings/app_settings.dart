@@ -24,6 +24,9 @@ class AppSettings extends ChangeNotifier {
       (e) => e.name == _store.getString(_kAppearance),
       orElse: () => NxAppearanceMode.dark,
     );
+    if (_appearanceMode == NxAppearanceMode.light) {
+      _visualTheme = NxVisualTheme.gold;
+    }
     _music = _store.getBool(_kMusic) ?? true;
     _musicVolume = (_store.getInt(_kMusicVol) ?? 60).clamp(0, 100) / 100.0;
     _sound = _store.getBool(_kSound) ?? true;
@@ -165,6 +168,7 @@ class AppSettings extends ChangeNotifier {
   set appearanceMode(NxAppearanceMode v) {
     if (_appearanceMode == v) return;
     _appearanceMode = v;
+    if (v == NxAppearanceMode.light) _visualTheme = NxVisualTheme.gold;
     _store.setString(_kAppearance, v.name);
     notifyListeners();
   }

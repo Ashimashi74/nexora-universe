@@ -17,7 +17,7 @@ class _Hit {
 /// Global search across worlds, games and features (STEP_12).
 class HubSearchDelegate extends SearchDelegate<void> {
   HubSearchDelegate({required this.isFa})
-      : super(searchFieldLabel: isFa ? 'جستجو…' : 'Search…');
+      : super(searchFieldLabel: isFa ? 'جستجو…' : 'Global search');
   final bool isFa;
 
   List<_Hit> _all() {

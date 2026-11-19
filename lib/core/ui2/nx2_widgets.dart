@@ -9,6 +9,7 @@ import '../profile/profile_service.dart';
 import '../settings/app_settings.dart';
 import 'nx2_assets.dart';
 import '../../worlds/oracle_core/persona/oracle_tour.dart';
+import '../../worlds/hub/hub_search.dart';
 
 /// NX2 colour tokens: deep cosmic violet, neon magenta/cyan, gold for legendary.
 class Nx2 {
@@ -917,6 +918,16 @@ class Nx2TopBar extends ConsumerWidget implements PreferredSizeWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Nx2.title.copyWith(fontSize: 17)),
+          ),
+          _RoundIcon(
+            icon: Icons.search_rounded,
+            tooltip: context.tx('جستجوی سراسری', 'Open global search'),
+            onTap: () => showSearch<void>(
+              context: context,
+              delegate: HubSearchDelegate(
+                isFa: Localizations.localeOf(context).languageCode == 'fa',
+              ),
+            ),
           ),
           ...?actions,
           if (showWallet) ...<Widget>[
