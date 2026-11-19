@@ -235,7 +235,8 @@ class CloudProfileSync {
           bytes,
           fileOptions: FileOptions(contentType: mime, upsert: true),
         );
-    final String url = c.storage.from('nx-media').getPublicUrl(path);
+    // Same path on every upload (upsert keeps one photo per user); the version query makes caches fetch the new one.
+    final String url = '${c.storage.from('nx-media').getPublicUrl(path)}?v=${DateTime.now().millisecondsSinceEpoch}';
     await c.from('profiles').update(<String, dynamic>{
       'avatar_url': url,
       'avatar_path': path,

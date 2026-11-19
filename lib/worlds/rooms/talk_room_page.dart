@@ -17,6 +17,7 @@ import '../../games/finger_soccer/core/bm_data.dart';
 import '../../games/finger_soccer/core/bm_engine.dart';
 import '../../games/game_registry.dart';
 import '../arcade/online/online_match_page.dart';
+import '../nova_gallery/ui/nova_follow.dart';
 
 /// A ROOM is a conversation first: a voice stage (LiveKit, unlimited speakers and listeners), a text chat and the
 /// member list. Its manager can pick a game, tick the players, and start; picked players choose their team and
@@ -660,6 +661,7 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
         for (final RoomMember m in _members)
           ListTile(
             dense: true,
+            onTap: () => _showMember(m),
             leading: NxUserAvatar(avatar: m.avatar, name: m.name, size: 34,
                 ring: _speaking(m.userId) ? Nx2.success : (m.isManager ? Nx2.gold : null)),
             title: Text(m.name + (m.userId == _me ? context.tx(' (تو)', ' (you)') : ''),
@@ -698,6 +700,26 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
                 : null,
           ),
       ],
+    );
+  }
+
+  /// Member card: big avatar, name, follower / following counts and a follow button (shared follows table).
+  void _showMember(RoomMember m) {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Nx2.night,
+      builder: (BuildContext ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+          child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+            NxUserAvatar(avatar: m.avatar, name: m.name, size: 84, ring: m.isManager ? Nx2.gold : Nx2.violet),
+            const SizedBox(height: 8),
+            Text(m.name, style: const TextStyle(color: Nx2.text, fontSize: 18, fontWeight: FontWeight.w900)),
+            const SizedBox(height: 12),
+            NovaFollowBar(uid: m.userId, self: m.userId == _me),
+          ]),
+        ),
+      ),
     );
   }
 

@@ -286,7 +286,7 @@ class _ProfileAvatarPickerState extends ConsumerState<_ProfileAvatarPicker> {
       return;
     }
     final XFile? file = await ImagePicker().pickImage(
-        source: ImageSource.gallery, maxWidth: 1600, maxHeight: 1600, imageQuality: 85);
+        source: ImageSource.gallery, maxWidth: 720, maxHeight: 720, imageQuality: 85);
     if (file == null) return;
     setState(() => _busy = true);
     try {

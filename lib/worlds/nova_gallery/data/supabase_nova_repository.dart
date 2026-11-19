@@ -407,20 +407,18 @@ class SupabaseNovaRepository implements NovaRepository {
 
   // ------------------------------------------------------------------ follows (shared `follows` table)
   Future<({int followers, int following})> followCounts(String uid) async {
-    final List<dynamic> a = await c.from('follows').select('follower').eq('followee', uid);
-    final List<dynamic> b = await c.from('follows').select('followee').eq('follower', uid);
-    return (followers: a.length, following: b.length);
+    final int a = await c.from('follows').count(CountOption.exact).eq('followee', uid);
+    final int b = await c.from('follows').count(CountOption.exact).eq('follower', uid);
+    return (followers: a, following: b);
   }
 
   Future<bool> isFollowing(String uid) async =>
       (await c.from('follows').select('followee').eq('follower', me).eq('followee', uid)).isNotEmpty;
 
+  /// Follow / unfollow through the shared social RPC (private profiles get a follow request instead; rate-limited and
+  /// block-aware server-side, idempotent).
   Future<void> setFollow(String uid, bool on) async {
-    if (on) {
-      await c.from('follows').insert(<String, dynamic>{'follower': me, 'followee': uid});
-    } else {
-      await c.from('follows').delete().eq('follower', me).eq('followee', uid);
-    }
+    await c.rpc('nx_social_toggle_follow', params: <String, dynamic>{'p_target': uid, 'p_follow': on});
   }
 
   /// Real uid for an id coming from the UI (my explorer id maps back to my uid).
