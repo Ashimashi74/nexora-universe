@@ -2,6 +2,9 @@
 // POST { room: <nx_chats.id>, video?: boolean }  (verify_jwt = true)
 // → { url, token, room: 'nxg-call-<chat id>', identity, name, ttl }
 // Only authenticated members of that chat (nx_chat_members, read with the caller's own RLS) get a token.
+// POST { kind: 'room', room: <nx_rooms.id on the games project> } → voice token for a ROOM's stage
+// ('nxg-room-<id>'): members only (nx_room_members on the games project, read with the caller's own token);
+// manager and speakers publish audio unless the manager muted them, listeners (spectators) only subscribe.
 // Secrets (already on the project): LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET.
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { AccessToken } from "npm:livekit-server-sdk@2";
@@ -33,6 +36,31 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const room = String(body.room ?? body.room_id ?? "");
     if (!UUID.test(room)) return json({ error: "room required" }, 400);
+
+    if (body.kind === "room") {
+      const gUrl = Deno.env.get("GAMES_SUPABASE_URL") ?? "https://eyzafhrefnqlwcjpcdyg.supabase.co";
+      const gKey = Deno.env.get("GAMES_SUPABASE_ANON_KEY") ??
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5emFmaHJlZm5xbHdjanBjZHlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ4OTUzNjcsImV4cCI6MjExMDQ3MTM2N30.YfdEhbEbvbQ738snwc5C47LYx-NYRXywX66dgMEZh-M";
+      const gs = createClient(gUrl, gKey, {
+        global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
+        auth: { persistSession: false },
+      });
+      const { data: rm } = await gs.from("nx_room_members").select("role, muted").eq("room_id", room)
+        .eq("user_id", u.user.id).maybeSingle();
+      if (!rm) return json({ error: "not_member" }, 403);
+      const { data: rp } = await sb.from("profiles").select("username, avatar").eq("id", u.user.id).maybeSingle();
+      const canPub = (rm.role === "manager" || rm.role === "speaker") && !rm.muted;
+      const lk = `nxg-room-${room}`;
+      const rat = new AccessToken(key, secret, {
+        identity: u.user.id,
+        name: rp?.username ?? "Pilot",
+        ttl: "15m",
+        metadata: JSON.stringify({ avatar: rp?.avatar ?? null, role: rm.role }),
+      });
+      rat.addGrant({ room: lk, roomJoin: true, canPublish: canPub, canSubscribe: true, canPublishData: true });
+      return json({ url, token: await rat.toJwt(), room: lk, identity: u.user.id, name: rp?.username ?? "Pilot",
+        canPublish: canPub, role: rm.role, ttl: 900 });
+    }
 
     const { data: m } = await sb.from("nx_chat_members").select("role").eq("chat_id", room).eq("user_id", u.user.id).maybeSingle();
     if (!m) return json({ error: "not_member" }, 403);

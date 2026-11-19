@@ -495,7 +495,7 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
   Widget _seatPicker(BuildContext context, GameInfo game, int value,
       ValueChanged<int> onPick) {
     final int min = widget.gameId == 'mafia' ? 6 : game.minPlayers;
-    final int max = widget.gameId == 'mafia' ? 10 : game.maxPlayers;
+    final int max = widget.gameId == 'mafia' ? 12 : game.maxPlayers;
     if (max <= min) return const SizedBox.shrink();
     final NxThemeColors visual = NxThemeColors.of(context);
     return Wrap(spacing: 8, runSpacing: 8, children: <Widget>[

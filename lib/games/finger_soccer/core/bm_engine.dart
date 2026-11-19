@@ -179,7 +179,12 @@ class BmConfig {
     this.aiLvl = 1,
     this.mirror = false,
     this.first = 0,
+    this.perSide = 1,
   });
+
+  /// Players per side online (1 = 1v1, 2 = 2v2, 3 = 3v3). Seats alternate sides (0,2,4 vs 1,3,5) and each side's
+  /// players take its turns in rotation.
+  final int perSide;
   final String mode; // 'local' | 'bot' | 'online'
   final List<String> teams; // global team ids
   final List<int> form; // global formations
@@ -333,6 +338,7 @@ class BmEngine {
     ball = bl;
     bodies.add(bl);
     turn = k;
+    _turnStarted();
     phase = 'aim';
     drag = null;
     pause = 0;
@@ -758,7 +764,41 @@ class BmEngine {
     reset(ct(k));
   }
 
-  bool canCtl() => !menuOpen && phase == 'aim' && !remote && turn != ai && !(mode == 'online' && turn != 0);
+  bool canCtl() =>
+      !menuOpen &&
+      phase == 'aim' &&
+      !remote &&
+      turn != ai &&
+      !(mode == 'online' && turn != 0) &&
+      !(mode == 'online' && perSide > 1 && localSeat != null && shooterSeat(ct(turn)) != localSeat);
+
+  // ---------------------------------------------------------------- team rotation (2v2 / 3v3)
+  /// Players per side (from the config) and this phone's seat (online team games).
+  int perSide = 1;
+  int? localSeat;
+
+  /// Turns each side (global side index) has started; the shooter rotates with it.
+  final List<int> sideTurns = <int>[0, 0];
+
+  void _turnStarted() => sideTurns[ct(turn)]++;
+
+  /// Index (0..perSide-1) of the side's player whose turn it is.
+  int shooterIndex(int side) => perSide <= 1 ? 0 : (math.max(1, sideTurns[side]) - 1) % perSide;
+
+  /// Global seat of the side's current shooter (sides alternate seats: 0,2,4 / 1,3,5).
+  int shooterSeat(int side) => side + 2 * shooterIndex(side);
+
+  /// Replay only: adopt the rotation counters carried in a settled snapshot.
+  void applyRotation(Map<String, dynamic>? snap) {
+    final List<dynamic>? r = snap?['rt'] as List<dynamic>?;
+    if (r != null && r.length == 2) {
+      sideTurns[0] = (r[0] as num).toInt();
+      sideTurns[1] = (r[1] as num).toInt();
+    }
+  }
+
+  /// Replay only: a logged timeout flipped the turn without finishTurn().
+  void bumpRotation() => _turnStarted();
 
   void launch(BmBody b, double vx, double vy, bool fromRemote) {
     b.vx = vx;
@@ -797,6 +837,7 @@ class BmEngine {
 
   void finishTurn(bool emitSnap) {
     turn = 1 - turn;
+    _turnStarted();
     phase = 'aim';
     tleft = tt;
     remote = false;
@@ -823,6 +864,7 @@ class BmEngine {
       }).toList(),
       'sc': <int>[score[ct(0)], score[ct(1)]],
       'tn': ct(turn),
+      'rt': <int>[sideTurns[0], sideTurns[1]],
     };
   }
 
@@ -1203,6 +1245,9 @@ class BmEngine {
     mode = cfg.mode;
     names = List<String>.from(cfg.names);
     mirror = cfg.mirror;
+    perSide = cfg.perSide < 1 ? 1 : cfg.perSide;
+    sideTurns[0] = 0;
+    sideTurns[1] = 0;
     ai = cfg.ai ? 1 : -1;
     aiLvl = cfg.aiLvl;
     tt = cfg.turnTime;

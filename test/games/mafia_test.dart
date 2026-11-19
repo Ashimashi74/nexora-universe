@@ -230,7 +230,7 @@ void main() {
     test('complete with zero illegal actions', () {
       int games = 0;
       int townWins = 0;
-      for (int n = 6; n <= 10; n++) {
+      for (int n = 6; n <= 12; n++) {
         for (final MafiaSkill skill in MafiaSkill.values) {
           for (int seed = 1; seed <= 8; seed++) {
             final MafiaMatch m = MafiaMatch.create(
@@ -250,7 +250,7 @@ void main() {
           }
         }
       }
-      expect(games, 5 * 3 * 8);
+      expect(games, 7 * 3 * 8);
       // Both sides must be able to win.
       expect(townWins, greaterThan(0));
       expect(townWins, lessThan(games));

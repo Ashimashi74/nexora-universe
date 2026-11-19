@@ -32,6 +32,7 @@ import '../worlds/personal_orbit/personal_orbit_page.dart';
 import '../worlds/settings/account_page.dart';
 import '../worlds/settings/settings_page.dart';
 import '../worlds/rooms/rooms_page.dart';
+import '../worlds/rooms/talk_room_page.dart';
 import '../worlds/social_hub/social_hub_page.dart';
 import '../worlds/personal_orbit/rewards_page.dart';
 import '../worlds/social_station/social_station_page.dart';
@@ -104,6 +105,7 @@ GoRouter buildRouter(WidgetRef ref) {
       GoRoute(path: '/onboarding', pageBuilder: (context, state) => _fade(state, const OnboardingPage())),
       GoRoute(path: '/hub', pageBuilder: (context, state) => _fade(state, const HubPage())),
       GoRoute(path: '/rooms', pageBuilder: (context, state) => _warp(state, const RoomsPage())),
+      GoRoute(path: '/room/:id', builder: (context, state) => TalkRoomPage(roomId: state.pathParameters['id'] ?? '')),
       GoRoute(path: '/social', pageBuilder: (context, state) => _warp(state, const SocialHubPage())),
       GoRoute(path: '/rewards', pageBuilder: (context, state) => _warp(state, const RewardsPage())),
       GoRoute(path: '/settings', builder: (context, state) => const SettingsPage()),

@@ -265,7 +265,14 @@ class _BermudaViewState extends State<BermudaView>
         net?.send(<String, dynamic>{'a': 'timeout', 'seat': data['team']}, kind: 'timeout');
         break;
       case 'turn':
-        if (net != null) net.turnSeat = data['turn'] as int;
+        if (net != null) {
+          final int side = data['turn'] as int;
+          final int seat = e.shooterSeat(side);
+          net.turnSeat = seat;
+          if (e.perSide > 1 && seat < net.names.length) {
+            toast(seat == mySeat ? launch.tx('نوبت توست!', 'Your shot!') : net.names[seat], false);
+          }
+        }
         break;
       case 'end':
         final List<int> local = (data['local'] as List<dynamic>).cast<int>();
@@ -309,19 +316,51 @@ class _BermudaViewState extends State<BermudaView>
     ));
   }
 
+  /// Players per side online: seats alternate sides (0,2,4 vs 1,3,5) -> 1v1, 2v2 or 3v3.
+  int get _perSide => online ? math.max(1, (launch.net?.seatCount ?? 2) ~/ 2) : 1;
+  int get _mySide => mySeat % 2;
+
+  /// Room matches carry each picked player's pre-game choices (team / formation) and the room manager's field / ball,
+  /// so the match starts straight away without the in-game setup screen.
+  Map<String, dynamic>? get _roomPrefs {
+    final dynamic p = launch.net?.settings['room_prefs'];
+    return p is Map ? Map<String, dynamic>.from(p) : null;
+  }
+
+  _Setup? _prefSetup(int seat) {
+    final Map<String, dynamic>? rp = _roomPrefs;
+    if (rp == null) return null;
+    final Map<String, dynamic> st = launch.net!.settings;
+    final dynamic mine = rp['$seat'];
+    final Map<String, dynamic> m = mine is Map ? Map<String, dynamic>.from(mine) : <String, dynamic>{};
+    final String t = '${m['team'] ?? ''}';
+    final String team = kBmTeams.any((BmTeam x) => x.id == t) ? t : (seat == 0 ? 'club0' : 'club1');
+    int i(dynamic v, int max) => ((v as num?)?.toInt() ?? 0).clamp(0, max - 1).toInt();
+    return _Setup(team, i(m['form'], kBmForms.length), i(st['field'], kBmFields.length), i(st['ball'], NB));
+  }
+
+  /// Side name: "Ali" for 1v1, "Ali · Sara · Reza" for team games.
+  String _sideName(NetLink net, int side) => <String>[
+        for (int s = side; s < net.seatCount; s += 2)
+          if (s < net.names.length) net.names[s]
+      ].join(' · ');
+
   void _maybeStartOnline({bool quiet = false}) {
     if (stage == 'match') return;
-    final _Setup? h = _setups[0], g = _setups[1];
+    _Setup? h = _setups[0], g = _setups[1];
+    if (_roomPrefs != null) {
+      h ??= _prefSetup(0);
+      g ??= _prefSetup(1);
+    }
     if (h == null || g == null) return;
     final NetLink net = launch.net!;
+    e.localSeat = mySeat;
     _begin(
         BmConfig(
           mode: 'online',
           teams: <String>[h.team, g.team],
           form: <int>[h.form, g.form],
-          names: <String>[
-            for (int s = 0; s < 2; s++) s < net.names.length ? net.names[s] : ''
-          ],
+          names: <String>[_sideName(net, 0), _sideName(net, 1)],
           field: h.field,
           ball: h.ball,
           // Tournament rules (server-set in nx_matches.settings): first to N goals, or 3/5/7 minutes.
@@ -329,8 +368,9 @@ class _BermudaViewState extends State<BermudaView>
           limit: _goalLimit(net.settings),
           matchTime: _goalLimit(net.settings) > 0 ? 0 : _matchSeconds(net.settings),
           turnTime: kBmOnlineTurnSeconds,
-          mirror: mySeat == 1,
+          mirror: _mySide == 1,
           first: 0,
+          perSide: _perSide,
         ),
         quiet: quiet);
   }
@@ -421,14 +461,19 @@ class _BermudaViewState extends State<BermudaView>
     final List<int> sc = e.score; // local: [me, opponent]
     final bool won = !forfeit && sc[0] > sc[1];
     final bool draw = !forfeit && sc[0] == sc[1];
-    final int winnerSeat = won ? mySeat : 1 - mySeat;
+    final int winSide = won ? _mySide : 1 - _mySide;
+    final int seats = launch.net?.seatCount ?? 2;
     final List<int> global = <int>[sc[e.ct(0)], sc[e.ct(1)]];
     launch.onFinish(GameResult(
       outcome:
           draw ? GameOutcome.draw : (won ? GameOutcome.win : GameOutcome.loss),
       score: sc[0],
       opponentScore: sc[1],
-      winnerSeats: draw ? <int>[] : <int>[winnerSeat],
+      winnerSeats: draw
+          ? <int>[]
+          : <int>[
+              for (int s = winSide; s < math.max(2, seats); s += 2) s
+            ],
       scores: global,
       tournamentMatchId: launch.tournamentMatchId,
       summaryFa:
@@ -469,6 +514,8 @@ class _BermudaViewState extends State<BermudaView>
             e.remoteShot(ps);
           }
         }
+      } else if (_roomPrefs != null) {
+        _maybeStartOnline();
       } else if (_setups.containsKey(mySeat)) {
         stage = 'waiting';
       }
@@ -520,6 +567,7 @@ class _BermudaViewState extends State<BermudaView>
         final Map<String, dynamic>? snap =
             (d['snap'] as Map?)?.cast<String, dynamic>();
         e.applySnapshot(snap);
+        e.applyRotation(snap);
         final List<dynamic>? sc = snap?['sc'] as List<dynamic>?;
         if (sc != null && sc.length == 2) {
           e.score[e.ct(0)] = (sc[0] as num).toInt();
@@ -544,6 +592,7 @@ class _BermudaViewState extends State<BermudaView>
         final num? s = d['seat'] as num?;
         if (s == null || e.ct(e.turn) == s.toInt()) {
           e.turn = 1 - e.turn;
+          e.bumpRotation();
           e.phase = 'aim';
         }
         break;

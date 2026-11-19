@@ -29,7 +29,7 @@ class MafiaMatch {
 
   static const int humanId = 0;
 
-  /// [totalPlayers] is clamped to 6..10 (values below 6 default to 8).
+  /// [totalPlayers] is clamped to 6..12 (values below 6 default to 8).
   factory MafiaMatch.create({
     required String humanName,
     required bool isFa,
@@ -39,7 +39,7 @@ class MafiaMatch {
     MafiaConfig config = const MafiaConfig(),
     bool humanIsBot = false,
   }) {
-    final int n = totalPlayers < 6 ? 8 : totalPlayers.clamp(6, 10).toInt();
+    final int n = totalPlayers < 6 ? 8 : totalPlayers.clamp(6, 12).toInt();
     final Random rng = Random(seed);
     final List<BotPersona> pool = List<BotPersona>.from(kBotPersonas)..shuffle(rng);
     final Map<int, BotPersona> personas = <int, BotPersona>{};

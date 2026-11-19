@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/online/online_service.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/theme/nx_theme.dart';
+import '../../core/ui2/anix_kit.dart';
 import '../../core/ui2/nx2_widgets.dart';
 import '../../core/widgets/nx_widgets.dart';
 import '../../games/game_registry.dart';
@@ -27,6 +28,7 @@ class RoomsPage extends ConsumerStatefulWidget {
 
 class _RoomsPageState extends ConsumerState<RoomsPage> {
   List<Map<String, dynamic>> _rooms = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _talk = <Map<String, dynamic>>[];
   bool _loading = true;
   String? _error;
   Timer? _poll;
@@ -65,11 +67,17 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
           .eq('status', 'lobby')
           .eq('is_private', false)
           .eq('quick', false)
+          .eq('kind', 'game')
           .gte('updated_at', DateTime.now().toUtc().subtract(const Duration(minutes: 20)).toIso8601String())
           .order('created_at', ascending: false)
           .limit(40);
+      List<dynamic> talk = const <dynamic>[];
+      try {
+        talk = (await c.rpc('nx_talk_rooms')) as List<dynamic>? ?? const <dynamic>[];
+      } catch (_) {}
       if (!mounted) return;
       setState(() {
+        _talk = talk.map((dynamic r) => Map<String, dynamic>.from(r as Map)).toList();
         _rooms = rows.map((dynamic r) => Map<String, dynamic>.from(r as Map)).toList();
         _loading = false;
         _error = null;
@@ -97,6 +105,75 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
     if (g == null || !mounted) return;
     await context.push('/online/${g.id}?action=$action');
     unawaited(_load(silent: true));
+  }
+
+  /// Opens a new conversation room (voice + chat; games are picked inside).
+  Future<void> _openTalk() async {
+    final TextEditingController name = TextEditingController();
+    final String? title = await showDialog<String>(
+      context: context,
+      builder: (BuildContext ctx) => AlertDialog(
+        title: Text(ctx.tx('اتاق جدید', 'New room')),
+        content: TextField(
+          controller: name,
+          autofocus: true,
+          maxLength: 60,
+          decoration: InputDecoration(hintText: ctx.tx('نام اتاق (اختیاری)', 'Room name (optional)')),
+        ),
+        actions: <Widget>[
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(ctx.tx('انصراف', 'Cancel'))),
+          FilledButton(onPressed: () => Navigator.pop(ctx, name.text.trim()), child: Text(ctx.tx('ساخت', 'Create'))),
+        ],
+      ),
+    );
+    if (title == null || !mounted) return;
+    final OnlineService o = ref.read(onlineProvider);
+    try {
+      await o.gamesHello();
+      final dynamic r = await o.games!.rpc('nx_room_open', params: <String, dynamic>{'p_title': title});
+      if (!mounted) return;
+      await context.push('/room/${(r as Map)['room_id']}');
+      unawaited(_load(silent: true));
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(context.tx('ساخت اتاق ممکن نشد. وارد حساب شده‌ای؟', 'Could not create the room. Are you signed in?'))));
+      }
+    }
+  }
+
+  Widget _talkTile(Map<String, dynamic> r) {
+    final GameInfo? g = gameById('${r['game']}');
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Nx2Panel(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        onTap: () async {
+          await context.push('/room/${r['id']}');
+          unawaited(_load(silent: true));
+        },
+        child: Row(children: <Widget>[
+          Image.asset(AnixAssets.icon('headset'), width: 42, height: 42),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+              Text('${r['title'] ?? r['host_name'] ?? 'ANIX'}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Nx2.text)),
+              Text(
+                  '${r['status'] == 'playing' ? context.tx('در حال بازی', 'Playing') : context.tx('گفتگو', 'Talking')}'
+                  ' · ${g == null ? '' : context.tx(g.nameFa, g.nameEn)}',
+                  style: const TextStyle(color: Nx2.muted, fontSize: 12, fontWeight: FontWeight.w700)),
+            ]),
+          ),
+          const Icon(Icons.people_alt_rounded, color: Nx2.cyan, size: 18),
+          const SizedBox(width: 4),
+          Text('${r['members'] ?? 0}',
+              style: const TextStyle(color: Nx2.cyan, fontWeight: FontWeight.w900, fontSize: 16)),
+        ]),
+      ),
+    );
   }
 
   int _count(Map<String, dynamic> r) {
@@ -143,6 +220,14 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
             ]),
             const SizedBox(height: 10),
             Nx2Button(
+              label: context.tx('اتاق گفتگو + بازی', 'TALK ROOM + GAMES'),
+              icon: Icons.headset_mic_rounded,
+              kind: Nx2ButtonKind.pink,
+              height: 54,
+              onTap: _openTalk,
+            ),
+            const SizedBox(height: 10),
+            Nx2Button(
               label: context.tx('همه‌ی بازی‌ها (آفلاین و با ربات)', 'ALL GAMES (offline & vs bot)'),
               icon: Icons.sports_esports_rounded,
               kind: Nx2ButtonKind.violet,
@@ -150,8 +235,14 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
               fontSize: 13,
               onTap: () => context.push('/world/nexora_arcade'),
             ),
+            if (_talk.isNotEmpty) ...<Widget>[
+              const SizedBox(height: 18),
+              Nx2SectionHeader(title: context.tx('اتاق‌های گفتگو', 'Talk rooms')),
+              const SizedBox(height: 8),
+              for (final Map<String, dynamic> r in _talk) _talkTile(r),
+            ],
             const SizedBox(height: 18),
-            Nx2SectionHeader(title: context.tx('اتاق‌های باز', 'Open rooms')),
+            Nx2SectionHeader(title: context.tx('اتاق‌های بازی', 'Game lobbies')),
             const SizedBox(height: 8),
             if (_loading && _rooms.isEmpty)
               const Padding(padding: EdgeInsets.all(28), child: Center(child: CircularProgressIndicator()))

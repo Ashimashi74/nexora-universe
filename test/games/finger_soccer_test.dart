@@ -262,4 +262,35 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     expect(tester.takeException(), isNull);
   });
+
+  test('3v3 online: each side rotates its shooter (0,2,4 / 1,3,5) and replays adopt the rotation', () {
+    final BmEngine e = BmEngine(_Hooks(), rng: math.Random(3))
+      ..startMatch(const BmConfig(
+        mode: 'online',
+        teams: <String>['club0', 'club1'],
+        form: <int>[0, 3],
+        names: <String>['A · C · E', 'B · D · F'],
+        field: 0,
+        ball: 0,
+        perSide: 3,
+      ));
+    e.localSeat = 0;
+    final List<int> seq = <int>[];
+    for (int i = 0; i < 8; i++) {
+      seq.add(e.shooterSeat(e.ct(e.turn)));
+      e.finishTurn(false);
+    }
+    expect(seq, <int>[0, 1, 2, 3, 4, 5, 0, 1]);
+    // seat 0 controls only on its own rotation slot
+    expect(e.shooterSeat(0), 2);
+    expect(e.canCtl(), isFalse);
+    final Map<String, dynamic> snap = e.snapshot();
+    final BmEngine r = BmEngine(_Hooks(), rng: math.Random(3))
+      ..startMatch(const BmConfig(
+          mode: 'online', teams: <String>['club0', 'club1'], form: <int>[0, 3], names: <String>['a', 'b'],
+          field: 0, ball: 0, perSide: 3));
+    r.applyRotation(snap);
+    expect(r.shooterSeat(0), e.shooterSeat(0));
+    expect(r.shooterSeat(1), e.shooterSeat(1));
+  });
 }
