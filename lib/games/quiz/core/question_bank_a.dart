@@ -1,4 +1,4 @@
-// GENERATED question bank — NEXORA Quiz. Stable, well-known facts only.
+// GENERATED question bank — ANIX Quiz. Stable, well-known facts only.
 import 'question_model.dart';
 
 const List<QuizQuestion> kQuestionBankA = <QuizQuestion>[

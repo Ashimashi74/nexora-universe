@@ -45,7 +45,7 @@ String novaAgo(BuildContext context, DateTime t) {
   return '${t.year}/${t.month}/${t.day}';
 }
 
-/// Round avatar with initial (official channel shows the NEXORA mark).
+/// Round avatar with initial (official channel shows the ANIX mark).
 class NovaAvatar extends StatelessWidget {
   const NovaAvatar({super.key, required this.name, this.avatarUrl, this.official = false, this.size = 40, this.ring = false});
   final String name;

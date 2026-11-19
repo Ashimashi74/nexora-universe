@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-const String kShots = '/workspace/work/redesign_shots';
+const String kShots = String.fromEnvironment('SHOTS', defaultValue: '/workspace/work/anix_shots');
 final GlobalKey kShotKey = GlobalKey();
 bool _fontsLoaded = false;
 
@@ -29,14 +29,14 @@ Future<void> loadFonts() async {
   ];
   await fam('Roboto', rob);
   await fam('FlutterTest', rob);
-  const String a = '/workspace/work/nexora_redesign/assets/fonts';
+  const String a = '/workspace/work/anix/assets/fonts';
   await fam('ChakraPetch', <String>['$a/ChakraPetch-Regular.ttf', '$a/ChakraPetch-SemiBold.ttf', '$a/ChakraPetch-Bold.ttf']);
   await fam('Estedad', <String>['$a/Estedad-Regular.ttf', '$a/Estedad-Medium.ttf', '$a/Estedad-Bold.ttf', '$a/Estedad-Black.ttf']);
   await fam('Lalezar', <String>['$a/Lalezar-Regular.ttf']);
   await fam('MaterialIcons', <String>['$sdk/MaterialIcons-Regular.otf']);
 }
 
-void phone(WidgetTester tester, {double w = 390, double h = 844, double dpr = 2}) {
+void phone(WidgetTester tester, {double w = 360, double h = 800, double dpr = 2}) {
   tester.view.physicalSize = Size(w * dpr, h * dpr);
   tester.view.devicePixelRatio = dpr;
   addTearDown(tester.view.resetPhysicalSize);

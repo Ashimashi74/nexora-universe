@@ -302,13 +302,14 @@ class SocialController extends ChangeNotifier {
       final Community probe = Community.fromJson(c!.toJson());
       if (!probe.removeMember(actorId, targetId)) return false;
       final bool ok = await on.kick(communityId, targetId);
-      if (ok)
+      if (ok) {
         await _mutate(communityId, (Community x) {
           for (final e in x.events) {
             e.going.remove(targetId);
           }
           return true;
         });
+      }
       await refresh();
       return ok;
     }

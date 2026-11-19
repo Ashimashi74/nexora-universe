@@ -9,7 +9,7 @@ import 'bg_geometry.dart';
 
 /// Backgammon board skins. NX2 boards are fitted onto [BgGeom] with knot maps: every triangle tip of the art
 /// lands on the BgGeom point centre, field edges on the field edges, the hinge on the bar. The top/bottom
-/// frame strips are redrawn with their own map so the NEXORA plaques keep a sane aspect.
+/// frame strips are redrawn with their own map so the ANIX plaques keep a sane aspect.
 class BgBoardSkin {
   const BgBoardSkin(this.id, this.asset, this.nameFa, this.nameEn,
       {this.map, this.top, this.bottom, this.plaqueX = const <double>[470, 763]});

@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-/// NEXORA Spy & Mafia — social deduction for 4-8 players (bots fill empty seats offline).
+/// ANIX Spy & Mafia — social deduction for 4-8 players (bots fill empty seats offline).
 ///
 /// Everyone but the SPY sees the secret location (with 7+ players there are two spies, the "mafia").
 /// Two clue rounds: on your turn pick one of three clue words. Agents get words that fit the location; spies get

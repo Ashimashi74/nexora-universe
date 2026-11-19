@@ -83,7 +83,7 @@ class TournamentWatcher with WidgetsBindingObserver {
   final WidgetRef _ref;
   final GlobalKey<ScaffoldMessengerState> _messenger;
 
-  /// Opens a route (e.g. /tournaments/<id>).
+  /// Opens a route (e.g. `/tournaments/<id>`).
   final void Function(String route) _open;
 
   RealtimeChannel? _ch;
@@ -202,7 +202,7 @@ class TournamentWatcher with WidgetsBindingObserver {
       for (final TMatch m in await repo.myOpenMatches()) {
         final DateTime? at = m.scheduledAt;
         if (m.status != 'scheduled' || at == null) continue;
-        final String title = all.where((Tournament t) => t.id == m.tournamentId).firstOrNull?.title ?? 'NEXORA';
+        final String title = all.where((Tournament t) => t.id == m.tournamentId).firstOrNull?.title ?? 'ANIX';
         await TLocalNotifier.scheduleAt('msoon:${m.id}', at.subtract(const Duration(minutes: 10)), title,
             fa ? 'بازی‌ات ۱۰ دقیقه‌ی دیگر شروع می‌شود' : 'Your match starts in 10 minutes',
             payload: '/tournaments/${m.tournamentId}');

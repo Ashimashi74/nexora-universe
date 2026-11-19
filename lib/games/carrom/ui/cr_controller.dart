@@ -252,8 +252,9 @@ class CrController extends ChangeNotifier {
       if (tn != match.turnNumber || match.phase != CrPhase.aiming) return;
       _doPass();
     } else if (a == 'place') {
-      if (match.turn == m.seat)
+      if (match.turn == m.seat) {
         placeX[m.seat] = (m.data['px'] as num).toDouble();
+      }
     }
     _pushHud();
   }
@@ -375,18 +376,20 @@ class CrController extends ChangeNotifier {
   String seatName(int seat) {
     final String? n = launch.netName(seat);
     if (n != null) return n;
-    if (seat == 0)
+    if (seat == 0) {
       return launch.playerName.isEmpty
           ? launch.tx('شما', 'You')
           : launch.playerName;
+    }
     if (launch.vsBot) return launch.tx('ربات', 'Bot');
     return launch.tx('بازیکن ۲', 'Player 2');
   }
 
   /// Aim preview: direction (unit) + power, or null.
   Offset? get aimDir {
-    if (_stage == _BotStage.aiming && _botShot != null)
+    if (_stage == _BotStage.aiming && _botShot != null) {
       return Offset(_botShot!.dirX, _botShot!.dirY);
+    }
     if (!aiming) return null;
     final len = pull.distance;
     if (len < 4) return null;
@@ -740,9 +743,10 @@ class CrController extends ChangeNotifier {
       final bool won = w == mySeat;
       _banner(won ? 'بردی!' : 'باختی', won ? 'You win!' : 'You lose',
           won ? kCrGold : kCrSeat1);
-      if (won)
+      if (won) {
         fx.burst(CrConfig.centerX, CrConfig.centerY,
             count: 60, speed: 700, color: kCrGold, size: 8, life: 1.3);
+      }
     } else if (w == 0) {
       _banner(launch.vsBot ? 'بردی!' : '${seatName(0)} برد',
           launch.vsBot ? 'You win!' : '${seatName(0)} wins', kCrGold);

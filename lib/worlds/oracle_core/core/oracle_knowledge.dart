@@ -1,5 +1,5 @@
 /// ORACLE CORE offline knowledge base (pure Dart). Bilingual facts about every
-/// NEXORA world and feature. Every statement here describes how the offline
+/// ANIX world and feature. Every statement here describes how the offline
 /// build really behaves; anything that needs the server is labelled honestly.
 library;
 
@@ -41,8 +41,8 @@ const List<OracleWorld> kOracleWorlds = <OracleWorld>[
     id: 'orbit_network',
     nameFa: 'اوربیت نتورک',
     nameEn: 'Orbit Network',
-    descFa: 'پیام‌رسان NEXORA: چت خصوصی، گروه و کانال. پیام به کاربران واقعی و تماس‌ها بعد از اتصال سرور فعال می‌شوند.',
-    descEn: 'The NEXORA messenger: private chats, groups and channels. Messaging real users and calls turn on once the server is connected.',
+    descFa: 'پیام‌رسان ANIX: چت خصوصی، گروه و کانال. پیام به کاربران واقعی و تماس‌ها بعد از اتصال سرور فعال می‌شوند.',
+    descEn: 'The ANIX messenger: private chats, groups and channels. Messaging real users and calls turn on once the server is connected.',
     aliases: <String>[
       'orbit network', 'network', 'نتورک', 'اوربیت', 'orbit', 'messenger', 'messages', 'chats', 'chat',
       'پیام رسان', 'پیامرسان', 'چت',
@@ -50,8 +50,8 @@ const List<OracleWorld> kOracleWorlds = <OracleWorld>[
   ),
   OracleWorld(
     id: 'nexora_arcade',
-    nameFa: 'آرکید NEXORA',
-    nameEn: 'NEXORA Arcade',
+    nameFa: 'آرکید ANIX',
+    nameEn: 'ANIX Arcade',
     descFa: 'سالن بازی‌ها: کرام، فوتبال دستی، مار و پله، کوییز، تخته‌نرد، بیلیارد، UNO، لودو و مافیا؛ با ربات آفلاین یا دونفره روی همین گوشی.',
     descEn: 'The games hall: Carrom, Finger Soccer, Snakes & Ladders, Quiz, Backgammon, Billiards, UNO, Ludo and Mafia — vs offline bots or pass-and-play on this device.',
     aliases: <String>['arcade', 'nexora arcade', 'ارکید', 'game room', 'gaming', 'گیم', 'سالن بازی'],
@@ -60,16 +60,16 @@ const List<OracleWorld> kOracleWorlds = <OracleWorld>[
     id: 'oracle_core',
     nameFa: 'اوراکل کور',
     nameEn: 'Oracle Core',
-    descFa: 'همین‌جا! خانه‌ی من، ORACLE، دستیار NEXORA.',
-    descEn: 'Right here! My home — ORACLE, the NEXORA assistant.',
+    descFa: 'همین‌جا! خانه‌ی من، ORACLE، دستیار ANIX.',
+    descEn: 'Right here! My home — ORACLE, the ANIX assistant.',
     aliases: <String>['oracle core', 'اوراکل کور'],
   ),
   OracleWorld(
     id: 'social_station',
     nameFa: 'سوشال استیشن',
     nameEn: 'Social Station',
-    descFa: 'اجتماعات NEXORA: ساخت و پیوستن به گروه‌ها و کلاب‌ها، رویدادها و اعلان‌ها.',
-    descEn: 'NEXORA communities: create and join groups and clubs, events and announcements.',
+    descFa: 'اجتماعات ANIX: ساخت و پیوستن به گروه‌ها و کلاب‌ها، رویدادها و اعلان‌ها.',
+    descEn: 'ANIX communities: create and join groups and clubs, events and announcements.',
     aliases: <String>[
       'social station', 'social', 'سوشال', 'استیشن', 'community', 'communities', 'club*', 'اجتماع', 'کامیونیتی',
       'کلاب', 'انجمن',
@@ -77,8 +77,8 @@ const List<OracleWorld> kOracleWorlds = <OracleWorld>[
   ),
   OracleWorld(
     id: 'nexora_exchange',
-    nameFa: 'اکسچنج NEXORA',
-    nameEn: 'NEXORA Exchange',
+    nameFa: 'اکسچنج ANIX',
+    nameEn: 'ANIX Exchange',
     descFa: 'بازار آیتم‌های دیجیتال با سکه‌ای که از فعالیت به دست می‌آید: لباس آواتار، تزئین اتاق، تم، قاب پروفایل و آیتم بازی. قیمت‌ها شفاف و بدون قمار یا جعبه‌ی شانسی.',
     descEn: 'The digital item market, paid with coins you earn by playing: avatar gear, room decor, themes, profile frames and game items. Transparent prices, no gambling, no loot boxes.',
     aliases: <String>[
@@ -89,8 +89,8 @@ const List<OracleWorld> kOracleWorlds = <OracleWorld>[
     id: 'nova_gallery',
     nameFa: 'نوا گالری',
     nameEn: 'Nova Gallery',
-    descFa: 'شبکه‌ی اجتماعی NEXORA: پست، استوری، لایک و کامنت. پست‌هایت روی همین دستگاه ذخیره می‌شوند و انتشار عمومی بعد از اتصال سرور است.',
-    descEn: 'The NEXORA social network: posts, stories, likes and comments. Your posts are saved on this device; public sharing comes with the server.',
+    descFa: 'شبکه‌ی اجتماعی ANIX: پست، استوری، لایک و کامنت. پست‌هایت روی همین دستگاه ذخیره می‌شوند و انتشار عمومی بعد از اتصال سرور است.',
+    descEn: 'The ANIX social network: posts, stories, likes and comments. Your posts are saved on this device; public sharing comes with the server.',
     aliases: <String>[
       'nova gallery', 'nova', 'gallery', 'نوا', 'گالری', 'شبکه اجتماعی', 'social network', 'feed', 'فید',
       'reels', 'ریلز', 'story', 'stories', 'استوری',
@@ -149,7 +149,7 @@ class OracleFaq {
   /// Priority entries are checked before personal-data intents.
   final bool priority;
 
-  /// Skip when the text names a specific world (e.g. "open NEXORA Exchange").
+  /// Skip when the text names a specific world (e.g. "open ANIX Exchange").
   final bool skipWhenWorld;
 }
 
@@ -175,8 +175,8 @@ const List<OracleFaq> kOracleFaq = <OracleFaq>[
     must: <List<String>>[
       <String>['gambl*', 'loot*', 'bet', 'bets', 'betting', 'casino', 'lucky box', 'mystery box', 'قمار', 'شرط بندی', 'شرطبندی', 'شانسی', 'جعبه شانس', 'لوت'],
     ],
-    textFa: 'در NEXORA هیچ قمار، شرط‌بندی یا جعبه‌ی شانسی پولی وجود ندارد. هر آیتم قیمت ثابت و شفاف دارد و دقیقاً همان چیزی را می‌گیری که می‌بینی. حتی «پیشنهاد امروز» اکسچنج فقط از روی تاریخ چرخش می‌کند، نه شانس.',
-    textEn: 'NEXORA has no gambling, no betting and no paid loot boxes. Every item has a fixed, visible price and you get exactly what you see. Even the Exchange\'s "Featured today" rotates by date, not by chance.',
+    textFa: 'در ANIX هیچ قمار، شرط‌بندی یا جعبه‌ی شانسی پولی وجود ندارد. هر آیتم قیمت ثابت و شفاف دارد و دقیقاً همان چیزی را می‌گیری که می‌بینی. حتی «پیشنهاد امروز» اکسچنج فقط از روی تاریخ چرخش می‌کند، نه شانس.',
+    textEn: 'ANIX has no gambling, no betting and no paid loot boxes. Every item has a fixed, visible price and you get exactly what you see. Even the Exchange\'s "Featured today" rotates by date, not by chance.',
     actions: <OracleAction>[kGoExchange],
     pose: 'calm',
   ),
@@ -187,7 +187,7 @@ const List<OracleFaq> kOracleFaq = <OracleFaq>[
       <String>['leaderboard*', 'tournament*', 'league*', 'ranking', 'rankings', 'global rank', 'رتبه بندی', 'جدول رده', 'جدول رتبه', 'لیگ', 'تورنمنت', 'جام=', 'مسابقات'],
     ],
     textFa: 'جدول رتبه‌بندی جهانی، لیگ و تورنمنت به سرور نیاز دارند تا نتایج غیرقابل‌دستکاری باشند؛ بعد از اتصال آنلاین فعال می‌شوند. فعلاً آمار واقعی خودت را در پرسنال اوربیت ببین.',
-    textEn: 'Global leaderboards, leagues and tournaments need the server so results can\'t be tampered with; they turn on once NEXORA is online. For now, your real stats are in Personal Orbit.',
+    textEn: 'Global leaderboards, leagues and tournaments need the server so results can\'t be tampered with; they turn on once ANIX is online. For now, your real stats are in Personal Orbit.',
     actions: <OracleAction>[kGoPersonal],
     pose: 'alert',
   ),
@@ -218,8 +218,8 @@ const List<OracleFaq> kOracleFaq = <OracleFaq>[
     must: <List<String>>[
       <String>['offline', 'online', 'internet', 'server', 'sync', 'اینترنت', 'افلاین', 'انلاین', 'سرور', 'همگام'],
     ],
-    textFa: 'این نسخه‌ی NEXORA کاملاً آفلاین کار می‌کند: بازی‌ها با ربات یا دونفره روی یک گوشی، پیشرفت، اکسچنج، فضای شخصی و من. چیزهایی که کاربر واقعی دیگر لازم دارند (تماس، مسابقه‌ی آنلاین، رتبه‌بندی جهانی) بعد از اتصال سرور فعال می‌شوند و تا آن موقع صادقانه اعلام می‌شوند.',
-    textEn: 'This NEXORA build works fully offline: games vs bots or pass-and-play, progression, the Exchange, your Personal Orbit, and me. Things that need other real users (calls, online matches, global rankings) turn on with the server and are clearly labelled until then.',
+    textFa: 'این نسخه‌ی ANIX کاملاً آفلاین کار می‌کند: بازی‌ها با ربات یا دونفره روی یک گوشی، پیشرفت، اکسچنج، فضای شخصی و من. چیزهایی که کاربر واقعی دیگر لازم دارند (تماس، مسابقه‌ی آنلاین، رتبه‌بندی جهانی) بعد از اتصال سرور فعال می‌شوند و تا آن موقع صادقانه اعلام می‌شوند.',
+    textEn: 'This ANIX build works fully offline: games vs bots or pass-and-play, progression, the Exchange, your Personal Orbit, and me. Things that need other real users (calls, online matches, global rankings) turn on with the server and are clearly labelled until then.',
     pose: 'calm',
   ),
   // ---------- regular ----------
@@ -356,18 +356,18 @@ const List<OracleFaq> kOracleFaq = <OracleFaq>[
     must: <List<String>>[
       <String>['worlds', 'world', 'دنیا', 'جهان ها'],
     ],
-    textFa: 'NEXORA هفت دنیا دارد: نوا گالری (شبکه‌ی اجتماعی)، اوربیت نتورک (پیام‌رسان)، آرکید (بازی‌ها)، اوراکل کور (من!)، پرسنال اوربیت (خانه‌ی تو)، سوشال استیشن (اجتماعات) و اکسچنج (بازار). کدام را باز کنم؟',
-    textEn: 'NEXORA has seven worlds: Nova Gallery (social), Orbit Network (messenger), Arcade (games), Oracle Core (me!), Personal Orbit (your home), Social Station (communities) and the Exchange (market). Which one should I open?',
+    textFa: 'ANIX هفت دنیا دارد: نوا گالری (شبکه‌ی اجتماعی)، اوربیت نتورک (پیام‌رسان)، آرکید (بازی‌ها)، اوراکل کور (من!)، پرسنال اوربیت (خانه‌ی تو)، سوشال استیشن (اجتماعات) و اکسچنج (بازار). کدام را باز کنم؟',
+    textEn: 'ANIX has seven worlds: Nova Gallery (social), Orbit Network (messenger), Arcade (games), Oracle Core (me!), Personal Orbit (your home), Social Station (communities) and the Exchange (market). Which one should I open?',
     actions: <OracleAction>[kGoArcade, kGoPersonal, kGoExchange, kGoNova, kGoOrbitNet, kGoSocial],
     skipWhenWorld: true,
   ),
   OracleFaq(
     id: 'nexora',
     must: <List<String>>[
-      <String>['nexora', 'نکسورا', 'نکسرا'],
+      <String>['anix', 'انیکس', 'آنیکس', 'nexora', 'نکسورا', 'نکسرا'],
     ],
-    textFa: 'NEXORA یک جهان دیجیتال کیهانی و یکپارچه است: یک هویت برای همه‌ی دنیاها، از شبکه‌ی اجتماعی و پیام‌رسان تا بازی، اجتماعات، بازار و من، ORACLE. «جهان تو. هویت تو. تجربه‌ی تو.»',
-    textEn: 'NEXORA is one connected cosmic universe: a single identity across every world — social, messaging, games, communities, a market, and me, ORACLE. "Your universe. Your identity. Your experience."',
+    textFa: 'ANIX یک جهان دیجیتال کیهانی و یکپارچه است: یک هویت برای همه‌ی دنیاها، از شبکه‌ی اجتماعی و پیام‌رسان تا بازی، اجتماعات، بازار و من، ORACLE. «جهان تو. هویت تو. تجربه‌ی تو.»',
+    textEn: 'ANIX is one connected cosmic universe: a single identity across every world — social, messaging, games, communities, a market, and me, ORACLE. "Your universe. Your identity. Your experience."',
     pose: 'present',
     skipWhenWorld: true,
   ),

@@ -22,7 +22,7 @@ Future<void> initOnline() async {
       );
     }
   } catch (e) {
-    debugPrint('NEXORA online init failed: $e');
+    debugPrint('ANIX online init failed: $e');
   }
 }
 

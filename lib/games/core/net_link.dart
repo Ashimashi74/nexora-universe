@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
-/// ===================== NEXORA ONLINE MATCH LINK =====================
+/// ===================== ANIX ONLINE MATCH LINK =====================
 /// Transport-agnostic seam between a game widget and the online match.
 ///
 /// Model: every phone runs the SAME pure-Dart core with the SAME seed. Players only

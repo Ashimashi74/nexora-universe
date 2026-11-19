@@ -1,6 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// A real NEXORA user (public profile row).
+/// A real ANIX user (public profile row).
 class NxUser {
   const NxUser({required this.id, required this.username, this.avatar, this.level = 1, this.onlineAt, this.bio});
   final String id;
@@ -31,7 +31,7 @@ class FriendRequest {
 }
 
 /// Friends / requests / search on the shared tables (follows + friend_requests), via the
-/// same RPCs the other NEXORA app uses, so a friendship is the same in both apps.
+/// same RPCs the other ANIX app uses, so a friendship is the same in both apps.
 class SocialApi {
   SocialApi(this.c);
   final SupabaseClient c;

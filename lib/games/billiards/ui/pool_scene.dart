@@ -127,8 +127,9 @@ class PoolScene extends ChangeNotifier {
       particles.add(PoolParticle(x, y, math.cos(a) * sp, math.sin(a) * sp,
           0.25 + rng.nextDouble() * 0.3, color));
     }
-    if (particles.length > 120)
+    if (particles.length > 120) {
       particles.removeRange(0, particles.length - 120);
+    }
   }
 
   void repaint() => notifyListeners();

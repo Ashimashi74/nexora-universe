@@ -14,7 +14,7 @@ import 'ui/records_tabs.dart';
 import 'ui/space_tab.dart';
 import 'ui/wardrobe_tab.dart';
 
-/// PERSONAL ORBIT (STEP_09 + STEP_14): the user's own home in NEXORA.
+/// PERSONAL ORBIT (STEP_09 + STEP_14): the user's own home in ANIX.
 /// Premium dark world: identity & avatar, missions, wardrobe, 2.5D room,
 /// achievements, stats and activity. Everything is local-first (LocalStore).
 class PersonalOrbitPage extends ConsumerStatefulWidget {

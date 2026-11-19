@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-/// NEXORA Mini Golf — pure Dart, deterministic (fixed 1/120 s steps, the windmill turns with simulation time
+/// ANIX Mini Golf — pure Dart, deterministic (fixed 1/120 s steps, the windmill turns with simulation time
 /// counted from the start of each shot, so every phone replays the same shot identically).
 ///
 /// Course units: 300 x 520 portrait. 9 holes; players take turns (the player furthest from the cup who has not

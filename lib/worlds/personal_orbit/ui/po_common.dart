@@ -47,15 +47,18 @@ String poDateTime(BuildContext context, DateTime d) => poDigits(context,
 String poAgo(BuildContext context, DateTime at, DateTime now) {
   final Duration d = now.difference(at);
   if (d.inMinutes < 1) return context.tx('همین حالا', 'just now');
-  if (d.inMinutes < 60)
+  if (d.inMinutes < 60) {
     return poDigits(context,
         context.tx('${d.inMinutes} دقیقه پیش', '${d.inMinutes} min ago'));
-  if (d.inHours < 24)
+  }
+  if (d.inHours < 24) {
     return poDigits(
         context, context.tx('${d.inHours} ساعت پیش', '${d.inHours} h ago'));
-  if (d.inDays < 7)
+  }
+  if (d.inDays < 7) {
     return poDigits(
         context, context.tx('${d.inDays} روز پیش', '${d.inDays} d ago'));
+  }
   return poDate(context, at);
 }
 

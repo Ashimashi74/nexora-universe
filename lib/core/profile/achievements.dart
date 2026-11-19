@@ -85,7 +85,7 @@ const kAchievements = <AchievementDef>[
       descFa: 'به سطح ۱۰ برس', descEn: 'Reach level 10', check: _summit, coinReward: 200),
   AchievementDef(id: 'legend', asset: 'badge_legend', nameFa: 'افسانه', nameEn: 'Legend',
       descFa: 'به سطح ۲۰ برس', descEn: 'Reach level 20', check: _legend, coinReward: 500),
-  // ---- NEXORA arcade (redesign-2) ----
+  // ---- ANIX arcade (redesign-2) ----
   AchievementDef(id: 'arcade_rookie', asset: 'badge_gamer', nameFa: 'تازه‌نفس آرکید', nameEn: 'Arcade Rookie',
       descFa: '۵ بازی جدید آرکید را امتحان کن', descEn: 'Try 5 of the new arcade games', check: _arcadeRookie, coinReward: 120),
   AchievementDef(id: 'arcade_all', asset: 'trophy_wings', nameFa: 'استاد آرکید', nameEn: 'Arcade Master',

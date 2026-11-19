@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../ui2/page_turn.dart';
 
-/// NEXORA design tokens. Legacy gameplay colors remain stable; the app chrome
+/// ANIX design tokens. Legacy gameplay colors remain stable; the app chrome
 /// reads [NxThemeColors] from the active theme instead.
 class NxColors {
   NxColors._();
@@ -26,7 +26,7 @@ enum NxAppearanceMode { dark, light }
 
 enum NxVisualTheme { gold, neon }
 
-/// Colors and surface treatment for the two selectable NEXORA visual themes.
+/// Colors and surface treatment for the two selectable ANIX visual themes.
 class NxThemeColors extends ThemeExtension<NxThemeColors> {
   const NxThemeColors({
     required this.accent,

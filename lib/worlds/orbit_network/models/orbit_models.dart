@@ -156,7 +156,7 @@ class OrbitMessage {
       case OrbitMessageKind.art:
         return (fa ? '🖼 اثر هنری ' : '🖼 Art ') + (text.isEmpty ? '' : '· $text');
       case OrbitMessageKind.shared:
-        return (fa ? '🔗 اشتراک: ' : '🔗 Shared: ') + '${payload['text'] ?? text}';
+        return '${fa ? '🔗 اشتراک: ' : '🔗 Shared: '}${payload['text'] ?? text}';
       case OrbitMessageKind.invite:
         return fa ? '🎮 دعوت به آرکید' : '🎮 Arcade invite';
       case OrbitMessageKind.call:

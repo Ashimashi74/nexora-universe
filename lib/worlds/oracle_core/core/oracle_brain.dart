@@ -217,8 +217,8 @@ class OracleBrain {
     final String t = normalizeOracleText(input);
     if (t.isEmpty) {
       return const OracleReply(
-        textFa: 'هر سؤالی درباره‌ی NEXORA داری بپرس، یا بگو کجا ببرمت.',
-        textEn: 'Ask me anything about NEXORA, or tell me where to take you.',
+        textFa: 'هر سؤالی درباره‌ی ANIX داری بپرس، یا بگو کجا ببرمت.',
+        textEn: 'Ask me anything about ANIX, or tell me where to take you.',
         pose: 'calm',
         intent: 'empty',
       );
@@ -476,8 +476,8 @@ class OracleBrain {
   // ---------------- honesty ----------------
 
   OracleReply _offlineLimit() => const OracleReply(
-        textFa: 'این کار به اینترنت یا اطلاعات زنده نیاز دارد و من الان کاملاً آفلاین هستم، پس هنوز نمی‌توانم انجامش بدهم. چیزی از خودم نمی‌سازم. در عوض می‌توانم تو را به دنیاها و بازی‌ها ببرم یا درباره‌ی NEXORA کمک کنم.',
-        textEn: 'That needs the internet or live information, and I\'m fully offline right now, so I can\'t do it yet. I won\'t make something up. I can take you to worlds and games or help with anything inside NEXORA instead.',
+        textFa: 'این کار به اینترنت یا اطلاعات زنده نیاز دارد و من الان کاملاً آفلاین هستم، پس هنوز نمی‌توانم انجامش بدهم. چیزی از خودم نمی‌سازم. در عوض می‌توانم تو را به دنیاها و بازی‌ها ببرم یا درباره‌ی ANIX کمک کنم.',
+        textEn: 'That needs the internet or live information, and I\'m fully offline right now, so I can\'t do it yet. I won\'t make something up. I can take you to worlds and games or help with anything inside ANIX instead.',
         pose: 'alert',
         intent: 'offline_limit',
       );
@@ -564,10 +564,10 @@ class OracleBrain {
       );
 
   OracleReply _navHub({required bool auto}) => OracleReply(
-        textFa: 'برمی‌گردیم به ایستگاه NEXORA.',
-        textEn: 'Back to NEXORA Station.',
+        textFa: 'برمی‌گردیم به ایستگاه ANIX.',
+        textEn: 'Back to ANIX Station.',
         actions: const <OracleAction>[
-          OracleAction.navigate('/hub', labelFa: 'ایستگاه NEXORA', labelEn: 'NEXORA Station'),
+          OracleAction.navigate('/hub', labelFa: 'ایستگاه ANIX', labelEn: 'ANIX Station'),
         ],
         pose: 'present',
         intent: 'navigate',
@@ -819,16 +819,16 @@ class OracleBrain {
     final String nameEn = ctx.username.isEmpty ? '' : ', ${ctx.username}';
     if (hasOracleKeyword(t, _whoWords)) {
       return const OracleReply(
-        textFa: 'من ORACLE هستم، دستیار NEXORA. یک برنامه‌ام، نه یک انسان؛ کاملاً روی دستگاه خودت و آفلاین کار می‌کنم، پس فقط چیزهایی را می‌دانم که در NEXORA و پیشرفت محلی تو هست — و هیچ‌وقت وانمود نمی‌کنم کاری را کرده‌ام که نکرده‌ام.',
-        textEn: 'I\'m ORACLE, the NEXORA assistant. I\'m a program, not a person; I run fully offline on your device, so I only know what\'s in NEXORA and your local progress — and I never pretend to have done something I haven\'t.',
+        textFa: 'من ORACLE هستم، دستیار ANIX. یک برنامه‌ام، نه یک انسان؛ کاملاً روی دستگاه خودت و آفلاین کار می‌کنم، پس فقط چیزهایی را می‌دانم که در ANIX و پیشرفت محلی تو هست — و هیچ‌وقت وانمود نمی‌کنم کاری را کرده‌ام که نکرده‌ام.',
+        textEn: 'I\'m ORACLE, the ANIX assistant. I\'m a program, not a person; I run fully offline on your device, so I only know what\'s in ANIX and your local progress — and I never pretend to have done something I haven\'t.',
         pose: 'present',
         intent: 'who',
       );
     }
     if (hasOracleKeyword(t, _helpWords)) {
       return const OracleReply(
-        textFa: 'کارهایی که واقعاً انجام می‌دهم:\n• بردن تو به هر دنیا یا بازی («منو ببر آرکید»)\n• توضیح قوانین هر بازی («قوانین تخته‌نرد»)\n• گفتن آمار، سطح، سکه و دستاوردها\n• پیشنهاد بازی\n• تغییر کیفیت گرافیک، کاهش حرکت و زبان\n• پاسخ به سؤال‌ها درباره‌ی همه‌ی دنیاهای NEXORA',
-        textEn: 'What I can really do:\n• Take you to any world or game ("take me to the Arcade")\n• Explain any game\'s rules ("backgammon rules")\n• Tell your stats, level, coins and achievements\n• Recommend a game\n• Change graphics quality, reduced motion and language\n• Answer questions about every NEXORA world',
+        textFa: 'کارهایی که واقعاً انجام می‌دهم:\n• بردن تو به هر دنیا یا بازی («منو ببر آرکید»)\n• توضیح قوانین هر بازی («قوانین تخته‌نرد»)\n• گفتن آمار، سطح، سکه و دستاوردها\n• پیشنهاد بازی\n• تغییر کیفیت گرافیک، کاهش حرکت و زبان\n• پاسخ به سؤال‌ها درباره‌ی همه‌ی دنیاهای ANIX',
+        textEn: 'What I can really do:\n• Take you to any world or game ("take me to the Arcade")\n• Explain any game\'s rules ("backgammon rules")\n• Tell your stats, level, coins and achievements\n• Recommend a game\n• Change graphics quality, reduced motion and language\n• Answer questions about every ANIX world',
         pose: 'present',
         intent: 'help',
         followUpsFa: <String>['منو ببر به آرکید', 'قوانین تخته نرد', 'سطح من چنده؟', 'چی بازی کنم؟'],
@@ -924,7 +924,7 @@ class OfflineOracleEngine implements OracleEngine {
 ///
 /// Contract (deployed function): POST `{messages:[{role,content}], ctx}` with the user's JWT →
 /// `{message:{role:'assistant', content, tool_calls?}, model}`. The function's tools belong to the other
-/// NEXORA app, so this client never executes them: it answers each with `not_available_in_this_app` once and
+/// ANIX app, so this client never executes them: it answers each with `not_available_in_this_app` once and
 /// asks again; anything still unusable falls back to the offline brain.
 ///
 /// App-aware intents (navigation, settings, rules, stats, coins…) stay on the instant offline brain because it
@@ -977,7 +977,7 @@ class RemoteOracleEngine implements OracleEngine {
       <String, dynamic>{'role': 'user', 'content': input},
     ];
     final Map<String, dynamic> ctx = <String, dynamic>{
-      'app': 'NEXORA hub (Flutter): 7 worlds (Hub, Arcade with 9 games, Orbit Network messenger, Nova Gallery, '
+      'app': 'ANIX hub (Flutter): 7 worlds (Hub, Arcade with 9 games, Orbit Network messenger, Nova Gallery, '
           'Social Station, Personal Orbit, ORACLE Core). NOT the finger-football app: app tools are unavailable here, '
           'answer in plain text only, short, in the user\'s language.',
       'mode': 'chat',

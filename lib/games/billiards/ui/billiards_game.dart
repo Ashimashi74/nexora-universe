@@ -159,12 +159,14 @@ class _BilliardsGameState extends State<BilliardsGame>
       _syncScene();
       setState(() {});
     } else if (a == 'shot') {
-      if (sc != _match.shotCount || _stage != _Stage.aiming || _match.isOver)
+      if (sc != _match.shotCount || _stage != _Stage.aiming || _match.isOver) {
         return;
+      }
       _l.net?.verify(m.seq, m.data['h'] as String?, _hash());
       final PoolShot shot = _shotFrom(m.data);
-      if (shot.cueX != null && shot.cueY != null)
+      if (shot.cueX != null && shot.cueY != null) {
         _match.placeCue(shot.cueX!, shot.cueY!);
+      }
       _scene.aimAngle = math.atan2(shot.dirY, shot.dirX);
       _remoteShot = true;
       _shoot(shot);
@@ -202,16 +204,19 @@ class _BilliardsGameState extends State<BilliardsGame>
   String _name(int seat) {
     final String? online = _l.netName(seat);
     if (online != null) return online;
-    if (seat == 0)
+    if (seat == 0) {
       return _l.playerName.isEmpty
           ? _l.tx('بازیکن ۱', 'Player 1')
           : _l.playerName;
+    }
     if (_l.vsBot) {
-      if (_l.difficulty == BotDifficulty.easy)
-        return _l.tx('ربات نکسورا · آسان', 'NEXORA Bot · Easy');
-      if (_l.difficulty == BotDifficulty.hard)
-        return _l.tx('ربات نکسورا · سخت', 'NEXORA Bot · Hard');
-      return _l.tx('ربات نکسورا · معمولی', 'NEXORA Bot · Normal');
+      if (_l.difficulty == BotDifficulty.easy) {
+        return _l.tx('ربات انیکس · آسان', 'ANIX Bot · Easy');
+      }
+      if (_l.difficulty == BotDifficulty.hard) {
+        return _l.tx('ربات انیکس · سخت', 'ANIX Bot · Hard');
+      }
+      return _l.tx('ربات انیکس · معمولی', 'ANIX Bot · Normal');
     }
     return _l.tx('بازیکن ۲', 'Player 2');
   }
@@ -695,8 +700,9 @@ class _BilliardsGameState extends State<BilliardsGame>
       const double r = PoolConfig.ballR;
       final double x = t.dx.clamp(r, PoolConfig.tableW - r).toDouble();
       double y = t.dy.clamp(r, PoolConfig.tableH - r).toDouble();
-      if (_match.kitchenOnly && y < PoolConfig.headStringY)
+      if (_match.kitchenOnly && y < PoolConfig.headStringY) {
         y = PoolConfig.headStringY;
+      }
       _scene.placeValid = _match.placeCue(x, y);
       return;
     }
@@ -873,14 +879,17 @@ class _BilliardsGameState extends State<BilliardsGame>
   Widget _buildHud() {
     String sub(int seat) {
       final PoolGroup g = _match.groups[seat];
-      if (_match.groupCleared(seat))
+      if (_match.groupCleared(seat)) {
         return _l.tx('نوبت توپ ۸', 'On the 8-ball');
-      if (g == PoolGroup.solids)
+      }
+      if (g == PoolGroup.solids) {
         return _l.tx('ساده‌ها · ${_match.pottedCount(seat)}/۷',
             'Solids · ${_match.pottedCount(seat)}/7');
-      if (g == PoolGroup.stripes)
+      }
+      if (g == PoolGroup.stripes) {
         return _l.tx('راه‌راه‌ها · ${_match.pottedCount(seat)}/۷',
             'Stripes · ${_match.pottedCount(seat)}/7');
+      }
       return _match.isBreak
           ? _l.tx('بریک', 'Break')
           : _l.tx('میز باز', 'Open table');

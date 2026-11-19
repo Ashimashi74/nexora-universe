@@ -64,7 +64,7 @@ class LocalNovaRepository implements NovaRepository {
 
   String _id(String prefix) => '${prefix}_${_clock().microsecondsSinceEpoch}_${_rng.nextInt(999999)}';
 
-  /// redesign-v1.1: no placeholder content. Older builds seeded "NEXORA Official" tip posts and a welcome
+  /// redesign-v1.1: no placeholder content. Older builds seeded "ANIX Official" tip posts and a welcome
   /// notification on the device; they are removed once here. Only real posts remain.
   static const String kPurged = 'nova.official_purged.v2';
   Future<void> _ensureSeeded() async {

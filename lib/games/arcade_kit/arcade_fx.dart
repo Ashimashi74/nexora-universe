@@ -5,7 +5,7 @@ import 'package:flutter/painting.dart';
 
 import 'arcade_skin.dart';
 
-/// Shared premium rendering helpers + particle FX for the NEXORA arcade games.
+/// Shared premium rendering helpers + particle FX for the ANIX arcade games.
 /// Everything is resolution independent and respects [ArcadeFx.enabled] (Low quality / Reduced Motion).
 
 enum ParticleKind { spark, orb, confetti, smoke, ring, shard }

@@ -37,8 +37,9 @@ class _OrbitNetworkPageState extends ConsumerState<OrbitNetworkPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed)
+    if (state == AppLifecycleState.resumed) {
       ref.read(orbitControllerProvider).refresh();
+    }
   }
 
   Future<void> _newChat() async {

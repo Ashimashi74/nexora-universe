@@ -1,4 +1,4 @@
-/// Pure-Dart constants and table geometry for NEXORA 8-ball billiards.
+/// Pure-Dart constants and table geometry for ANIX 8-ball billiards.
 ///
 /// Units are "table units": the playing surface (cushion nose to cushion nose)
 /// is [PoolConfig.tableW] x [PoolConfig.tableH], measured 1:1 in pixels on the

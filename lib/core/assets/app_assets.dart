@@ -90,7 +90,6 @@ class AppAssets {
       'assets/games/carrom/board_classic_wood.webp';
   static const gamesCarromBoardNxBlackGold =
       'assets/games/carrom/board_nx_black_gold.webp';
-  static const gamesFingerSoccerBall = 'assets/games/finger_soccer/ball.webp';
   static const gamesFingerSoccerPitch = 'assets/games/finger_soccer/pitch.webp';
   static const gamesFingerSoccerPucksIsoPuckCosmicCrownIso =
       'assets/games/finger_soccer/pucks/iso/puck_cosmic_crown_iso.webp';
@@ -158,42 +157,6 @@ class AppAssets {
       'assets/games/finger_soccer/pucks/top/puck_royal_lion_top.webp';
   static const gamesFingerSoccerPucksTopPuckTechNxTop =
       'assets/games/finger_soccer/pucks/top/puck_tech_nx_top.webp';
-  static const gamesFingerSoccerPucksPLACEHOLDERLICENSEDIsoPuckNatEnglandIso =
-      'assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/iso/puck_nat_england_iso.webp';
-  static const gamesFingerSoccerPucksPLACEHOLDERLICENSEDIsoPuckNatFranceIso =
-      'assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/iso/puck_nat_france_iso.webp';
-  static const gamesFingerSoccerPucksPLACEHOLDERLICENSEDIsoPuckNatJapanIso =
-      'assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/iso/puck_nat_japan_iso.webp';
-  static const gamesFingerSoccerPucksPLACEHOLDERLICENSEDIsoPuckNatNetherlandsIso =
-      'assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/iso/puck_nat_netherlands_iso.webp';
-  static const gamesFingerSoccerPucksPLACEHOLDERLICENSEDIsoPuckNatPortugalIso =
-      'assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/iso/puck_nat_portugal_iso.webp';
-  static const gamesFingerSoccerPucksPLACEHOLDERLICENSEDIsoPuckNatSpainIso =
-      'assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/iso/puck_nat_spain_iso.webp';
-  static const gamesFingerSoccerPucksPLACEHOLDERLICENSEDThumbPuckNatEnglandThumb =
-      'assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/thumb/puck_nat_england_thumb.webp';
-  static const gamesFingerSoccerPucksPLACEHOLDERLICENSEDThumbPuckNatFranceThumb =
-      'assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/thumb/puck_nat_france_thumb.webp';
-  static const gamesFingerSoccerPucksPLACEHOLDERLICENSEDThumbPuckNatJapanThumb =
-      'assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/thumb/puck_nat_japan_thumb.webp';
-  static const gamesFingerSoccerPucksPLACEHOLDERLICENSEDThumbPuckNatNetherlandsThumb =
-      'assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/thumb/puck_nat_netherlands_thumb.webp';
-  static const gamesFingerSoccerPucksPLACEHOLDERLICENSEDThumbPuckNatPortugalThumb =
-      'assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/thumb/puck_nat_portugal_thumb.webp';
-  static const gamesFingerSoccerPucksPLACEHOLDERLICENSEDThumbPuckNatSpainThumb =
-      'assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/thumb/puck_nat_spain_thumb.webp';
-  static const gamesFingerSoccerPucksPLACEHOLDERLICENSEDTopPuckNatEnglandTop =
-      'assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/top/puck_nat_england_top.webp';
-  static const gamesFingerSoccerPucksPLACEHOLDERLICENSEDTopPuckNatFranceTop =
-      'assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/top/puck_nat_france_top.webp';
-  static const gamesFingerSoccerPucksPLACEHOLDERLICENSEDTopPuckNatJapanTop =
-      'assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/top/puck_nat_japan_top.webp';
-  static const gamesFingerSoccerPucksPLACEHOLDERLICENSEDTopPuckNatNetherlandsTop =
-      'assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/top/puck_nat_netherlands_top.webp';
-  static const gamesFingerSoccerPucksPLACEHOLDERLICENSEDTopPuckNatPortugalTop =
-      'assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/top/puck_nat_portugal_top.webp';
-  static const gamesFingerSoccerPucksPLACEHOLDERLICENSEDTopPuckNatSpainTop =
-      'assets/games/finger_soccer/pucks_PLACEHOLDER_LICENSED/top/puck_nat_spain_top.webp';
   static const gamesSharedDiscsDiscBlack =
       'assets/games/shared/discs/disc_black.webp';
   static const gamesSharedDiscsDiscBlackCrown =
@@ -438,8 +401,9 @@ class AppAssets {
   static String clubBadge(String id) =>
       'assets/progression/club_badges/$id.webp';
   static String oraclePose(String pose) {
-    if (pose == 'idle' || pose == 'hero_wave')
+    if (pose == 'idle' || pose == 'hero_wave') {
       return charactersOracleAvatarUser;
+    }
     return 'assets/characters/oracle/poses/$pose.webp';
   }
 

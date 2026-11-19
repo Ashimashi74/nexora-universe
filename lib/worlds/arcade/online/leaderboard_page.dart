@@ -69,9 +69,10 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
           .map((dynamic r) => Map<String, dynamic>.from(r as Map))
           .toList());
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() => _error = context.tx(
             'بارگیری رتبه‌بندی ممکن نشد', 'Could not load rankings'));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }

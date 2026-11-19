@@ -145,8 +145,9 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
   void _autoOpenGame() {
     final TMatch? m = _myNext;
     final Tournament? t = _t;
-    if (m == null || t == null || m.status != 'playing' || m.gameMatch == null)
+    if (m == null || t == null || m.status != 'playing' || m.gameMatch == null) {
       return;
+    }
     if (_openedGames.add(m.gameMatch!)) unawaited(_openGame(t, m));
   }
 
@@ -220,7 +221,8 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
     }
     setState(() => _busy = true);
     final TResult r = await _repo.register(t.id, code);
-    if (mounted) setState(() => _busy = false);
+    if (!mounted) return;
+    setState(() => _busy = false);
     await _toast(r,
         okFa: entryStatusName(context, '${r.data['status']}'),
         okEn: entryStatusName(context, '${r.data['status']}'));
@@ -263,7 +265,8 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
     HapticFeedback.mediumImpact();
     setState(() => _busy = true);
     final TResult r = await _repo.checkIn(_t!.id);
-    if (mounted) setState(() => _busy = false);
+    if (!mounted) return;
+    setState(() => _busy = false);
     await _toast(r,
         okFa: 'حضورت ثبت شد', okEn: 'You are checked in');
     unawaited(_load());
@@ -1138,10 +1141,12 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
         .where((TEntry e) => e.status == 'approved' || e.status == 'waitlist')
         .toList()
       ..sort((TEntry a, TEntry b) {
-        if (a.place != null || b.place != null)
+        if (a.place != null || b.place != null) {
           return (a.place ?? 999).compareTo(b.place ?? 999);
-        if (a.seed != null || b.seed != null)
+        }
+        if (a.seed != null || b.seed != null) {
           return (a.seed ?? 999).compareTo(b.seed ?? 999);
+        }
         return (a.createdAt ?? DateTime(2000))
             .compareTo(b.createdAt ?? DateTime(2000));
       });

@@ -24,6 +24,7 @@ GameLaunch launch(String id) => GameLaunch(
 const String only = String.fromEnvironment('ONLY');
 void main() {
   setUp(() async {
+    // ignore: invalid_use_of_visible_for_testing_member
     SharedPreferences.setMockInitialValues(<String, Object>{});
     await LocalStore.init();
     await loadFonts();

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui' show FontFeature;
 
 import 'package:flutter/material.dart';
 
@@ -12,7 +11,7 @@ import '../domain/bracket.dart';
 const Color kTAccent = Color(0xFFFFB020);
 const Color kTAccent2 = Color(0xFFFF4F6E);
 
-/// Theme-aware NEXORA accents for tournament chrome.
+/// Theme-aware ANIX accents for tournament chrome.
 Color tAccent(BuildContext context) => NxThemeColors.of(context).accent;
 Color tAccentSecondary(BuildContext context) =>
     NxThemeColors.of(context).accentSecondary;

@@ -7,7 +7,7 @@ import '../../core/online/online_service.dart';
 import '../../core/profile/profile_service.dart';
 import '../../core/storage/local_store.dart';
 
-/// ===================== NEXORA ARCADE META =====================
+/// ===================== ANIX ARCADE META =====================
 /// Shared progression for the 20 arcade games added on redesign-2:
 /// medals (bronze/silver/gold), personal bests, a seeded daily challenge, account sync (best scores live in the
 /// profile counters, which CloudProfileSync uploads) and the global score board on the games project

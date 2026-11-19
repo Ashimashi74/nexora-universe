@@ -1,4 +1,4 @@
-/// Pure-Dart data model for NEXORA Mafia (no Flutter imports).
+/// Pure-Dart data model for ANIX Mafia (no Flutter imports).
 library;
 
 /// Every role in the game. New roles can be added here; the engine reads the

@@ -1,4 +1,4 @@
-/// NEXORA Quiz rules engine (pure Dart, deterministic from a seed).
+/// ANIX Quiz rules engine (pure Dart, deterministic from a seed).
 library;
 
 import 'dart:math' as math;

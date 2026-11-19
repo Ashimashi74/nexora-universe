@@ -14,7 +14,7 @@ import '../../core/widgets/nx_widgets.dart';
 import '../../games/game_registry.dart';
 import '../../games/arcade_kit/arcade_icon.dart';
 
-/// NEXORA ARCADE lobby (STEP_18): game pedestals, records, quick play.
+/// ANIX ARCADE lobby (STEP_18): game pedestals, records, quick play.
 class ArcadePage extends ConsumerWidget {
   const ArcadePage({super.key});
 
@@ -25,7 +25,7 @@ class ArcadePage extends ConsumerWidget {
     return DefaultTabController(
       length: 2,
       child: NxWorldScaffold(
-        title: context.tx('آرکید NEXORA', 'NEXORA ARCADE'),
+        title: context.tx('آرکید ANIX', 'ANIX ARCADE'),
         palette: WorldPalette.arcade,
         dock: Nx2Tab.games,
         body: Column(children: [

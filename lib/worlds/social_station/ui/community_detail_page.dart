@@ -14,8 +14,8 @@ import 'tournament_bracket_view.dart';
 
 /// The shareable invitation text for a community.
 String inviteText(BuildContext context, Community c) => context.tx(
-      'به جامعه «${c.name}» در NEXORA بپیوند! 🚀\nکد دعوت: ${c.inviteCode}\nدر Social Station روی «ورود با کد دعوت» بزن.',
-      'Join "${c.name}" on NEXORA! 🚀\nInvite code: ${c.inviteCode}\nIn Social Station tap "Join with code".',
+      'به جامعه «${c.name}» در ANIX بپیوند! 🚀\nکد دعوت: ${c.inviteCode}\nدر Social Station روی «ورود با کد دعوت» بزن.',
+      'Join "${c.name}" on ANIX! 🚀\nInvite code: ${c.inviteCode}\nIn Social Station tap "Join with code".',
     );
 
 /// Invite sheet: copy code, copy shareable text, drop the card into ORBIT NETWORK.
@@ -61,8 +61,9 @@ Future<void> showInviteSheet(BuildContext context, WidgetRef ref, Community c) {
                 child: OutlinedButton.icon(
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: c.inviteCode));
-                    if (bc.mounted)
+                    if (bc.mounted) {
                       socialSnack(bc, 'کد کپی شد.', 'Code copied.');
+                    }
                   },
                   icon: const Icon(Icons.copy_rounded),
                   label: Text(bc.tx('کپی کد', 'Copy code')),
@@ -73,9 +74,10 @@ Future<void> showInviteSheet(BuildContext context, WidgetRef ref, Community c) {
                 child: FilledButton.icon(
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: text));
-                    if (bc.mounted)
+                    if (bc.mounted) {
                       socialSnack(bc, 'متن دعوت کپی شد؛ هرجا خواستی بفرست.',
                           'Invite text copied — paste it anywhere.');
+                    }
                   },
                   icon: const Icon(Icons.ios_share_rounded),
                   label: Text(bc.tx('کپی متن دعوت', 'Copy invite')),
@@ -272,9 +274,10 @@ class _CommunityDetailPageState extends ConsumerState<CommunityDetailPage>
                         onTap: () async {
                           await Clipboard.setData(
                               ClipboardData(text: c.inviteCode));
-                          if (context.mounted)
+                          if (context.mounted) {
                             socialSnack(context, 'کد دعوت کپی شد.',
                                 'Invite code copied.');
+                          }
                         },
                         child: Row(
                             mainAxisSize: MainAxisSize.min,

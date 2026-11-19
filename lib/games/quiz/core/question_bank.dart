@@ -1,5 +1,6 @@
-/// NEXORA Quiz: full question bank (A: space, science, geography, history, sports;
+/// ANIX Quiz: full question bank (A: space, science, geography, history, sports;
 /// B: technology, iran, general, media).
+library;
 import 'question_bank_a.dart';
 import 'question_bank_b.dart';
 import 'question_model.dart';

@@ -42,7 +42,7 @@ class OracleLines {
       OracleLine('بیا یه دست تخته بزنیم… شوخی کردم، من تاس ندارم، دست ندارم… یعنی دارم ولی کوچیکه 😅', "Let's play backgammon… kidding, my hands are too tiny for dice 😅"),
       OracleLine('اگه یه بار دیگه گوشیت رو اینقدر تکون بدی سرگیجه می‌گیرم 😵‍💫', 'Shake your phone like that again and I get dizzy 😵‍💫'),
       OracleLine('حدس می‌زنم امروز روز توئه. البته دیروز هم همینو گفتم 😜', "I bet today's your day. I said that yesterday too 😜"),
-      OracleLine('یه نفر گفت تو بهترین بازیکن NEXORA هستی. اون یه نفر خودت بودی؟ 🤨', 'Someone said you are the best NEXORA player. Was that someone you? 🤨'),
+      OracleLine('یه نفر گفت تو بهترین بازیکن ANIX هستی. اون یه نفر خودت بودی؟ 🤨', 'Someone said you are the best ANIX player. Was that someone you? 🤨'),
       OracleLine('من آپدیت شدم، تو کی آپدیت می‌شی؟ 😏', "I got an update. When's yours? 😏"),
       OracleLine('دوستات منتظرن ببرنت، نذار ناامید شن 😈', "Your friends are waiting to beat you, don't disappoint them 😈"),
       OracleLine('اگه حوصله‌ت سر رفته، من یه عالمه ایده‌ی بد دارم! 💡', "Bored? I have tons of terrible ideas! 💡"),

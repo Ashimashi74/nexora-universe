@@ -33,7 +33,7 @@ const List<String> kTournamentGames = <String>[
   'billiards',
   'backgammon',
   'quiz',
-  // NEXORA arcade (redesign-2): 1-vs-1 capable multiplayer games
+  // ANIX arcade (redesign-2): 1-vs-1 capable multiplayer games
   'kart_racing',
   'obstacle_race',
   'bomb_arena',
@@ -228,8 +228,9 @@ class _TournamentWizardPageState extends ConsumerState<TournamentWizardPage> {
       };
 
   String? _validate(BuildContext context) {
-    if (_title.text.trim().length < 3)
+    if (_title.text.trim().length < 3) {
       return context.tx('عنوان حداقل ۳ حرف', 'Title needs at least 3 letters');
+    }
     if (!_regOpen.isBefore(_regClose) ||
         _draw.isBefore(_regClose) ||
         _start.isBefore(_draw)) {
@@ -237,12 +238,14 @@ class _TournamentWizardPageState extends ConsumerState<TournamentWizardPage> {
           'ترتیب زمان‌ها: شروع ثبت‌نام < پایان ثبت‌نام ≤ قرعه ≤ شروع',
           'Order: reg open < reg close ≤ draw ≤ start');
     }
-    if (_format == TFormat.groupsKo && _capacity < 4)
+    if (_format == TFormat.groupsKo && _capacity < 4) {
       return context.tx(
           'حالت گروهی حداقل ۴ نفر', 'Groups need at least 4 players');
-    if (_dist.fold<int>(0, (int a, int b) => a + b) > 100)
+    }
+    if (_dist.fold<int>(0, (int a, int b) => a + b) > 100) {
       return context.tx(
           'جمع درصدها بیشتر از ۱۰۰', 'Prize % adds up to more than 100');
+    }
     return null;
   }
 
@@ -274,9 +277,10 @@ class _TournamentWizardPageState extends ConsumerState<TournamentWizardPage> {
     }
     if (publish && (_editing == null || _editing!.status == 'draft')) {
       final TResult p = await repo.admin(id, 'publish');
-      if (!p.ok && mounted)
+      if (!p.ok && mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(tErrorText(p.error, fa))));
+      }
     }
     if (!mounted) return;
     setState(() => _busy = false);
@@ -927,7 +931,7 @@ class _TournamentWizardPageState extends ConsumerState<TournamentWizardPage> {
               ? context.tx('دستی', 'manual')
               : '$matches'),
       _kv(context.tx('ثبت‌نام', 'Registration'),
-          '${regModeName(context, _regMode)} · ${_feeCoins}🪙 ${_feeGems}💎'),
+          '${regModeName(context, _regMode)} · $_feeCoins🪙 $_feeGems💎'),
       _kv(context.tx('شروع ثبت‌نام', 'Reg opens'), fmtWhen(_regOpen.toUtc())),
       _kv(context.tx('پایان ثبت‌نام', 'Reg closes'),
           fmtWhen(_regClose.toUtc())),

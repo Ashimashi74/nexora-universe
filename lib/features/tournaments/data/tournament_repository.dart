@@ -302,6 +302,6 @@ String tErrorText(String? code, bool fa) {
     'bad_distribution' => t('جمع درصد جوایز بیشتر از ۱۰۰ است', 'Prize percentages add up to more than 100'),
     'downstream_started' => t('بازی بعدی شروع شده؛ اصلاح ممکن نیست', 'The next match already started'),
     'groups_need_4' => t('حالت گروهی حداقل ۴ نفر لازم دارد', 'Groups need at least 4 players'),
-    _ => code == null ? t('خطا', 'Error') : code,
+    _ => code ?? t('خطا', 'Error'),
   };
 }

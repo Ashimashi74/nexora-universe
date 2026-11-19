@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,7 +11,7 @@ import 'online_service.dart';
 
 /// Keeps the local identity (offline cache) and the server profile in sync.
 ///
-/// * XP / coins: server is the source of truth (public.profiles, shared with the other NEXORA app).
+/// * XP / coins: server is the source of truth (public.profiles, shared with the other ANIX app).
 ///   Local awards are queued and sent through `nx_award` (idempotent, daily cap server-side).
 /// * Inventory, achievements, stats, decor, theme: `nx_profiles.data` (merged on sign-in).
 /// * Works offline: the queue survives restarts and flushes on the next connection.
@@ -81,7 +80,7 @@ class CloudProfileSync {
       if (otherAccount) await _store.remove(_kQueue);
 
       if (nx == null) {
-        // First link of this account to NEXORA Flutter.
+        // First link of this account to ANIX Flutter.
         if (!otherAccount && _profile.hasIdentity) {
           final dynamic r = await c.rpc('nx_import_local', params: <String, dynamic>{
             'p_xp': _profile.xp,

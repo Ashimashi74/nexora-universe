@@ -36,7 +36,7 @@ const Map<String, ArcadeIconSpec> kArcadeIcons = <String, ArcadeIconSpec>{
   'game_2048': ArcadeIconSpec(Icons.filter_9_plus_rounded, Color(0xFFFFB13D), Color(0xFFFF4F9A)),
 };
 
-/// The game's pedestal art (assets/arcade/pedestals/<id>.webp) — or, when the art is not there yet, a premium
+/// The game's pedestal art `(assets/arcade/pedestals/<id>.webp)` — or, when the art is not there yet, a premium
 /// procedural medallion. Dropping a webp with the game's id into that folder replaces the medallion everywhere.
 class GamePedestal extends StatelessWidget {
   const GamePedestal(this.gameId, {super.key, this.size, this.cacheWidth = 360, this.fit = BoxFit.contain});

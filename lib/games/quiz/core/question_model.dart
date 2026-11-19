@@ -1,4 +1,4 @@
-/// NEXORA Quiz question model (pure Dart).
+/// ANIX Quiz question model (pure Dart).
 enum QuizCategory { space, science, geography, history, sports, technology, iran, general, media }
 
 class QuizQuestion {

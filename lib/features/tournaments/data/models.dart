@@ -225,7 +225,7 @@ class TNotification {
   final bool read;
   final DateTime createdAt;
 
-  String get title => '${data['title'] ?? 'NEXORA'}';
+  String get title => '${data['title'] ?? 'ANIX'}';
 }
 
 class StandingRow {

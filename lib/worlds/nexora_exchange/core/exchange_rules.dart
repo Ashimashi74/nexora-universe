@@ -1,4 +1,4 @@
-/// NEXORA EXCHANGE — pure economy rules (no Flutter imports).
+/// ANIX EXCHANGE — pure economy rules (no Flutter imports).
 ///
 /// P26 / Vision §5.7: transparent prices, no gambling, no betting, no random
 /// paid rewards. "Featured today" is a deterministic rotation computed from

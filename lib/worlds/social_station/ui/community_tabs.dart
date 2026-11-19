@@ -36,8 +36,9 @@ Future<void> composeAnnouncement(BuildContext context, WidgetRef ref, Community 
   if (text == null || text.trim().isEmpty) return;
   final SocialMe me = socialMe(ref);
   final bool ok = await ref.read(socialControllerProvider).announce(c.id, actorId: me.id, actorName: me.name, text: text);
-  if (!ok && context.mounted)
+  if (!ok && context.mounted) {
     socialSnack(context, 'فقط مالک و مدیران اطلاعیه می‌دهند.', 'Only the owner and admins can announce.');
+  }
 }
 
 Future<void> addLocalPlayer(BuildContext context, WidgetRef ref, Community c) async {

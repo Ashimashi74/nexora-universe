@@ -5,7 +5,7 @@ import 'carrom_config.dart';
 /// Pure deterministic Carrom physics (no Flutter imports).
 ///
 /// Determinism contract (same as Finger Soccer):
-///  * fixed step dt = 1/120, semi-implicit Euler, fixed order: move -> pairs (i<j) -> cushions -> pockets.
+///  * fixed step dt = 1/120, semi-implicit Euler, fixed order: move -> pairs (i before j) -> cushions -> pockets.
 ///  * only + - * / and sqrt in the simulation (no sin/cos/pow), IEEE doubles.
 ///  * a piece slower than [CrConfig.stopSpeed] stops exactly (0); "settled" = all velocities exactly 0.
 ///  * after every shot positions are snapped to 1/1000 and velocities zeroed; [crStateHash] is FNV-1a.

@@ -1,6 +1,6 @@
 import '../../../core/assets/app_assets.dart';
 
-/// Categories of built-in NEXORA art that can be attached to posts and messages.
+/// Categories of built-in ANIX art that can be attached to posts and messages.
 /// (No image_picker package: the app's own art library is the honest offline source.)
 enum ArtCategory { gear, decor, pedestal, badge }
 

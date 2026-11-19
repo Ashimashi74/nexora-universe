@@ -14,7 +14,7 @@ import 'uno/uno_entry.dart';
 
 export 'core/game_contract.dart';
 
-/// GameRegistry (STEP_16): the nine NEXORA ARCADE games.
+/// GameRegistry (STEP_16): the nine ANIX ARCADE games.
 final List<GameInfo> kGames = <GameInfo>[
   GameInfo(
     id: 'finger_soccer',
@@ -143,8 +143,8 @@ final List<GameInfo> kGames = <GameInfo>[
   ),
   GameInfo(
     id: 'quiz',
-    nameFa: 'کوییز نکسورا',
-    nameEn: 'NEXORA Quiz',
+    nameFa: 'کوییز انیکس',
+    nameEn: 'ANIX Quiz',
     taglineFa: 'دوئل دانش در ۱۰ راند',
     taglineEn: '10-round knowledge duel',
     rulesFa: '۱۰ سؤال، هر کدام ۱۵ ثانیه. پاسخ درست امتیاز دارد و سرعت جایزه‌ی اضافه. دسته را انتخاب کن و حریف را شکست بده.',

@@ -225,7 +225,7 @@ class _KartGameState extends ArcadeLoopState<KartGame> {
     _done = true;
     final List<int> order = race.standings().map((Kart k) => k.seat).toList();
     final int place = order.indexOf(me) + 1;
-    _banner = '${ordinalEn(place)}';
+    _banner = ordinalEn(place);
     final GameResult res = rankedResult(l, order, whatFa: 'مسابقه‌ی کارت', whatEn: 'Kart race');
     l.onFinish(res);
   }

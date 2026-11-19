@@ -5,7 +5,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-import '../core/bm_data.dart';
 import '../core/bm_engine.dart';
 import 'bm_ball.dart';
 
@@ -76,7 +75,6 @@ class BmView {
   Offset toWorld(Offset p) => Offset((p.dx - ox) / s, (p.dy - oy) / s);
 }
 
-Color _c(int argb, [double a = 1]) => Color(argb).withValues(alpha: (Color(argb).a * a).clamp(0.0, 1.0).toDouble());
 Color _rgba(int r, int g, int b, double a) => Color.fromRGBO(r, g, b, a.clamp(0.0, 1.0).toDouble());
 
 class BmPainter extends CustomPainter {
@@ -296,120 +294,12 @@ class BmPainter extends CustomPainter {
     canvas.restore();
   }
 
-  // ------------------------------------------------------------ piece trails
-  void _pieceTrails(Canvas canvas) {
-    for (final BmBody b in e.bodies) {
-      if (b == e.ball || b.tr.length < 3) continue;
-      final List<BmTrailPt> T = b.tr;
-      final int n = T.length;
-      final List<int> rgb = b.team != 0 ? <int>[255, 90, 90] : <int>[70, 160, 255];
-      final double q = math.min(1.0, T[n - 1].v / (1500 * K));
-      for (int i = 1; i < n; i++) {
-        final double f = i / n;
-        canvas.drawLine(
-            Offset(T[i - 1].x, T[i - 1].y),
-            Offset(T[i].x, T[i].y),
-            Paint()
-              ..blendMode = BlendMode.plus
-              ..strokeCap = StrokeCap.round
-              ..strokeWidth = b.r * 1.7 * f
-              ..color = _rgba(rgb[0], rgb[1], rgb[2], f * .5 * (.4 + .6 * q)));
-      }
-      for (int i = 1; i < n; i++) {
-        final double f = i / n;
-        canvas.drawLine(
-            Offset(T[i - 1].x, T[i - 1].y),
-            Offset(T[i].x, T[i].y),
-            Paint()
-              ..blendMode = BlendMode.plus
-              ..strokeCap = StrokeCap.round
-              ..strokeWidth = b.r * .35 * f
-              ..color = _rgba(255, 255, 255, f * .35 * q));
-      }
-    }
-  }
-
-  // ------------------------------------------------------------ drawParts()
-  void _drawParts(Canvas canvas) {
-    if (e.parts.isEmpty) return;
-    for (final BmPart p in e.parts) {
-      final double a = math.max(0, p.l / p.m);
-      final Color col = _c(p.c, a);
-      final double r = p.r * (p.k == 4 ? 1 : (.5 + .5 * a));
-      final Paint paint = Paint()
-        ..blendMode = BlendMode.plus
-        ..color = col;
-      switch (p.k) {
-        case 1:
-          canvas.save();
-          canvas.translate(p.x, p.y);
-          canvas.rotate(p.rot);
-          final double q = r * 1.8;
-          final Path path = Path()
-            ..moveTo(0, -q)
-            ..quadraticBezierTo(0, 0, q, 0)
-            ..quadraticBezierTo(0, 0, 0, q)
-            ..quadraticBezierTo(0, 0, -q, 0)
-            ..quadraticBezierTo(0, 0, 0, -q);
-          canvas.drawPath(path, paint);
-          canvas.restore();
-          break;
-        case 2:
-          canvas.save();
-          canvas.translate(p.x, p.y);
-          canvas.rotate(p.rot);
-          canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: r * 3, height: r * 1.4), paint);
-          canvas.restore();
-          break;
-        case 3:
-          canvas.save();
-          canvas.translate(p.x, p.y);
-          canvas.rotate(p.rot);
-          canvas.drawRect(Rect.fromLTWH(-r, -r, r * 2, r * 2), paint);
-          canvas.restore();
-          break;
-        case 4:
-          paint
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.8;
-          canvas.drawCircle(Offset(p.x, p.y), math.max(0.01, r * (1.4 - a * .4)), paint);
-          break;
-        case 5:
-          final double l0 = math.sqrt(p.vx * p.vx + p.vy * p.vy), l = l0 == 0 ? 1 : l0, k = math.min(26.0, l * .07);
-          paint
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = math.max(1.0, r * .8)
-            ..strokeCap = StrokeCap.round;
-          canvas.drawLine(Offset(p.x, p.y), Offset(p.x - p.vx / l * k, p.y - p.vy / l * k), paint);
-          break;
-        default:
-          canvas.drawCircle(Offset(p.x, p.y), math.max(0.01, r), paint);
-      }
-    }
-  }
-
   // ------------------------------------------------------------ drawTrail()
   void _drawTrail(Canvas canvas, double now) {
     final List<BmTrailPt> trail = e.trail;
     final int n = trail.length;
     if (n < 2) return;
-    final BmTrail st = kBmTR[e.setBall % kBmTR.length];
-    final List<int> c = st.c;
-    const double BW = BR;
-    final BmFa fa = kBmFA[e.field.id] ?? kBmFA['stadium']!;
-    void seg(int i, double w, double al, int col, [double ox = 0, double oy = 0, BlendMode bm = BlendMode.plus]) {
-      final BmTrailPt p = trail[i - 1], q = trail[i];
-      final double ga = math.max(0, math.min(1.0, al * q.a));
-      canvas.drawLine(
-          Offset(p.x + ox, p.y + oy),
-          Offset(q.x + ox, q.y + oy),
-          Paint()
-            ..blendMode = bm
-            ..strokeCap = StrokeCap.round
-            ..strokeWidth = math.max(.6, w * q.a)
-            ..color = _c(col, ga));
-    }
-
+    const double bw = BR;
     List<double> nrm(int i) {
       final BmTrailPt p = trail[math.max(0, i - 1)], q = trail[math.min(n - 1, i)];
       final double dx = q.x - p.x, dy = q.y - p.y;
@@ -425,11 +315,11 @@ class BmPainter extends CustomPainter {
       final BmTrailPt p = trail[i - 1], q = trail[i];
       final double f = q.a.clamp(0.0, 1.0).toDouble();
       final List<double> nn = nrm(i);
-      final double offset = BW * 0.42;
+      final double offset = bw * 0.42;
       final Paint mark = Paint()
         ..blendMode = BlendMode.multiply
         ..strokeCap = StrokeCap.round
-        ..strokeWidth = BW * (0.70 + f * 0.85)
+        ..strokeWidth = bw * (0.70 + f * 0.85)
         ..color = _rgba(16, 28, 12, 0.10 + f * 0.16);
       canvas.drawLine(Offset(p.x + nn[0] * offset, p.y + nn[1] * offset),
           Offset(q.x + nn[0] * offset, q.y + nn[1] * offset), mark);
@@ -437,198 +327,7 @@ class BmPainter extends CustomPainter {
           Offset(q.x - nn[0] * offset, q.y - nn[1] * offset), mark);
     }
 
-    // Deliberately stop here: only the low-alpha multiply trace remains.
-    // All neon, fire, sparkle and particle trail variants are disabled.
-    return;
-
-    void base(double w0, double a0) {
-      for (int i = 1; i < n; i++) {
-        seg(i, BW * 2.2 * w0, .14 * a0, c[0]);
-        seg(i, BW * 1.1 * w0, .42 * a0, c[1]);
-        seg(i, BW * .4 * w0, .95 * a0, c.length > 2 ? c[2] : 0xFFFFFFFF);
-      }
-    }
-
-    int hsl(double h, double l) => bmHsl(h, l);
-    switch (st.k) {
-      case 'bolt':
-        base(.55, .8);
-        for (final List<Object> wc in <List<Object>>[
-          <Object>[4.2, c[1], .55],
-          <Object>[1.7, c[2], .95]
-        ]) {
-          final double w = wc[0] as double;
-          final Path path = Path();
-          int m = 0;
-          for (int i = 0; i < n; i++) {
-            final BmTrailPt q = trail[i];
-            if (q.a < .12) continue;
-            final List<double> nn = nrm(i);
-            final double a = (math.sin(i * 91.7 + now * .07 + w) * BW * 1.1) * q.a;
-            if (m++ == 0) {
-              path.moveTo(q.x + nn[0] * a, q.y + nn[1] * a);
-            } else {
-              path.lineTo(q.x + nn[0] * a, q.y + nn[1] * a);
-            }
-          }
-          canvas.drawPath(
-              path,
-              Paint()
-                ..blendMode = BlendMode.plus
-                ..style = PaintingStyle.stroke
-                ..strokeJoin = StrokeJoin.round
-                ..strokeCap = StrokeCap.round
-                ..strokeWidth = w
-                ..color = _c(wc[1] as int, wc[2] as double));
-        }
-        break;
-      case 'prism':
-        for (int i = 1; i < n; i++) {
-          seg(i, BW * 1.9, .4, hsl(i * 14 + now * .25, 58));
-          seg(i, BW * .9, .7, hsl(i * 14 + now * .25 + 40, 70));
-          seg(i, BW * .32, .95, 0xFFFFFFFF);
-        }
-        break;
-      case 'wave':
-        base(.4, .7);
-        for (int i = 1; i < n; i++) {
-          final List<double> nn = nrm(i);
-          final double o = math.sin(i * .55 + now * .02) * BW * 1.0 * trail[i].a;
-          seg(i, BW * .55, .85, c[0], nn[0] * o, nn[1] * o);
-          seg(i, BW * .55, .85, c[1], -nn[0] * o, -nn[1] * o);
-        }
-        break;
-      case 'star':
-        base(.7, .9);
-        break;
-      case 'smoke':
-        for (int i = 0; i < n; i += 2) {
-          final BmTrailPt q = trail[i];
-          final double g = 1 - q.a;
-          canvas.drawCircle(Offset(q.x + math.sin(i * 3.1) * g * 14, q.y + math.cos(i * 2.7) * g * 14), BW * (.9 + g * 2.4),
-              Paint()..color = _c(c[1], q.a * .2));
-        }
-        for (int i = 1; i < n; i++) {
-          seg(i, BW * .45, .7, c[2]);
-        }
-        break;
-      case 'rainbow':
-        for (int b = 0; b < 6; b++) {
-          for (int i = 1; i < n; i++) {
-            final List<double> nn = nrm(i);
-            final double o = (b - 2.5) * BW * .34 * trail[i].a;
-            seg(i, BW * .42, .8, hsl(b * 60.0, 60), nn[0] * o, nn[1] * o);
-          }
-        }
-        break;
-      case 'neon':
-        for (int i = 1; i < n; i++) {
-          seg(i, BW * 1.9, .2, c[0]);
-          seg(i, BW * .75, .9, c[1]);
-          seg(i, BW * .24, 1, c[2]);
-        }
-        break;
-      case 'yin':
-        for (int i = 1; i < n; i++) {
-          final List<double> nn = nrm(i);
-          final double o = math.sin(i * .42 + now * .016) * BW * .85 * trail[i].a;
-          seg(i, BW * .7, .9, c[0], nn[0] * o, nn[1] * o);
-          seg(i, BW * .7, .85, c[1], -nn[0] * o, -nn[1] * o);
-          seg(i, BW * 1.8, .1, c[1]);
-        }
-        break;
-      case 'fire':
-        for (int i = 1; i < n; i++) {
-          seg(i, BW * 2.2, .22, c[0]);
-          seg(i, BW * 1.2, .55, c[1]);
-          seg(i, BW * .45, .95, c[2]);
-        }
-        break;
-      case 'blade':
-        final Path path = Path();
-        final List<Offset> R = <Offset>[];
-        for (int i = 0; i < n; i++) {
-          final List<double> nn = nrm(i);
-          final double w = BW * 1.5 * math.pow(i / (n - 1), 1.3).toDouble() * trail[i].a;
-          if (i == 0) {
-            path.moveTo(trail[i].x + nn[0] * w, trail[i].y + nn[1] * w);
-          } else {
-            path.lineTo(trail[i].x + nn[0] * w, trail[i].y + nn[1] * w);
-          }
-          R.add(Offset(trail[i].x - nn[0] * w, trail[i].y - nn[1] * w));
-        }
-        for (int i = n - 1; i >= 0; i--) {
-          path.lineTo(R[i].dx, R[i].dy);
-        }
-        path.close();
-        canvas.drawPath(
-            path,
-            Paint()
-              ..blendMode = BlendMode.plus
-              ..color = _c(c[0], .75));
-        for (int i = 1; i < n; i++) {
-          seg(i, BW * .3, .95, c[2]);
-        }
-        break;
-      case 'ghost':
-        for (int i = 1; i < n; i++) {
-          seg(i, BW * .5, .5, c[1]);
-        }
-        for (int i = 0; i < n; i += 4) {
-          final BmTrailPt q = trail[i];
-          final double rr = BR * (.6 + .4 * q.a);
-          canvas.drawCircle(
-              Offset(q.x, q.y),
-              rr,
-              Paint()
-                ..blendMode = BlendMode.plus
-                ..style = PaintingStyle.stroke
-                ..strokeWidth = 3
-                ..color = _c(c[1], q.a * .4));
-          canvas.drawCircle(
-              Offset(q.x, q.y),
-              rr,
-              Paint()
-                ..blendMode = BlendMode.plus
-                ..color = _c(c[0], q.a * .08));
-        }
-        break;
-      case 'ember':
-        for (int i = 1; i < n; i++) {
-          seg(i, BW * 1.2, .2, c[0]);
-          seg(i, BW * .55, .6, c[1]);
-          seg(i, BW * .2, 1, c[2]);
-        }
-        break;
-      case 'plasma':
-        for (int i = 1; i < n; i++) {
-          final double k = 1 + .3 * math.sin(now * .03 + i * .35);
-          final List<double> nn = nrm(i);
-          final double o = math.sin(i * .5 - now * .025) * BW * .5 * trail[i].a;
-          seg(i, BW * 2.8 * k, .2, c[0]);
-          seg(i, BW * 1.4 * k, .5, c[1]);
-          seg(i, BW * .45, 1, c[2]);
-          seg(i, BW * .3, .7, c[1], nn[0] * o, nn[1] * o);
-        }
-        break;
-    }
-    for (int i = 1; i < n; i++) {
-      seg(i, BW * .8, .2, fa.c[0]);
-    }
-    final BmTrailPt last = trail[n - 1];
-    final BmBody? ball = e.ball;
-    if (ball != null && last.v > 1800 * K) {
-      final double ux = ball.vx / last.v, uy = ball.vy / last.v;
-      for (int k = -1; k <= 1; k++) {
-        canvas.drawLine(
-            Offset(ball.x - ux * BR * 1.4 - uy * k * BR * .9, ball.y - uy * BR * 1.4 + ux * k * BR * .9),
-            Offset(ball.x - ux * BR * 7 - uy * k * BR * .9, ball.y - uy * BR * 7 + ux * k * BR * .9),
-            Paint()
-              ..blendMode = BlendMode.plus
-              ..strokeWidth = 2
-              ..color = _c(c[1], .35));
-      }
-    }
+    // Only the low-alpha multiply trace is drawn; the neon/fire/sparkle trail variants were removed.
   }
 
   // ------------------------------------------------------------ aim()

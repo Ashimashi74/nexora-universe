@@ -126,7 +126,7 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
     } catch (e) {
       final String s = '$e';
       _error = s.contains('Socket') || s.contains('host lookup')
-          ? context.tx('اتصال برقرار نیست', 'No connection')
+          ? (mounted ? context.tx('اتصال برقرار نیست', 'No connection') : 'No connection')
           : s;
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -134,17 +134,22 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
   }
 
   String _pretty(String m) {
-    if (m.contains('room not found'))
+    if (m.contains('room not found')) {
       return context.tx('اتاقی با این کد پیدا نشد', 'No room with that code');
-    if (m.contains('room full'))
+    }
+    if (m.contains('room full')) {
       return context.tx('اتاق پر است', 'The room is full');
-    if (m.contains('already started'))
+    }
+    if (m.contains('already started')) {
       return context.tx(
           'بازی این اتاق شروع شده', 'That room has already started');
-    if (m.contains('need'))
+    }
+    if (m.contains('need')) {
       return context.tx('بازیکن کافی نیست', 'Not enough players yet');
-    if (m.contains('not signed in'))
+    }
+    if (m.contains('not signed in')) {
       return context.tx('اول آنلاین شو', 'Go online first');
+    }
     return m;
   }
 
@@ -237,9 +242,10 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
         .onPresenceJoin((_) => _syncPresence())
         .onPresenceLeave((_) => _syncPresence())
         .subscribe((RealtimeSubscribeStatus s, Object? e) {
-      if (mounted)
+      if (mounted) {
         setState(
             () => _realtimeConnected = s == RealtimeSubscribeStatus.subscribed);
+      }
       if (s == RealtimeSubscribeStatus.subscribed) {
         final int mySeat = _seats
                 .where((_Seat x) => x.userId == _me)
@@ -304,8 +310,9 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
           matchId != null &&
           !_inMatch &&
           matchId != _lastMatchSeen) {
-        if (seats.any((_Seat s) => s.userId == _me))
+        if (seats.any((_Seat s) => s.userId == _me)) {
           unawaited(_openMatch(matchId));
+        }
       }
     } catch (_) {}
   }
@@ -409,7 +416,7 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
                                         'p_room': _roomId,
                                         'p_user': f.id
                                       });
-                                  if (ctx.mounted) {
+                                  if (ctx.mounted && mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                         SnackBar(
                                             content: Text(context.tx(
@@ -442,10 +449,11 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
         if (didPop && _roomId != null && _room?['status'] == 'lobby') {
           final SupabaseClient? c = _c;
           final String id = _roomId!;
-          if (c != null)
+          if (c != null) {
             unawaited(c.rpc('nx_leave_room', params: <String, dynamic>{
               'p_room': id
             }).catchError((Object _) => null));
+          }
         }
       },
       child: NxWorldScaffold(
@@ -646,8 +654,9 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
 
   int _count(Map<String, dynamic> r) {
     final dynamic l = r['nx_room_players'];
-    if (l is List && l.isNotEmpty && l.first is Map)
+    if (l is List && l.isNotEmpty && l.first is Map) {
       return ((l.first as Map)['count'] as num?)?.toInt() ?? 0;
+    }
     return 0;
   }
 

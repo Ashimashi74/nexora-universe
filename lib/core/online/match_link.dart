@@ -397,7 +397,7 @@ class SupabaseMatchLink extends ChangeNotifier implements NetLink {
   void verify(int seq, String? expected, String actual) {
     if (expected == null || expected == actual) return;
     _desyncs++;
-    debugPrint('NEXORA desync at seq $seq: expected $expected got $actual');
+    debugPrint('ANIX desync at seq $seq: expected $expected got $actual');
   }
 
   /// Report the final result (first report wins server-side; all phones computed the same state).

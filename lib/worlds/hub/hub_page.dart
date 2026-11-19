@@ -15,7 +15,7 @@ import '../../games/game_registry.dart';
 import '../world_registry.dart';
 import 'hub_search.dart';
 
-/// NEXORA HUB (NX2 redesign): profile HUD on top, ORACLE on its crystal dock in the middle,
+/// ANIX HUB (NX2 redesign): profile HUD on top, ORACLE on its crystal dock in the middle,
 /// one big PLAY, the art menu tiles and the bottom dock — following the owner's home mockups.
 class HubPage extends ConsumerStatefulWidget {
   const HubPage({super.key});
@@ -355,7 +355,7 @@ class _MenuGrid extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Nx2SectionHeader(
-              title: context.tx('منوی نکسورا', 'NEXORA MENU'),
+              title: context.tx('منوی انیکس', 'ANIX MENU'),
               action: context.tx('همه', 'All'),
               onAction: () => _showAll(context),
             ),

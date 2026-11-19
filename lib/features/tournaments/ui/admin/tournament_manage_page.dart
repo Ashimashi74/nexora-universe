@@ -362,7 +362,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
             if (await _confirm(context.tx('حذف شود؟', 'Delete?'), t.title,
                 danger: true)) {
               final TResult r = await _repo.admin(t.id, 'delete');
-              if (r.ok && mounted) context.pop();
+              if (r.ok && mounted) this.context.pop();
             }
           }, color: NxColors.danger),
       ],
@@ -463,8 +463,9 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
                       context.tx('سید (۱ = بهترین)', 'Seed (1 = best)'),
                       hint: '1');
                   final int? s = int.tryParse(v ?? '');
-                  if (s != null)
+                  if (s != null) {
                     await _run(() => _repo.setSeed(t.id, e.userId, s));
+                  }
                 }
               : null,
           trailing: preDraw

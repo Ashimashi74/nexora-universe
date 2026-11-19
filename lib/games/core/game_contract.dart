@@ -4,13 +4,13 @@ import 'net_link.dart';
 
 export 'net_link.dart';
 
-/// ===================== NEXORA GAME CONTRACT (STEP_16) =====================
-/// Every Arcade game is an independent module under lib/games/<id>/.
-///  * Pure-Dart rules engine in lib/games/<id>/core/ (no Flutter/Flame imports,
+/// ===================== ANIX GAME CONTRACT (STEP_16) =====================
+/// Every Arcade game is an independent module under `lib/games/<id>/`.
+///  * Pure-Dart rules engine in `lib/games/<id>/core/` (no Flutter/Flame imports,
 ///    deterministic, unit-tested; the same logic will run server-side online).
-///  * Rendering (Flame or Flutter CustomPainter) + UI in lib/games/<id>/ui/.
+///  * Rendering (Flame or Flutter CustomPainter) + UI in `lib/games/<id>/ui/`.
 ///  * One entry function `Widget build<Name>Game(GameLaunch launch)` in
-///    lib/games/<id>/<id>_entry.dart registered in game_registry.dart.
+///    `lib/games/<id>/<id>_entry.dart` registered in game_registry.dart.
 ///  * When a match ends the game calls `launch.onFinish(GameResult(...))` exactly
 ///    once. The host shows the result screen, awards XP/coins and offers rematch.
 ///  * The host draws the exit button (top-start corner, 56x56 safe area): keep

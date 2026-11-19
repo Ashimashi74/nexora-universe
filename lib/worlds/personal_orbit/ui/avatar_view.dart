@@ -96,8 +96,9 @@ class _OrbitAvatarState extends ConsumerState<OrbitAvatar>
   @override
   void initState() {
     super.initState();
-    if (widget.animate && !ref.read(settingsProvider).reducedMotion)
+    if (widget.animate && !ref.read(settingsProvider).reducedMotion) {
       _c.repeat();
+    }
   }
 
   @override
@@ -137,7 +138,9 @@ class _OrbitAvatarState extends ConsumerState<OrbitAvatar>
       final CatalogItem? item = catalogItem(id);
       if (item != null &&
           item.category == ItemCategory.avatarGear &&
-          item.asset.isNotEmpty) gear[slot] = item;
+          item.asset.isNotEmpty) {
+        gear[slot] = item;
+      }
     }
     final String? frameId = p.equipped['frame'];
     final CatalogItem? frame = frameId == null ? null : catalogItem(frameId);

@@ -12,7 +12,7 @@ import '../core/question_model.dart';
 import '../core/quiz_engine.dart';
 import 'quiz_widgets.dart';
 
-/// Full-screen NEXORA Quiz match (vs bot or same-device split screen).
+/// Full-screen ANIX Quiz match (vs bot or same-device split screen).
 class QuizView extends StatefulWidget {
   const QuizView({super.key, required this.launch});
 
@@ -331,7 +331,7 @@ class _QuizViewState extends State<QuizView> with TickerProviderStateMixin {
       ? (_l.netName(_other) ?? 'Pilot')
       : (_local
           ? _l.tx('بازیکن ۲', 'Player 2')
-          : _l.tx('ربات نکسورا', 'NX Bot'));
+          : _l.tx('ربات انیکس', 'NX Bot'));
 
   String _roundLabel() => _l.tx(
       'سؤال ${_engine.roundIndex + 1} از ${_engine.totalRounds}',
@@ -398,7 +398,7 @@ class _QuizViewState extends State<QuizView> with TickerProviderStateMixin {
           AnimatedBuilder(
             animation: _pulse,
             builder: (BuildContext context, Widget? child) => Text(
-              _l.tx('کوییز نکسورا', 'NEXORA Quiz'),
+              _l.tx('کوییز انیکس', 'ANIX Quiz'),
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: NxColors.iceWhite,

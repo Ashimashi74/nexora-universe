@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexora/core/storage/local_store.dart';
 import 'package:nexora/games/arcade_registry.dart';
@@ -15,6 +14,7 @@ const String only = String.fromEnvironment('ONLY');
 const int secs = int.fromEnvironment('SECS', defaultValue: 5);
 void main() {
   setUp(() async {
+    // ignore: invalid_use_of_visible_for_testing_member
     SharedPreferences.setMockInitialValues(<String, Object>{});
     await LocalStore.init();
     await loadFonts();

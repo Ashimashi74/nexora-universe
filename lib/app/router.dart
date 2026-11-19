@@ -140,7 +140,7 @@ GoRouter buildRouter(WidgetRef ref) {
           chatId: state.pathParameters['chatId'] ?? '',
           callId: state.uri.queryParameters['call'],
           video: state.uri.queryParameters['video'] == '1',
-          title: state.uri.queryParameters['title'] ?? 'NEXORA',
+          title: state.uri.queryParameters['title'] ?? 'ANIX',
           startNew: false,
         ),
       ),

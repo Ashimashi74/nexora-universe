@@ -15,7 +15,7 @@ import '../../core/widgets/nx_widgets.dart';
 import 'core/exchange_rules.dart';
 import 'core/exchange_service.dart';
 
-/// NEXORA EXCHANGE (STEP_28): transparent cosmetic shop paid with earned coins.
+/// ANIX EXCHANGE (STEP_28): transparent cosmetic shop paid with earned coins.
 /// No loot boxes, no gambling, no random paid rewards; real money is disabled.
 class ExchangePage extends ConsumerStatefulWidget {
   const ExchangePage({super.key});
@@ -131,7 +131,7 @@ class _ExchangePageState extends ConsumerState<ExchangePage> {
     final NxThemeColors visual = NxThemeColors.of(context);
     final int tabCount = _kTabs.length + 1;
     return NxWorldScaffold(
-      title: 'NEXORA EXCHANGE',
+      title: 'ANIX EXCHANGE',
       palette: WorldPalette.exchange,
       body: DefaultTabController(
         length: tabCount,

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/nx_theme.dart';
 
-/// The seven worlds of NEXORA (Vision §5). Single registry used by Hub,
+/// The seven worlds of ANIX (Vision §5). Single registry used by Hub,
 /// router, ORACLE and search.
 class NexoraWorld {
   const NexoraWorld({
@@ -50,8 +50,8 @@ const kWorlds = <NexoraWorld>[
   ),
   NexoraWorld(
     id: 'nexora_arcade',
-    name: 'NEXORA ARCADE',
-    nameFa: 'آرکید نکسورا',
+    name: 'ANIX ARCADE',
+    nameFa: 'آرکید انیکس',
     taglineFa: '۹ بازی، بات هوشمند و بازی دونفره',
     taglineEn: '9 games, smart bots & local multiplayer',
     icon: Icons.sports_esports_rounded,
@@ -90,8 +90,8 @@ const kWorlds = <NexoraWorld>[
   ),
   NexoraWorld(
     id: 'nexora_exchange',
-    name: 'NEXORA EXCHANGE',
-    nameFa: 'بازار نکسورا',
+    name: 'ANIX EXCHANGE',
+    nameFa: 'بازار انیکس',
     taglineFa: 'آیتم‌های آواتار، تزئین و پوسته',
     taglineEn: 'Avatar items, decor & skins',
     icon: Icons.storefront_rounded,

@@ -5,7 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
-/// ===================== NEXORA ARCADE SKIN LAYER =====================
+/// ===================== ANIX ARCADE SKIN LAYER =====================
 /// Every new arcade game draws ALL of its visuals through an [ArcadeSkin]:
 ///  * palette (background gradient, accents, glow, per-player colours),
 ///  * optional sprites (PNG/WebP) keyed by role ('player', 'kart_0', 'bg', ...),
@@ -47,7 +47,7 @@ class ArcadeSkin {
   /// FX tuning: 'particles' (multiplier), 'glow' (0..2), 'shake' (0..2), 'trail' (0..1), 'bloom' (0..1).
   final Map<String, double> fx;
 
-  /// role -> file name inside assets/games/<gameId>/
+  /// role -> file name inside `assets/games/<gameId>/`
   final Map<String, String> sprites;
   final Map<String, ui.Image> _images = <String, ui.Image>{};
 
@@ -68,7 +68,7 @@ class ArcadeSkin {
 
   String get folder => 'assets/games/$gameId/';
 
-  /// Reads assets/games/<id>/skin.json (if any) and decodes the sprites it lists. Never throws.
+  /// Reads `assets/games/<id>/skin.json` (if any) and decodes the sprites it lists. Never throws.
   Future<ArcadeSkin> load({AssetBundle? bundle}) async {
     final AssetBundle b = bundle ?? rootBundle;
     try {

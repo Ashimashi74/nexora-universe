@@ -25,6 +25,7 @@ import 'render_util.dart';
 const String only = String.fromEnvironment('ONLY');
 void main() {
   setUpAll(() async {
+    // ignore: invalid_use_of_visible_for_testing_member
     SharedPreferences.setMockInitialValues(<String, Object>{'settings.lang': 'en'});
     await LocalStore.init();
     await loadFonts();

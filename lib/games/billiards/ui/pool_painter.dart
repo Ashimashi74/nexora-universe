@@ -160,8 +160,9 @@ class PoolScenePainter extends CustomPainter {
     }
     if (scene.ballInHand && !balls[0].pocketed) _drawHandRing(canvas, balls[0]);
     _drawParticles(canvas);
-    if (scene.showCue && !balls[0].pocketed && scene.cueOpacity > 0.01)
+    if (scene.showCue && !balls[0].pocketed && scene.cueOpacity > 0.01) {
       _drawCue(canvas, balls[0]);
+    }
     canvas.restore();
   }
 

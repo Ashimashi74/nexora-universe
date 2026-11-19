@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-/// NEXORA Basketball Battle — a 60-second shoot-out. Every player shoots on their own hoop at the same time;
+/// ANIX Basketball Battle — a 60-second shoot-out. Every player shoots on their own hoop at the same time;
 /// scores are broadcast live (peer pattern) and the best score wins. Pure Dart, deterministic for a seed.
 ///
 /// World units: 360 x 640, front view. Swipe up to throw; the rim is two solid points, the ball scores when it falls

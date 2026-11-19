@@ -220,7 +220,7 @@ class IdentityTab extends ConsumerWidget {
         Wrap(spacing: 8, runSpacing: 8, children: <Widget>[
           ActionChip(
             avatar: const Icon(Icons.storefront_rounded, size: 18),
-            label: Text(context.tx('NEXORA Exchange', 'NEXORA Exchange')),
+            label: Text(context.tx('ANIX Exchange', 'ANIX Exchange')),
             onPressed: () => context.push('/world/nexora_exchange'),
           ),
           ActionChip(

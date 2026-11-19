@@ -154,7 +154,7 @@ String _two(int v) => v < 10 ? '0$v' : '$v';
 String dayKey(DateTime d) => '${d.year}-${_two(d.month)}-${_two(d.day)}';
 
 /// Start of the current period in local time. Weeks start on Saturday
-/// (the Iranian calendar week), the default audience of NEXORA.
+/// (the Iranian calendar week), the default audience of ANIX.
 DateTime periodStart(ChallengePeriod p, DateTime now) {
   if (p == ChallengePeriod.daily) return DateTime(now.year, now.month, now.day);
   // DateTime.weekday: Monday = 1 ... Saturday = 6, Sunday = 7.

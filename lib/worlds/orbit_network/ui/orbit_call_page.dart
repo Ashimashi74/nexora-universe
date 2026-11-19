@@ -70,8 +70,9 @@ class _OrbitCallPageState extends ConsumerState<OrbitCallPage> {
       return;
     }
     try {
-      if (widget.startNew)
+      if (widget.startNew) {
         _callId = await repo.startCall(widget.chatId, video: widget.video);
+      }
       final Map<String, dynamic>? grant =
           await be.liveKitGrant(widget.chatId, video: widget.video);
       final String? token = grant?['token'] as String?;

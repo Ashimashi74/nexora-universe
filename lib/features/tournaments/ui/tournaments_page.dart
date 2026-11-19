@@ -146,12 +146,14 @@ class _TournamentsPageState extends ConsumerState<TournamentsPage>
     if (_game != null) l = l.where((Tournament t) => t.game == _game);
     if (_fee == _FeeFilter.free) l = l.where((Tournament t) => t.isFree);
     if (_fee == _FeeFilter.paid) l = l.where((Tournament t) => !t.isFree);
-    if (_kind == _KindFilter.knockout)
+    if (_kind == _KindFilter.knockout) {
       l = l.where(
           (Tournament t) => !t.format.isLeague && t.format != TFormat.groupsKo);
-    if (_kind == _KindFilter.league)
+    }
+    if (_kind == _KindFilter.league) {
       l = l.where(
           (Tournament t) => t.format.isLeague || t.format == TFormat.groupsKo);
+    }
     if (tab == TTab.mine) {
       l = l.where((Tournament t) =>
           _mine.containsKey(t.id) || t.createdBy == _repo.uid);
@@ -281,7 +283,7 @@ class _TournamentsPageState extends ConsumerState<TournamentsPage>
                         child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              Text(context.tx('جام‌های نکسورا', 'NEXORA CUPS'),
+                              Text(context.tx('جام‌های انیکس', 'ANIX CUPS'),
                                   style: Nx2.title.copyWith(
                                       fontSize: 15, color: Nx2.gold)),
                               Text(

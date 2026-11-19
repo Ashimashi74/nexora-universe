@@ -92,8 +92,8 @@ class MissionsTab extends ConsumerWidget {
           padding: const EdgeInsets.only(top: NxSpace.sm),
           child: Text(
             context.tx(
-                'پیشرفت فقط از فعالیت واقعی تو در دنیاهای NEXORA محاسبه می‌شود. هفته از شنبه شروع می‌شود.',
-                'Progress counts only your real activity in NEXORA worlds. Weeks start on Saturday.'),
+                'پیشرفت فقط از فعالیت واقعی تو در دنیاهای ANIX محاسبه می‌شود. هفته از شنبه شروع می‌شود.',
+                'Progress counts only your real activity in ANIX worlds. Weeks start on Saturday.'),
             style: TextStyle(color: PoColors.inkDim(context), fontSize: 12),
             textAlign: TextAlign.center,
           ),

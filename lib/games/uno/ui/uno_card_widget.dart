@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/nx_theme.dart';
 import '../core/uno_models.dart';
 
-/// NEXORA colour for each card suit.
+/// ANIX colour for each card suit.
 Color unoColorValue(UnoColor c) {
   switch (c) {
     case UnoColor.turquoise:
@@ -141,7 +141,7 @@ class _UnoCardPainter extends CustomPainter {
         ).createShader(inner.outerRect),
     );
 
-    // Orbit ring (NEXORA motif) behind the central symbol.
+    // Orbit ring (ANIX motif) behind the central symbol.
     final Offset center = rect.center;
     canvas.save();
     canvas.translate(center.dx, center.dy);

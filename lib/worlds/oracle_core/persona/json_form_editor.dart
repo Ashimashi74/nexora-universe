@@ -35,7 +35,7 @@ class _JsonFormEditorState extends State<JsonFormEditor> {
     );
   }
 
-  /// [parent] is a Map<String, dynamic> (key = String) or a List (key = int).
+  /// [parent] is a `Map<String, dynamic>` (key = String) or a List (key = int).
   Widget _field(Object parent, Object key, Object? v, {required int depth}) {
     final String label = key is String ? _label(key) : '#${(key as int) + 1}';
     void set(Object? nv) {

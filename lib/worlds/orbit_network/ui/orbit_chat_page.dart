@@ -103,7 +103,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
           ListTile(
             leading: const Icon(Icons.collections_rounded,
                 color: NxColors.turquoise),
-            title: Text(c.tx('اثر هنری NEXORA', 'NEXORA art')),
+            title: Text(c.tx('اثر هنری ANIX', 'ANIX art')),
             subtitle: Text(
                 c.tx('از کتابخانه‌ی هنری اپ', "From the app's art library")),
             onTap: () => Navigator.of(c).pop('art'),
@@ -235,6 +235,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
       );
       final String caption = _text.text.trim();
       _text.clear();
+      if (!mounted) return;
       final String name = orbitMyName(context, ref.read(profileProvider));
       await _ctrl.send(widget.chatId, authorName: name, kind: kind, text: caption, payload: media);
       await _afterSend();

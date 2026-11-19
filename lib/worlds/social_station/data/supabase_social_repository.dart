@@ -33,8 +33,9 @@ class SupabaseSocialRepository implements SocialRepository {
   static Object? _swap(Object? v, String from, String to) {
     if (v is String) return v == from ? to : v;
     if (v is List) return v.map((Object? e) => _swap(e, from, to)).toList();
-    if (v is Map)
+    if (v is Map) {
       return <String, dynamic>{for (final MapEntry<dynamic, dynamic> e in v.entries) '${e.key}': _swap(e.value, from, to)};
+    }
     return v;
   }
 
