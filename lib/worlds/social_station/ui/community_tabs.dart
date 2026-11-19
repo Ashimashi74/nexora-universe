@@ -10,6 +10,7 @@ import '../models/social_models.dart';
 import '../state/social_controller.dart';
 import 'social_widgets.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 // ============================ actions ============================
 
 Future<void> composeCommunityPost(BuildContext context, WidgetRef ref, Community c) async {
@@ -67,7 +68,7 @@ Future<void> createCommunityEvent(BuildContext context, WidgetRef ref, Community
   final bool? ok = await showDialog<bool>(
     context: context,
     builder: (BuildContext dc) => StatefulBuilder(
-      builder: (BuildContext sc, StateSetter set) => AlertDialog(
+      builder: (BuildContext sc, StateSetter set) => AnixDialog(
         title: Text(sc.tx('رویداد تازه', 'New event')),
         content: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[

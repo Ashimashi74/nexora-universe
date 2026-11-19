@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 /// A form for a JSON document (maps, lists, strings, numbers, booleans) — used for the ORACLE personality config so
 /// admins edit fields, lists and switches instead of raw JSON. The value is edited in place; [onChanged] fires on
 /// every edit. Known keys get Persian labels; unknown keys show their key.
@@ -48,7 +49,7 @@ class _JsonFormEditorState extends State<JsonFormEditor> {
     }
 
     if (v is bool) {
-      return SwitchListTile(
+      return AnixSwitchTile(
         dense: true,
         contentPadding: EdgeInsets.symmetric(horizontal: 8.0 + depth * 4),
         title: Text(label),

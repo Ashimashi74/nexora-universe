@@ -180,6 +180,6 @@ String adminErrorText(String? e, bool fa) => switch (e) {
       'not_found' => fa ? 'پیدا نشد' : 'Not found',
       'tournament_room' => fa ? 'اتاق تورنمنت — از ابزار بازی‌های تورنمنت استفاده کن' : 'Tournament room — use the match tools',
       'network' => fa ? 'اتصال برقرار نیست' : 'No connection',
-      null => fa ? 'خطا' : 'Error',
+      null => fa ? 'بارگیری از سرور ممکن نشد. اتصال را بررسی کن.' : 'Could not load from the server. Check your connection.',
       _ => e,
     };

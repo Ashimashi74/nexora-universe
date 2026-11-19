@@ -7,6 +7,8 @@ import 'package:go_router/go_router.dart';
 import '../../core/audio/music_service.dart';
 import '../../core/profile/profile_service.dart';
 import '../../core/settings/app_settings.dart';
+import '../../core/ui2/anix_brand.dart';
+import '../../core/ui2/anix_kit.dart';
 import '../../core/ui2/nx2_assets.dart';
 import '../../core/ui2/nx2_widgets.dart';
 import '../../core/ui2/oracle_mascot.dart';
@@ -111,6 +113,7 @@ class _HubPageState extends ConsumerState<HubPage> {
       bottomNavigationBar: const Nx2Dock(current: Nx2Tab.home),
       body: Nx2Background(
         dim: 0.3,
+        scene: Nx2Scene.hub,
         child: Stack(children: <Widget>[
           SafeArea(
             bottom: false,
@@ -201,9 +204,12 @@ class _Hud extends StatelessWidget {
           child: Nx2Pressable(
           onTap: () => context.push('/world/personal_orbit'),
           child: Row(children: <Widget>[
-            Nx2AvatarRing(
-                size: 62, initial: name.characters.first.toUpperCase()),
-            const SizedBox(width: 2),
+            AnixFramedAvatar(
+                avatarId: profile.portrait,
+                photoUrl: profile.avatarUrl,
+                tier: anixTierForLevel(profile.level),
+                size: 58),
+            const SizedBox(width: 6),
             Flexible(
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -290,6 +296,8 @@ class _OracleStage extends StatelessWidget {
           bottom: stage * 0.24,
           child: OracleMascot(
             mood: mood,
+            asset: AnixBrand.homeLogo,
+            semanticLabel: 'ANIX',
             size: stage * 0.72,
             onTap: onTap,
             onLongPress: onLongPress,
@@ -389,7 +397,7 @@ class _MenuGrid extends StatelessWidget {
   }
 
   void _showAll(BuildContext context) {
-    showModalBottomSheet<void>(
+    showAnixSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: const Color(0xF2120A33),

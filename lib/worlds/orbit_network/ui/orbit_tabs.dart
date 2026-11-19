@@ -17,6 +17,7 @@ import 'orbit_call_page.dart';
 import 'orbit_chat_page.dart';
 import 'orbit_sheets.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 void openOrbitChat(BuildContext context, String chatId, {String? focusMessageId}) {
   Navigator.of(context).push<void>(MaterialPageRoute<void>(
     builder: (BuildContext c) => OrbitChatPage(chatId: chatId, focusMessageId: focusMessageId),
@@ -34,7 +35,7 @@ class OrbitChatsTab extends ConsumerWidget {
   const OrbitChatsTab({super.key});
 
   Future<void> _chatMenu(BuildContext context, OrbitController ctrl, OrbitChat chat) async {
-    final String? a = await showModalBottomSheet<String>(
+    final String? a = await showAnixSheet<String>(
       context: context,
       builder: (BuildContext c) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[

@@ -14,6 +14,7 @@ import '../../../core/widgets/nx_widgets.dart';
 import 'avatar_view.dart';
 import 'po_common.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 /// Identity: avatar, name, Explorer ID, bio, rank, XP, join date.
 class IdentityTab extends ConsumerWidget {
   const IdentityTab({super.key});
@@ -23,7 +24,7 @@ class IdentityTab extends ConsumerWidget {
     final TextEditingController bio = TextEditingController(text: p.bio);
     final bool? ok = await showDialog<bool>(
       context: context,
-      builder: (BuildContext ctx) => AlertDialog(
+      builder: (BuildContext ctx) => AnixDialog(
         title: Text(ctx.tx('ویرایش پروفایل', 'Edit profile')),
         content: SizedBox(
           width: 360,
@@ -94,10 +95,15 @@ class IdentityTab extends ConsumerWidget {
                   color: PoColors.ink(context)),
             ),
             const SizedBox(height: 4),
-            Text(context.tx(p.rankTitleFa, p.rankTitleEn),
-                style: TextStyle(
-                    color: PoColors.lilac(context),
-                    fontWeight: FontWeight.w800)),
+            Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+              AnixRankEmblem(tier: anixTierForLevel(p.level), size: 34),
+              const SizedBox(width: 6),
+              Text(
+                  '${context.tx(p.rankTitleFa, p.rankTitleEn)} · ${anixTierName(anixTierForLevel(p.level), context.isFa)}',
+                  style: TextStyle(
+                      color: PoColors.lilac(context),
+                      fontWeight: FontWeight.w800)),
+            ]),
             const SizedBox(height: 10),
             _ExplorerIdChip(id: p.explorerId),
             const SizedBox(height: 12),
@@ -301,26 +307,42 @@ class _ProfileAvatarPickerState extends ConsumerState<_ProfileAvatarPicker> {
     }
   }
 
+  Future<void> _choosePortrait() async {
+    final ProfileService p = widget.profile;
+    final String? id = await showAnixAvatarPicker(context,
+        current: p.portrait, tier: anixTierForLevel(p.level), fa: context.isFa);
+    if (id != null) await p.setPortrait(id);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final String? url = widget.profile.avatarUrl;
+    final ProfileService p = widget.profile;
+    final String? url = p.avatarUrl;
+    final AnixTier tier = anixTierForLevel(p.level);
     return Column(children: <Widget>[
       Stack(alignment: Alignment.bottomRight, children: <Widget>[
-        if (url != null && url.isNotEmpty)
-          CircleAvatar(radius: 95, backgroundImage: NetworkImage(url))
-        else
-          const OrbitAvatar(size: 190),
+        GestureDetector(
+          onTap: _choosePortrait,
+          child: AnixFramedAvatar(avatarId: p.portrait, photoUrl: url, tier: tier, size: 176, active: true),
+        ),
         FloatingActionButton.small(
           heroTag: 'profile-photo-picker',
+          tooltip: context.tx('عکس پروفایل', 'Profile photo'),
           onPressed: _busy ? null : _pick,
           child: _busy
               ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
               : const Icon(Icons.camera_alt_rounded),
         ),
       ]),
-      const SizedBox(height: 6),
-      Text(context.tx('تغییر عکس پروفایل', 'Change profile photo'),
-          style: TextStyle(color: PoColors.inkDim(context), fontSize: 12)),
+      const SizedBox(height: 10),
+      AnixButton(
+        label: context.tx('انتخاب آواتار', 'Choose avatar'),
+        icon: Icons.face_retouching_natural_rounded,
+        style: AnixButtonStyle.secondary,
+        height: 40,
+        fontSize: 13,
+        onTap: _choosePortrait,
+      ),
     ]);
   }
 }

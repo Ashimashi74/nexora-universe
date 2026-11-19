@@ -13,6 +13,7 @@ import 'cr_controller.dart';
 import 'cr_fx.dart';
 import 'cr_painter.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 const String _kRulesFa =
     'هدف: هر ۹ مهره‌ی رنگ خودت را (سفید برای پایین، مشکی برای بالا) به چاله‌ها بینداز و ملکه‌ی قرمز را پوشش بده.\n\n'
     '• استرایکر را با اسلایدر روی خط پایه جابه‌جا کن، سپس روی صفحه بکش و رها کن؛ هرچه بیشتر بکشی ضربه قوی‌تر است.\n'
@@ -109,7 +110,7 @@ class _CarromViewState extends State<CarromView>
       builder: (BuildContext ctx) {
         return Directionality(
           textDirection: launch.isFa ? TextDirection.rtl : TextDirection.ltr,
-          child: AlertDialog(
+          child: AnixDialog(
             backgroundColor: theme.surfaceRaised,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(20),

@@ -11,12 +11,13 @@ import '../models/nova_models.dart';
 import '../state/nova_controller.dart';
 import 'nova_visuals.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 /// XP for a real published post (the profile's daily cap still applies).
 const int kNovaPostXp = 12;
 
 /// Opens the post composer. Pass [editing] to edit an existing post.
 Future<void> showNovaComposer(BuildContext context, {NovaPost? editing, bool motion = false}) {
-  return showModalBottomSheet<void>(
+  return showAnixSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
@@ -262,7 +263,7 @@ class _ComposerSheetState extends ConsumerState<_ComposerSheet> {
             ),
           ],
           const SizedBox(height: 6),
-          SwitchListTile(
+          AnixSwitchTile(
             contentPadding: EdgeInsets.zero,
             value: _motion,
             activeColor: pal.primary,
@@ -285,7 +286,7 @@ class _ComposerSheetState extends ConsumerState<_ComposerSheet> {
 
 /// Picker over the app's built-in art library. Returns null if dismissed.
 Future<ArtAsset?> showArtAssetPicker(BuildContext context) {
-  return showModalBottomSheet<ArtAsset>(
+  return showAnixSheet<ArtAsset>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
@@ -350,7 +351,7 @@ Future<ArtAsset?> showArtAssetPicker(BuildContext context) {
 
 /// Story composer (text on a cosmic gradient, lives 24h).
 Future<void> showStoryComposer(BuildContext context) {
-  return showModalBottomSheet<void>(
+  return showAnixSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,

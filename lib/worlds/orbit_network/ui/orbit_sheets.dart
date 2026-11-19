@@ -14,6 +14,7 @@ import '../state/orbit_controller.dart';
 import 'orbit_bubbles.dart';
 import '../../../games/arcade_kit/arcade_icon.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 /// Club badge ids usable as group/channel/community icons.
 const List<String> kOrbitBadges = <String>[
   'badge_club_scorpion',
@@ -96,7 +97,7 @@ class OrbitBadgePicker extends StatelessWidget {
 
 /// Create (or edit) a group / channel.
 Future<OrbitChat?> showOrbitChatEditor(BuildContext context, {required OrbitChatKind kind, OrbitChat? editing}) {
-  return showModalBottomSheet<OrbitChat>(
+  return showAnixSheet<OrbitChat>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
@@ -218,7 +219,7 @@ class _ChatEditorState extends ConsumerState<_ChatEditor> {
 
 /// Arcade game picker for invites. Returns the chosen game id.
 Future<String?> showArcadeGamePicker(BuildContext context) {
-  return showModalBottomSheet<String>(
+  return showAnixSheet<String>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
@@ -266,7 +267,7 @@ Future<String?> showArcadeGamePicker(BuildContext context) {
 
 /// Pick a chat to deliver something into.
 Future<String?> showOrbitChatPicker(BuildContext context) {
-  return showModalBottomSheet<String>(
+  return showAnixSheet<String>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
@@ -344,7 +345,7 @@ class _OrbitFriendPickerState extends ConsumerState<OrbitFriendPicker> {
         )
       else
         for (final NxUser u in f)
-          CheckboxListTile(
+          AnixCheckboxTile(
             dense: true,
             contentPadding: EdgeInsets.zero,
             value: widget.selected.contains(u.id),
@@ -367,7 +368,7 @@ class _OrbitFriendPickerState extends ConsumerState<OrbitFriendPicker> {
 /// Lists items other worlds shared. If [chatId] is given, tapping delivers there;
 /// otherwise the user picks a chat.
 Future<void> showSharedInbox(BuildContext context, {String? chatId}) {
-  return showModalBottomSheet<void>(
+  return showAnixSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,

@@ -15,6 +15,7 @@ import '../../core/widgets/nx_widgets.dart';
 import 'core/exchange_rules.dart';
 import 'core/exchange_service.dart';
 
+import '../../core/ui2/anix_kit.dart';
 /// ANIX EXCHANGE (STEP_28): transparent cosmetic shop paid with earned coins.
 /// No loot boxes, no gambling, no random paid rewards; real money is disabled.
 class ExchangePage extends ConsumerStatefulWidget {
@@ -917,7 +918,7 @@ class _CuePainter extends CustomPainter {
 // ---------------------------------------------------------------- detail sheet
 
 Future<void> showItemSheet(BuildContext context, CatalogItem item) {
-  return showModalBottomSheet<void>(
+  return showAnixSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: NxThemeColors.of(context).backgroundMid,
@@ -983,7 +984,7 @@ class _ItemSheetState extends ConsumerState<_ItemSheet>
     }
     final bool? confirm = await showDialog<bool>(
       context: context,
-      builder: (BuildContext ctx) => AlertDialog(
+      builder: (BuildContext ctx) => AnixDialog(
         title: Text(ctx.tx('تأیید خرید', 'Confirm purchase')),
         content: Text(ctx.tx(
           '«${item.nameFa}» را با ${_digits(ctx, '${item.price}')} سکه می‌خری؟\nموجودی بعد از خرید: ${_digits(ctx, '${p.coins - item.price}')} سکه',

@@ -9,6 +9,7 @@ import 'state/orbit_controller.dart';
 import 'ui/orbit_sheets.dart';
 import 'ui/orbit_tabs.dart';
 
+import '../../core/ui2/anix_kit.dart';
 /// ORBIT NETWORK — the messenger world (offline-first).
 class OrbitNetworkPage extends ConsumerStatefulWidget {
   const OrbitNetworkPage({super.key});
@@ -43,7 +44,7 @@ class _OrbitNetworkPageState extends ConsumerState<OrbitNetworkPage>
   }
 
   Future<void> _newChat() async {
-    final String? kind = await showModalBottomSheet<String>(
+    final String? kind = await showAnixSheet<String>(
       context: context,
       builder: (BuildContext c) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[

@@ -15,6 +15,7 @@ import '../../domain/bracket.dart';
 import '../../domain/prize_split.dart';
 import '../t_common.dart';
 
+import '../../../../core/ui2/anix_kit.dart';
 /// Organizer wizard: info → format/capacity → times → match rules → prizes → registration/codes → review/publish.
 /// Every value is validated again on the server (nx_t_save); this page only guides.
 class TournamentWizardPage extends ConsumerStatefulWidget {
@@ -595,7 +596,7 @@ class _TournamentWizardPageState extends ConsumerState<TournamentWizardPage> {
           if (_format == TFormat.singleElim ||
               _format == TFormat.twoLegs ||
               _format == TFormat.groupsKo)
-            SwitchListTile(
+            AnixSwitchTile(
               contentPadding: EdgeInsets.zero,
               value: _thirdPlace,
               activeColor: tAccent(context),
@@ -604,7 +605,7 @@ class _TournamentWizardPageState extends ConsumerState<TournamentWizardPage> {
               onChanged: (bool v) => setState(() => _thirdPlace = v),
             ),
           if (_format == TFormat.roundRobin || _format == TFormat.groupsKo)
-            SwitchListTile(
+            AnixSwitchTile(
               contentPadding: EdgeInsets.zero,
               value: _rrDouble,
               activeColor: tAccent(context),
@@ -674,7 +675,7 @@ class _TournamentWizardPageState extends ConsumerState<TournamentWizardPage> {
   Widget _stepRules(BuildContext context) =>
       _section(context.tx('قوانین بازی', 'Match rules'), <Widget>[
         if (_format == TFormat.twoLegs)
-          SwitchListTile(
+          AnixSwitchTile(
             contentPadding: EdgeInsets.zero,
             value: _finalOneLeg,
             activeColor: tAccent(context),
@@ -714,7 +715,7 @@ class _TournamentWizardPageState extends ConsumerState<TournamentWizardPage> {
           _stepper(context.tx('تعداد گل', 'Goals to win'), _goalTarget, 1, 20,
               (int v) => _goalTarget = v),
         const Divider(),
-        SwitchListTile(
+        AnixSwitchTile(
           contentPadding: EdgeInsets.zero,
           value: _checkin,
           activeColor: tAccent(context),
@@ -883,7 +884,7 @@ class _TournamentWizardPageState extends ConsumerState<TournamentWizardPage> {
                       _codeUses, 1, 1000, (int v) => _codeUses = v),
                   _stepper(context.tx('اعتبار (روز)', 'Valid for (days)'),
                       _codeDays, 1, 365, (int v) => _codeDays = v),
-                  SwitchListTile(
+                  AnixSwitchTile(
                     contentPadding: EdgeInsets.zero,
                     value: _codeApproval,
                     activeColor: tAccent(context),

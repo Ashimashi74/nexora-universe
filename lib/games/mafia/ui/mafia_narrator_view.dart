@@ -11,6 +11,7 @@ import '../core/mafia_models.dart';
 import 'mafia_visuals.dart';
 import 'mafia_widgets.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 enum _NStage { setup, pass, nightIntro, nightStep, detectiveAnswer, dawn, day, nominate, defense, vote, verdict, over }
 
 enum _NightStep { mafia, doctor, detective, sniper }
@@ -498,7 +499,7 @@ class _MafiaNarratorViewState extends State<MafiaNarratorView> {
       MafiaPanel(
         accent: NxColors.gold,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
-          SwitchListTile(
+          AnixSwitchTile(
             contentPadding: EdgeInsets.zero,
             value: _useSniper,
             activeColor: NxColors.gold,
@@ -506,7 +507,7 @@ class _MafiaNarratorViewState extends State<MafiaNarratorView> {
             title: Text(_t('تک‌تیرانداز', 'Sniper'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
             subtitle: Text(_t('از ۷ بازیکن به بالا', 'From 7 players up'), style: _dim),
           ),
-          SwitchListTile(
+          AnixSwitchTile(
             contentPadding: EdgeInsets.zero,
             value: _revealRole,
             activeColor: NxColors.gold,

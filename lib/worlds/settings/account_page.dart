@@ -9,6 +9,7 @@ import '../../core/settings/app_settings.dart';
 import '../../core/theme/nx_theme.dart';
 import '../../core/widgets/nx_widgets.dart';
 
+import '../../core/ui2/anix_kit.dart';
 String nxAuthError(BuildContext context, String? code) {
   switch (code) {
     case null:
@@ -153,7 +154,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
       if (o.isOnline && o.isGuest) {
         final bool? sure = await showDialog<bool>(
           context: context,
-          builder: (BuildContext ctx) => AlertDialog(
+          builder: (BuildContext ctx) => AnixDialog(
             title:
                 Text(ctx.tx('ورود به حساب دیگر', 'Sign in to another account')),
             content: Text(ctx.tx(
@@ -386,7 +387,7 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                   : () async {
                       final bool? sure = await showDialog<bool>(
                         context: context,
-                        builder: (BuildContext ctx) => AlertDialog(
+                        builder: (BuildContext ctx) => AnixDialog(
                           title: Text(ctx.tx('خروج؟', 'Sign out?')),
                           content: Text(ctx.tx(
                               'پیشرفتت روی سرور امن است. بعد از خروج با یک حساب مهمان تازه ادامه می‌دهی.',

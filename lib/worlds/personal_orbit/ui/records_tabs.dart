@@ -11,6 +11,7 @@ import '../../../core/theme/nx_theme.dart';
 import 'po_common.dart';
 import '../../../games/arcade_kit/arcade_icon.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 // ---------------------------------------------------------------- Achievements
 
 class AchievementsTab extends ConsumerWidget {
@@ -19,7 +20,7 @@ class AchievementsTab extends ConsumerWidget {
   void _details(BuildContext context, AchievementDef a, bool unlocked) {
     showDialog<void>(
       context: context,
-      builder: (BuildContext ctx) => AlertDialog(
+      builder: (BuildContext ctx) => AnixDialog(
         title: Text(ctx.tx(a.nameFa, a.nameEn)),
         content: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
           _AchievementImage(asset: a.asset, unlocked: unlocked, size: 120),

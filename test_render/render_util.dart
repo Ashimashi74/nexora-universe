@@ -33,6 +33,7 @@ Future<void> loadFonts() async {
   await fam('ChakraPetch', <String>['$a/ChakraPetch-Regular.ttf', '$a/ChakraPetch-SemiBold.ttf', '$a/ChakraPetch-Bold.ttf']);
   await fam('Estedad', <String>['$a/Estedad-Regular.ttf', '$a/Estedad-Medium.ttf', '$a/Estedad-Bold.ttf', '$a/Estedad-Black.ttf']);
   await fam('Lalezar', <String>['$a/Lalezar-Regular.ttf']);
+  await fam('monospace', <String>['/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf']);
   await fam('MaterialIcons', <String>['$sdk/MaterialIcons-Regular.otf']);
 }
 

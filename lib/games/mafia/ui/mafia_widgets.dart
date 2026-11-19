@@ -6,6 +6,7 @@ import '../../../core/theme/nx_theme.dart';
 import '../core/mafia_models.dart';
 import 'mafia_visuals.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 /// Everything a seat on the ring needs to draw itself.
 class SeatInfo {
   const SeatInfo({
@@ -313,7 +314,7 @@ class ChatBubble extends StatelessWidget {
 /// Bottom sheet listing the game log the viewer may see.
 Future<void> showMafiaLog(
     BuildContext context, List<GameLogEntry> entries, bool isFa) {
-  return showModalBottomSheet<void>(
+  return showAnixSheet<void>(
     context: context,
     backgroundColor: const Color(0xF0070A22),
     isScrollControlled: true,
@@ -409,7 +410,7 @@ Future<int?> pickPlayer(
   required double Function(int id) hueOf,
   required String? Function(int id) emblemOf,
 }) {
-  return showModalBottomSheet<int>(
+  return showAnixSheet<int>(
     context: context,
     backgroundColor: const Color(0xF0070A22),
     builder: (BuildContext ctx) {
@@ -469,7 +470,7 @@ Future<MafiaRole?> pickRole(BuildContext context,
     {required String title,
     required bool isFa,
     required List<MafiaRole> roles}) {
-  return showModalBottomSheet<MafiaRole>(
+  return showAnixSheet<MafiaRole>(
     context: context,
     backgroundColor: const Color(0xF0070A22),
     builder: (BuildContext ctx) {
@@ -509,7 +510,7 @@ Future<bool?> pickBool(BuildContext context,
     required String yes,
     required String no,
     Color yesColor = MafiaStyle.blood}) {
-  return showModalBottomSheet<bool>(
+  return showAnixSheet<bool>(
     context: context,
     backgroundColor: const Color(0xF0070A22),
     builder: (BuildContext ctx) {

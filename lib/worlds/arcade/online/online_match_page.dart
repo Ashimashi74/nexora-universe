@@ -15,6 +15,7 @@ import '../../../games/game_registry.dart';
 import '../../oracle_core/persona/oracle_persona.dart';
 import '../../oracle_core/persona/oracle_persona_widgets.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 /// Hosts one online match: opens the move link, builds the game in online mode,
 /// rebuilds + replays the log on reconnect/resync, reports the result and shows it.
 class OnlineMatchPage extends ConsumerStatefulWidget {
@@ -221,7 +222,7 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
     if (_finished || _link == null) return true;
     final bool? ok = await showDialog<bool>(
       context: context,
-      builder: (BuildContext ctx) => AlertDialog(
+      builder: (BuildContext ctx) => AnixDialog(
         title: Text(ctx.tx('ترک بازی آنلاین؟', 'Leave the online match?')),
         content: Text(ctx.tx(
             'خروج یعنی تسلیم: در بازی دونفره حریف برنده می‌شود.',

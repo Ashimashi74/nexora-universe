@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,6 +6,7 @@ import '../../core/assets/app_assets.dart';
 import '../../core/profile/profile_service.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/theme/nx_theme.dart';
+import '../../core/ui2/anix_kit.dart';
 import '../../core/ui2/nx2_assets.dart';
 import '../../core/ui2/nx2_widgets.dart';
 import '../../core/ui2/oracle_mascot.dart';
@@ -163,13 +163,12 @@ class _GamesGridState extends State<_GamesGrid> {
             crossAxisCount: 2,
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            childAspectRatio: 0.70,
+            childAspectRatio: 360 / 520, // ANIX game card shell
           ),
           delegate: SliverChildBuilderDelegate(
             (context, i) => _GameTile(
                 game: games[i],
-                stats: profile.stats[games[i].id],
-                frame: i),
+                stats: profile.stats[games[i].id]),
             childCount: games.length,
           ),
         ),
@@ -229,93 +228,87 @@ class _GamesGridState extends State<_GamesGrid> {
 }
 
 class _GameTile extends StatelessWidget {
-  const _GameTile({required this.game, required this.stats, required this.frame});
+  const _GameTile({required this.game, required this.stats});
   final GameInfo game;
   final GameStats? stats;
-  final int frame;
 
   @override
   Widget build(BuildContext context) {
-    final String art = switch (frame % 3) {
-      0 => Nx2Assets.framesTilePurple,
-      1 => Nx2Assets.framesTileBlue,
-      _ => Nx2Assets.framesTileGold,
-    };
     void open() {
-      HapticFeedback.selectionClick();
       context.push('/arcade/${game.id}');
     }
 
-    return Nx2Pressable(
-      onTap: open,
-      child: Nx2Panel(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-        borderColor: Color.lerp(game.accent, Nx2.violet, 0.35),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          Expanded(
-            child: Stack(fit: StackFit.expand, children: [
-              Opacity(
-                opacity: 0.55,
-                child: Image.asset(art,
-                  fit: BoxFit.fill,
+    final String players = game.minPlayers == game.maxPlayers
+        ? '${game.minPlayers}'
+        : '${game.minPlayers}-${game.maxPlayers}';
+    return Semantics(
+      button: true,
+      label: context.tx(game.nameFa, game.nameEn),
+      child: AnixGameCard(
+        onTap: open,
+        art: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: RadialGradient(
+              center: const Alignment(0, -0.1),
+              radius: 0.95,
+              colors: <Color>[
+                Color.lerp(game.accent, const Color(0xFF0B1A31), 0.35) ?? game.accent,
+                const Color(0xFF071326),
+              ],
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 14, 10, 8),
+            child: Hero(
+              tag: 'pedestal_${game.id}',
+              child: Image.asset(AppAssets.pedestal(game.id),
                   cacheWidth: 360,
-                  errorBuilder: (_, __, ___) => const SizedBox.shrink()),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(14, 16, 14, 18),
-                child: Hero(
-                  tag: 'pedestal_${game.id}',
-                  child: Image.asset(AppAssets.pedestal(game.id),
-                      cacheWidth: 360,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => ArcadeMedallion(game.id)),
-                ),
-              ),
-              if (game.isNew)
-                const PositionedDirectional(
-                  top: 6,
-                  end: 6,
-                  child: NxPill(label: 'NEW', icon: Icons.auto_awesome_rounded, color: Nx2.gold),
-                ),
-              if (game.supportsOnline)
-                const PositionedDirectional(
-                  top: 6,
-                  start: 6,
-                  child: NxPill(
-                      label: 'ONLINE',
-                      icon: Icons.public_rounded,
-                      color: Nx2.cyan),
-                ),
-            ]),
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => ArcadeMedallion(game.id)),
+            ),
           ),
-          const SizedBox(height: 6),
-          Text(context.tx(game.nameFa, game.nameEn),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w900, fontSize: 14, color: Nx2.text)),
-          Row(children: [
-            const Icon(Icons.people_alt_rounded, size: 13, color: Nx2.muted),
-            const SizedBox(width: 3),
-            Text(
-                game.minPlayers == game.maxPlayers
-                    ? '${game.minPlayers}'
-                    : '${game.minPlayers}-${game.maxPlayers}',
-                style: const TextStyle(fontSize: 11, color: Nx2.muted)),
-            const Spacer(),
-            if (stats != null)
-              Text('${stats!.won}/${stats!.played}',
-                  style: const TextStyle(fontSize: 11, color: Nx2.gold)),
-          ]),
-          const SizedBox(height: 6),
-          Nx2Button(
-            label: context.tx('بازی', 'PLAY'),
-            kind: frame.isEven ? Nx2ButtonKind.pink : Nx2ButtonKind.violet,
-            height: 36,
-            fontSize: 13,
-            onTap: open,
-          ),
+        ),
+        overlay: Stack(children: <Widget>[
+          if (game.isNew)
+            const PositionedDirectional(
+              top: 6,
+              end: 6,
+              child: NxPill(label: 'NEW', icon: Icons.auto_awesome_rounded, color: Nx2.gold),
+            ),
+          if (game.supportsOnline)
+            const PositionedDirectional(
+              top: 6,
+              start: 6,
+              child: NxPill(label: 'ONLINE', icon: Icons.public_rounded, color: Nx2.cyan),
+            ),
         ]),
+        footer: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(context.tx(game.nameFa, game.nameEn),
+                      maxLines: 1,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Nx2.text)),
+                ),
+                const SizedBox(height: 2),
+                Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
+                  const Icon(Icons.people_alt_rounded, size: 12, color: Nx2.muted),
+                  const SizedBox(width: 3),
+                  Text(players, style: const TextStyle(fontSize: 11, color: Nx2.muted)),
+                  if (stats != null) ...<Widget>[
+                    const SizedBox(width: 8),
+                    const Icon(Icons.emoji_events_rounded, size: 12, color: Nx2.gold),
+                    const SizedBox(width: 2),
+                    Text('${stats!.won}/${stats!.played}', style: const TextStyle(fontSize: 11, color: Nx2.gold)),
+                  ],
+                ]),
+              ]),
+        ),
       ),
     );
   }

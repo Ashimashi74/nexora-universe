@@ -12,6 +12,7 @@ import '../../../core/theme/nx_theme.dart';
 import 'avatar_view.dart';
 import 'po_common.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 /// Background gradient (top → bottom) of the room for each orbit theme.
 List<Color> orbitThemeColors(String theme) {
   switch (theme) {
@@ -94,7 +95,7 @@ class _SpaceTabState extends ConsumerState<SpaceTab> {
             p.owns(c.id) &&
             !p.decorLayout.containsKey(c.id))
         .toList();
-    final String? picked = await showModalBottomSheet<String>(
+    final String? picked = await showAnixSheet<String>(
       context: context,
       backgroundColor: NxThemeColors.of(context).backgroundMid,
       showDragHandle: true,

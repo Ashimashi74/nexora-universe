@@ -14,12 +14,13 @@ import '../models/arcade_refs.dart';
 import '../models/orbit_models.dart';
 import '../../../games/arcade_kit/arcade_icon.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 String orbitTime(DateTime t) => '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
 /// Honest bottom sheet for features that require the server (calls, contacts...).
 Future<void> showOrbitOnlineOnly(BuildContext context,
     {required String fa, required String en, IconData icon = Icons.call_rounded}) {
-  return showModalBottomSheet<void>(
+  return showAnixSheet<void>(
     context: context,
     builder: (BuildContext c) => Padding(
       padding: const EdgeInsets.fromLTRB(NxSpace.md, 0, NxSpace.md, NxSpace.lg),

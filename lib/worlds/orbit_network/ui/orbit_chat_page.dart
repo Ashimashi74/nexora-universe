@@ -18,6 +18,7 @@ import 'orbit_call_page.dart';
 import 'orbit_bubbles.dart';
 import 'orbit_sheets.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 /// One conversation (Saved Orbit, group or channel).
 class OrbitChatPage extends ConsumerStatefulWidget {
   const OrbitChatPage({super.key, required this.chatId, this.focusMessageId});
@@ -96,7 +97,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
   }
 
   Future<void> _attach() async {
-    final String? choice = await showModalBottomSheet<String>(
+    final String? choice = await showAnixSheet<String>(
       context: context,
       builder: (BuildContext c) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
@@ -273,7 +274,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
     final Set<String> already =
         (await _ctrl.members(chat.id)).map((OrbitMember m) => m.id).toSet();
     if (!cc.mounted) return;
-    final bool? ok = await showModalBottomSheet<bool>(
+    final bool? ok = await showAnixSheet<bool>(
       context: cc,
       isScrollControlled: true,
       useSafeArea: true,
@@ -314,7 +315,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
 
   Future<void> _actions(OrbitMessage m, bool mine) async {
     if (m.kind == OrbitMessageKind.system) return;
-    final String? a = await showModalBottomSheet<String>(
+    final String? a = await showAnixSheet<String>(
       context: context,
       builder: (BuildContext c) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
@@ -393,7 +394,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
   }
 
   void _showPinned(List<OrbitMessage> pinned) {
-    showModalBottomSheet<void>(
+    showAnixSheet<void>(
       context: context,
       builder: (BuildContext c) =>
           ListView(shrinkWrap: true, children: <Widget>[
@@ -419,7 +420,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
   }
 
   Future<void> _info(OrbitChat chat) async {
-    await showModalBottomSheet<void>(
+    await showAnixSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -460,7 +461,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
                     ),
                   ),
                 const SizedBox(height: 12),
-                SwitchListTile(
+                AnixSwitchTile(
                   value: live.pinned,
                   title: Text(cc.tx('سنجاق در بالای فهرست', 'Pin to top')),
                   onChanged: (bool v) {
@@ -468,7 +469,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
                     ctrl.updateChat(live);
                   },
                 ),
-                SwitchListTile(
+                AnixSwitchTile(
                   value: live.muted,
                   title: Text(cc.tx('بی‌صدا', 'Mute')),
                   onChanged: (bool v) {
@@ -576,7 +577,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
                     onPressed: () async {
                       final bool? ok = await showDialog<bool>(
                         context: cc,
-                        builder: (BuildContext d) => AlertDialog(
+                        builder: (BuildContext d) => AnixDialog(
                           title: Text(live.online && live.role != 'owner'
                               ? d.tx('ترک گفت‌وگو؟', 'Leave chat?')
                               : d.tx('حذف گفت‌وگو؟', 'Delete chat?')),

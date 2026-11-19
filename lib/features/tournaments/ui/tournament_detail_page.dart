@@ -18,6 +18,7 @@ import '../domain/prize_split.dart';
 import 'bracket_view.dart';
 import 't_common.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 /// Tournament detail: rules, countdowns, prize pool, players, register / code / withdraw, live bracket or
 /// league table, my next match with the Ready button, match list and history.
 class TournamentDetailPage extends ConsumerStatefulWidget {
@@ -178,7 +179,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
       final TextEditingController c = TextEditingController();
       code = await showDialog<String>(
         context: context,
-        builder: (BuildContext ctx) => AlertDialog(
+        builder: (BuildContext ctx) => AnixDialog(
           title: Text(ctx.tx('کد دعوت', 'Invite code')),
           content: TextField(
             controller: c,
@@ -202,7 +203,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
     } else if (!t.isFree) {
       final bool? ok = await showDialog<bool>(
         context: context,
-        builder: (BuildContext ctx) => AlertDialog(
+        builder: (BuildContext ctx) => AnixDialog(
           title: Text(ctx.tx('پرداخت ورودیه', 'Pay the entry fee')),
           content: Text(ctx.tx(
               'ورودیه: ${t.feeCoins} سکه${t.feeGems > 0 ? ' و ${t.feeGems} جم' : ''}. تا پایان ثبت‌نام می‌توانی انصراف بدهی و کامل پس بگیری.',
@@ -234,7 +235,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
     final Tournament t = _t!;
     final bool? ok = await showDialog<bool>(
       context: context,
-      builder: (BuildContext ctx) => AlertDialog(
+      builder: (BuildContext ctx) => AnixDialog(
         title:
             Text(ctx.tx('انصراف از تورنمنت؟', 'Withdraw from the tournament?')),
         content: Text(t.status == 'registering'
@@ -305,7 +306,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
     final TextEditingController c = TextEditingController();
     final String? reason = await showDialog<String>(
       context: context,
-      builder: (BuildContext ctx) => AlertDialog(
+      builder: (BuildContext ctx) => AnixDialog(
         title: Text(ctx.tx('اعتراض به نتیجه', 'Dispute the result')),
         content: TextField(
           controller: c,
@@ -1094,7 +1095,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
 
   void _matchSheet(BuildContext context, Tournament t, TMatch m) {
     final (int s1, int s2) = m.shownScore;
-    showModalBottomSheet<void>(
+    showAnixSheet<void>(
       context: context,
       builder: (BuildContext ctx) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),

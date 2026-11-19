@@ -16,6 +16,7 @@ import '../oracle_core/oracle_game_sheet.dart';
 import '../oracle_core/persona/oracle_persona.dart';
 import '../oracle_core/persona/oracle_persona_widgets.dart';
 
+import '../../core/ui2/anix_kit.dart';
 /// Hosts any GameModule: exit button, pause-confirm, result screen, XP, rematch.
 class GameHostPage extends ConsumerStatefulWidget {
   const GameHostPage({
@@ -111,7 +112,7 @@ class _GameHostPageState extends ConsumerState<GameHostPage> {
     if (_finished) return true;
     final ok = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => AnixDialog(
         title: Text(ctx.tx('خروج از بازی؟', 'Leave the match?')),
         content: Text(ctx.tx('پیشرفت این دست ذخیره نمی‌شود.',
             'Progress in this match will be lost.')),

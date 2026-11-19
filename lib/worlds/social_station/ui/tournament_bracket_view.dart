@@ -12,6 +12,7 @@ import '../models/tournament_bracket.dart';
 import '../state/social_controller.dart';
 import 'social_widgets.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 String roundName(BuildContext context, int round, int roundCount) {
   final int fromEnd = roundCount - 1 - round;
   if (fromEnd == 0) return context.tx('فینال', 'Final');
@@ -25,7 +26,7 @@ Future<void> createCommunityTournament(BuildContext context, WidgetRef ref, Comm
   final TextEditingController name = TextEditingController(text: '${c.name} Cup');
   String gameId = c.gameId ?? kArcadeGames.first.id;
   final Set<String> picked = c.members.map((CommunityMember m) => m.name).toSet();
-  final bool? ok = await showModalBottomSheet<bool>(
+  final bool? ok = await showAnixSheet<bool>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
@@ -240,7 +241,7 @@ class TournamentPage extends ConsumerWidget {
           );
       await showDialog<void>(
         context: context,
-        builder: (BuildContext dc) => AlertDialog(
+        builder: (BuildContext dc) => AnixDialog(
           icon: const Icon(Icons.emoji_events_rounded, color: NxColors.gold, size: 56),
           title: Text('${dc.tx('قهرمان', 'Champion')}: ${now!.bracket.champion}', textAlign: TextAlign.center),
           content: Text(dc.tx('+${o.xp} XP برای برگزاری مسابقه', '+${o.xp} XP for hosting the cup'), textAlign: TextAlign.center),

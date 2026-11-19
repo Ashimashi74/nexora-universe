@@ -13,6 +13,7 @@ import '../../../core/widgets/nx_widgets.dart';
 import '../../../games/game_registry.dart';
 import 'online_match_page.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 class _Seat {
   _Seat(
       {required this.userId,
@@ -378,7 +379,7 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
     } catch (_) {}
     if (!mounted) return;
     final Set<String> inRoom = _seats.map((_Seat s) => s.userId).toSet();
-    await showModalBottomSheet<void>(
+    await showAnixSheet<void>(
       context: context,
       backgroundColor: NxColors.navy,
       builder: (BuildContext ctx) => SafeArea(

@@ -9,6 +9,7 @@ import '../../core/settings/app_settings.dart';
 import '../../core/theme/nx_theme.dart';
 import 'admin_access.dart';
 
+import '../../core/ui2/anix_kit.dart';
 /// Admin panel. Tabs appear only for the permissions the signed-in admin holds; the server checks every call again
 /// (auth project: users/bans, grants, admins, announcements, moderation, ORACLE · games project: rooms, tournaments)
 /// and writes an audit entry.
@@ -107,7 +108,7 @@ Future<String?> _ask(BuildContext context, String title, {String hint = '', Stri
   final TextEditingController c = TextEditingController(text: initial);
   final String? r = await showDialog<String>(
     context: context,
-    builder: (BuildContext ctx) => AlertDialog(
+    builder: (BuildContext ctx) => AnixDialog(
       title: Text(title),
       content: TextField(controller: c, autofocus: true, decoration: InputDecoration(hintText: hint)),
       actions: <Widget>[
@@ -170,7 +171,12 @@ class _LoaderState extends State<_Loader> {
     if (d['ok'] != true) {
       return Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-        Text(adminErrorText(d['error'] as String?, context.isFa)),
+        const Icon(Icons.cloud_off_rounded, color: NxColors.gold, size: 36),
+        const SizedBox(height: 8),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Text(adminErrorText(d['error'] as String?, context.isFa), textAlign: TextAlign.center),
+        ),
         TextButton(onPressed: _reload, child: Text(context.tx('دوباره', 'Retry'))),
       ]));
     }
@@ -259,7 +265,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
     final TextEditingController reason = TextEditingController();
     final bool? ok = await showDialog<bool>(
       context: context,
-      builder: (BuildContext ctx) => AlertDialog(
+      builder: (BuildContext ctx) => AnixDialog(
         title: Text(ctx.tx('اهدا به ${u['username'] ?? ''}', 'Grant to ${u['username'] ?? ''}')),
         content: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
           TextField(controller: coins, keyboardType: const TextInputType.numberWithOptions(signed: true),
@@ -372,12 +378,12 @@ Future<void> showAdminEditor(BuildContext context, WidgetRef ref, Map<String, dy
   final bool? ok = await showDialog<bool>(
     context: context,
     builder: (BuildContext ctx) => StatefulBuilder(
-      builder: (BuildContext ctx, StateSetter set) => AlertDialog(
+      builder: (BuildContext ctx, StateSetter set) => AnixDialog(
         title: Text(ctx.tx('دسترسی ${u['username'] ?? ''}', 'Access · ${u['username'] ?? ''}')),
         content: SingleChildScrollView(
           child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
             for (final String p in AdminPerm.all)
-              CheckboxListTile(
+              AnixCheckboxTile(
                 dense: true,
                 contentPadding: EdgeInsets.zero,
                 value: perms.contains(p),
@@ -389,7 +395,7 @@ Future<void> showAdminEditor(BuildContext context, WidgetRef ref, Map<String, dy
             const Divider(),
             Text(ctx.tx('جایزه‌ی جم در تورنمنت‌هایش', 'Gem prizes in their tournaments'),
                 style: const TextStyle(fontWeight: FontWeight.w800)),
-            SwitchListTile(
+            AnixSwitchTile(
               dense: true,
               contentPadding: EdgeInsets.zero,
               value: unlimited,
@@ -626,7 +632,7 @@ class _AnnouncementsTab extends ConsumerWidget {
             final bool? ok = await showDialog<bool>(
               context: context,
               builder: (BuildContext ctx) => StatefulBuilder(
-                builder: (BuildContext ctx, StateSetter set) => AlertDialog(
+                builder: (BuildContext ctx, StateSetter set) => AnixDialog(
                   title: Text(ctx.tx('اطلاعیه‌ی جدید', 'New announcement')),
                   content: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
                     TextField(controller: title, decoration: InputDecoration(labelText: ctx.tx('عنوان', 'Title'))),

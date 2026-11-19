@@ -12,6 +12,7 @@ import '../state/nova_controller.dart';
 import 'nova_composer.dart';
 import 'nova_visuals.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 /// One post in the feed.
 class NovaPostCard extends ConsumerWidget {
   const NovaPostCard({super.key, required this.post, this.onHashtag, this.onMention});
@@ -135,7 +136,7 @@ class NovaPostCard extends ConsumerWidget {
       case 'delete':
         final bool? ok = await showDialog<bool>(
           context: context,
-          builder: (BuildContext c) => AlertDialog(
+          builder: (BuildContext c) => AnixDialog(
             title: Text(c.tx('حذف پست؟', 'Delete post?')),
             content: Text(c.tx('این پست برای همیشه از دستگاهت پاک می‌شود.', 'This post will be removed from your device for good.')),
             actions: <Widget>[
@@ -211,7 +212,7 @@ class _ActionButton extends StatelessWidget {
 /// Comments sheet for a post.
 Future<void> showNovaComments(BuildContext context, String postId,
     {ValueChanged<String>? onHashtag, ValueChanged<String>? onMention}) {
-  return showModalBottomSheet<void>(
+  return showAnixSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,

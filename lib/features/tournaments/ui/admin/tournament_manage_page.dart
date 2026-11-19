@@ -13,6 +13,7 @@ import '../../data/tournament_repository.dart';
 import '../../domain/bracket.dart';
 import '../t_common.dart';
 
+import '../../../../core/ui2/anix_kit.dart';
 /// Organizer panel: controls (publish / draw / start / pause / cancel / finish), approval queue, players
 /// and seeds, invite codes, manual match tools (result / correction / replay / edit / add for custom), logs, staff.
 /// The UI only hides; every action is role-checked by the RPCs in Postgres.
@@ -108,7 +109,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
       {bool danger = false}) async {
     final bool? ok = await showDialog<bool>(
       context: context,
-      builder: (BuildContext ctx) => AlertDialog(
+      builder: (BuildContext ctx) => AnixDialog(
         title: Text(title),
         content: Text(body),
         actions: <Widget>[
@@ -132,7 +133,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
     final TextEditingController c = TextEditingController();
     final String? v = await showDialog<String>(
       context: context,
-      builder: (BuildContext ctx) => AlertDialog(
+      builder: (BuildContext ctx) => AnixDialog(
         title: Text(title),
         content: TextField(
             controller: c,
@@ -575,7 +576,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
                     onPressed: v < max ? () => set(() => f(v + 1)) : null,
                     icon: const Icon(Icons.add_rounded)),
               ]);
-          return AlertDialog(
+          return AnixDialog(
             title: Text(ctx.tx('کد دعوت جدید', 'New invite codes')),
             content: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
               row(ctx.tx('تعداد', 'Count'), count, 1, 50, (int v) => count = v),
@@ -583,7 +584,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
                   (int v) => uses = v),
               row(ctx.tx('اعتبار (روز)', 'Valid (days)'), days, 1, 365,
                   (int v) => days = v),
-              SwitchListTile(
+              AnixSwitchTile(
                 contentPadding: EdgeInsets.zero,
                 value: approval,
                 title: Text(ctx.tx('نیاز به تأیید', 'Requires approval')),
@@ -686,7 +687,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
   }
 
   Future<void> _matchTools(Tournament t, TMatch m) async {
-    final String? action = await showModalBottomSheet<String>(
+    final String? action = await showAnixSheet<String>(
       context: context,
       builder: (BuildContext ctx) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
@@ -756,7 +757,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
     final bool? ok = await showDialog<bool>(
       context: context,
       builder: (BuildContext ctx) => StatefulBuilder(
-        builder: (BuildContext ctx, StateSetter set) => AlertDialog(
+        builder: (BuildContext ctx, StateSetter set) => AnixDialog(
           title: Text(ctx.tx('نتیجه‌ی دستی', 'Manual result')),
           content: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
@@ -779,7 +780,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
                 }),
               ),
               if (!m.isElim)
-                CheckboxListTile(
+                AnixCheckboxTile(
                   value: draw,
                   title: Text(ctx.tx('مساوی', 'Draw')),
                   onChanged: (bool? v) => set(() => draw = v ?? false),
@@ -840,7 +841,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
     final List<TEntry> list = _entries
         .where((TEntry e) => e.status == 'approved' && e.userId != exclude)
         .toList();
-    return showModalBottomSheet<String>(
+    return showAnixSheet<String>(
       context: context,
       builder: (BuildContext ctx) => SafeArea(
         child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
@@ -998,7 +999,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
     if (q == null || q.isEmpty || !mounted) return;
     final List<Map<String, dynamic>> users = await _repo.searchUsers(q);
     if (!mounted) return;
-    final String? uid = await showModalBottomSheet<String>(
+    final String? uid = await showAnixSheet<String>(
       context: context,
       builder: (BuildContext ctx) => SafeArea(
         child: ListView(shrinkWrap: true, children: <Widget>[

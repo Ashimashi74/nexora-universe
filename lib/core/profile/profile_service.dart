@@ -73,6 +73,9 @@ class ProfileService extends ChangeNotifier {
   String avatarCore = 'hero_front';
   String? avatarUrl;
   String? avatarPath;
+
+  /// Portrait from the ANIX avatar base set (assets/ui/anix/avatars), shown in the rank frame.
+  String portrait = '01-vanguard';
   int xp = 0;
   int coins = 0;
   int crystals = 0;
@@ -110,6 +113,7 @@ class ProfileService extends ChangeNotifier {
     avatarCore = j['avatar'] as String? ?? 'hero_front';
     avatarUrl = j['avatarUrl'] as String?;
     avatarPath = j['avatarPath'] as String?;
+    portrait = j['portrait'] as String? ?? '01-vanguard';
     xp = (j['xp'] as num?)?.toInt() ?? 0;
     coins = (j['coins'] as num?)?.toInt() ?? 0;
     crystals = (j['crystals'] as num?)?.toInt() ?? 0;
@@ -141,6 +145,7 @@ class ProfileService extends ChangeNotifier {
         'avatar': avatarCore,
         'avatarUrl': avatarUrl,
         'avatarPath': avatarPath,
+        'portrait': portrait,
         'xp': xp,
         'coins': coins,
         'crystals': crystals,
@@ -188,6 +193,7 @@ class ProfileService extends ChangeNotifier {
   /// Everything except the server-owned wallet (xp/coins live in public.profiles).
   Map<String, dynamic> cloudBlob() => <String, dynamic>{
         'bio': bio,
+        'portrait': portrait,
         'orbitTheme': orbitTheme,
         'claimedDaily': claimedDaily,
         'streak': streak,
@@ -212,6 +218,7 @@ class ProfileService extends ChangeNotifier {
       decorLayout.clear();
       activity.clear();
       bio = j['bio'] as String? ?? '';
+      portrait = j['portrait'] as String? ?? portrait;
       orbitTheme = j['orbitTheme'] as String? ?? 'aurora';
       claimedDaily = j['claimedDaily'] as String? ?? '';
       streak = (j['streak'] as num?)?.toInt() ?? 0;
@@ -302,6 +309,17 @@ class ProfileService extends ChangeNotifier {
   /// XP needed to go from level n to n+1.
   static int xpForLevel(int level) => 100 + (level - 1) * 75;
 
+  /// Level reached with [xp] total XP (same curve as [level]).
+  static int levelForXp(int xp) {
+    var l = 1;
+    var remaining = xp;
+    while (remaining >= xpForLevel(l)) {
+      remaining -= xpForLevel(l);
+      l++;
+    }
+    return l;
+  }
+
   int get level {
     var l = 1;
     var remaining = xp;
@@ -369,6 +387,13 @@ class ProfileService extends ChangeNotifier {
       onNameChanged?.call(username);
     }
     if (newBio != null) bio = newBio;
+    await _save();
+    notifyListeners();
+  }
+
+  Future<void> setPortrait(String id) async {
+    if (id == portrait) return;
+    portrait = id;
     await _save();
     notifyListeners();
   }

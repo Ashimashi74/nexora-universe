@@ -11,6 +11,7 @@ import '../theme/nx_theme.dart';
 import '../ui2/nx2_widgets.dart';
 import '../ui2/oracle_mascot.dart';
 
+import '../ui2/anix_kit.dart';
 /// Animated cosmic background used by every world (respects quality + reduced motion).
 class NxBackground extends ConsumerStatefulWidget {
   const NxBackground(
@@ -130,12 +131,13 @@ class _StarPainter extends CustomPainter {
 
 /// App surfaces backdrop (NX2: the owner's cosmic castle art, darkened for contrast).
 class NxBrandBackground extends StatelessWidget {
-  const NxBrandBackground({super.key, this.child, this.room = false});
+  const NxBrandBackground({super.key, this.child, this.room = false, this.scene});
   final Widget? child;
   final bool room;
+  final Nx2Scene? scene;
 
   @override
-  Widget build(BuildContext context) => Nx2Background(room: room, child: child);
+  Widget build(BuildContext context) => Nx2Background(room: room, scene: scene, child: child);
 }
 
 /// Premium inset panel with a quiet metallic/neon rim, shared by all app worlds.
@@ -281,6 +283,7 @@ class NxWorldScaffold extends StatelessWidget {
     this.showWallet = true,
     this.dock,
     this.room = false,
+    this.scene,
   });
   final String title;
   final WorldPalette palette;
@@ -294,6 +297,20 @@ class NxWorldScaffold extends StatelessWidget {
   final Nx2Tab? dock;
   final bool room;
 
+  /// Scene art; by default arcade pages get the ANIX arcade art and social pages the social art.
+  final Nx2Scene? scene;
+
+  Nx2Scene? get _scene {
+    if (scene != null) return scene;
+    if (identical(palette, WorldPalette.arcade)) return Nx2Scene.arcade;
+    if (identical(palette, WorldPalette.social) ||
+        identical(palette, WorldPalette.nova) ||
+        identical(palette, WorldPalette.orbit)) {
+      return Nx2Scene.social;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     final Widget? bottom = bottomNavigationBar ??
@@ -306,6 +323,7 @@ class NxWorldScaffold extends StatelessWidget {
       bottomNavigationBar: bottom,
       body: NxBrandBackground(
         room: room,
+        scene: _scene,
         child: SafeArea(
           bottom: bottom == null,
           child: body,
@@ -331,7 +349,7 @@ Future<void> showAwardOutcome(BuildContext context, AwardOutcome o) async {
   if (!o.levelUp && o.unlocked.isEmpty) return;
   await showDialog<void>(
     context: context,
-    builder: (ctx) => AlertDialog(
+    builder: (ctx) => AnixDialog(
       title: Row(children: [
         const Icon(Icons.auto_awesome, color: NxColors.gold),
         const SizedBox(width: 8),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../ui2/anix_kit.dart';
 import '../ui2/page_turn.dart';
 
 /// ANIX design tokens. Legacy gameplay colors remain stable; the app chrome
@@ -248,7 +249,12 @@ ThemeData _buildTheme(NxThemeColors visual, NxAppearanceMode appearance) {
     onSurface: visual.text,
   );
   final base = ThemeData(
-      useMaterial3: true, colorScheme: scheme, brightness: appearance == NxAppearanceMode.light ? Brightness.light : Brightness.dark);
+      useMaterial3: true,
+      colorScheme: scheme,
+      brightness: appearance == NxAppearanceMode.light ? Brightness.light : Brightness.dark,
+      // Every Material default (FAB labels, chips, buttons with their own text styles) uses the app fonts too.
+      fontFamily: kNxFont,
+      fontFamilyFallback: kNxFontFallback);
   return base.copyWith(
     extensions: <ThemeExtension<dynamic>>[visual],
     pageTransitionsTheme: const PageTransitionsTheme(builders: <TargetPlatform, PageTransitionsBuilder>{
@@ -308,7 +314,8 @@ ThemeData _buildTheme(NxThemeColors visual, NxAppearanceMode appearance) {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(NxRadius.md)),
-        textStyle: const TextStyle(fontWeight: FontWeight.w800),
+        textStyle: const TextStyle(
+            fontFamily: kNxFont, fontFamilyFallback: kNxFontFallback, fontWeight: FontWeight.w800),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
@@ -363,6 +370,19 @@ ThemeData _buildTheme(NxThemeColors visual, NxAppearanceMode appearance) {
           s.contains(WidgetState.selected)
               ? visual.accentSecondary
               : const Color(0x33FFFFFF)),
+    ),
+    // ANIX tooltip pack: compact panel with its pointer, opening above the target.
+    tooltipTheme: TooltipThemeData(
+      decoration: anixTooltipDecoration(),
+      preferBelow: false,
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      textStyle: const TextStyle(
+          fontFamily: kNxFont,
+          fontFamilyFallback: kNxFontFallback,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+          color: Color(0xFFEAF6FF)),
     ),
     sliderTheme: SliderThemeData(
       activeTrackColor: visual.accent,

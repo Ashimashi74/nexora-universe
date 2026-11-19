@@ -10,6 +10,7 @@ import '../models/social_models.dart';
 import '../state/social_controller.dart';
 import 'social_widgets.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 class _EditorResult {
   const _EditorResult(this.community, this.outcome);
   final Community community;
@@ -19,7 +20,7 @@ class _EditorResult {
 /// Opens the create (or edit, when [existing] is given) community sheet.
 /// Returns the created/edited community, or null when cancelled.
 Future<Community?> showCommunityEditor(BuildContext context, {Community? existing}) async {
-  final _EditorResult? r = await showModalBottomSheet<_EditorResult>(
+  final _EditorResult? r = await showAnixSheet<_EditorResult>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,

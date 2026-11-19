@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:nexora/core/ui2/anix_kit.dart';
 import 'package:nexora/core/settings/app_settings.dart';
 import 'package:nexora/core/storage/local_store.dart';
 import 'package:nexora/core/theme/nx_theme.dart';
@@ -77,7 +78,7 @@ void main() {
     expect(Theme.of(tester.element(settingsPage)).brightness, Brightness.dark);
 
     final lightModeTile =
-        find.widgetWithText(SwitchListTile, 'Light appearance');
+        find.widgetWithText(AnixSwitchTile, 'Light appearance');
     await tester.ensureVisible(lightModeTile);
     await tester.pumpAndSettle();
     await tester.tap(lightModeTile);

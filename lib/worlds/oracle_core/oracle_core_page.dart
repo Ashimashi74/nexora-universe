@@ -13,6 +13,7 @@ import '../../core/widgets/nx_widgets.dart';
 import '../../games/game_registry.dart';
 import 'core/oracle_brain.dart';
 
+import '../../core/ui2/anix_kit.dart';
 const String _kChatKey = 'oracle.chat.v1';
 const int _kMaxMessages = 100;
 
@@ -167,7 +168,7 @@ class _OracleCorePageState extends ConsumerState<OracleCorePage> {
   Future<void> _clear() async {
     final bool? ok = await showDialog<bool>(
       context: context,
-      builder: (BuildContext ctx) => AlertDialog(
+      builder: (BuildContext ctx) => AnixDialog(
         title: Text(ctx.tx('پاک کردن گفتگو', 'Clear conversation')),
         content: Text(ctx.tx('همه‌ی پیام‌های این گفتگو از این دستگاه پاک شود؟',
             'Delete all messages of this conversation from this device?')),
@@ -398,7 +399,7 @@ class _OracleCorePageState extends ConsumerState<OracleCorePage> {
   }
 
   void _showVoiceNotice() {
-    showModalBottomSheet<void>(
+    showAnixSheet<void>(
       context: context,
       backgroundColor: const Color(0xF20B0A24),
       shape: const RoundedRectangleBorder(

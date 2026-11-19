@@ -78,7 +78,14 @@ class OracleMascot extends ConsumerStatefulWidget {
     this.glow = true,
     this.onTap,
     this.onLongPress,
+    this.asset,
+    this.semanticLabel,
   });
+
+  /// Draws this artwork (e.g. the ANIX home logo) instead of the ORACLE poses, with the same
+  /// float / tilt / glow loop and the same tap reactions (giggle, full spin, hop).
+  final String? asset;
+  final String? semanticLabel;
   final OracleMood mood;
   final double size;
   final bool interactive;
@@ -119,6 +126,7 @@ class _OracleMascotState extends ConsumerState<OracleMascot>
     super.didChangeDependencies();
     if (_precached) return;
     _precached = true;
+    if (widget.asset != null) return;
     final int cw = (widget.size * 2.2).round();
     for (final String p in <String>['content', 'laugh', 'spin', 'excited']) {
       precacheImage(
@@ -133,7 +141,7 @@ class _OracleMascotState extends ConsumerState<OracleMascot>
         Timer(Duration(milliseconds: 2600 + _rng.nextInt(3200)), () {
       if (!mounted) return;
       final bool reduced = ref.read(settingsProvider).reducedMotion;
-      if (!reduced && _reaction == _Reaction.none && _blinkable) {
+      if (!reduced && _reaction == _Reaction.none && _blinkable && widget.asset == null) {
         setState(() => _blink = true);
         Timer(const Duration(milliseconds: 150), () {
           if (mounted) setState(() => _blink = false);
@@ -199,13 +207,14 @@ class _OracleMascotState extends ConsumerState<OracleMascot>
       _loop.repeat();
     }
     final double s = widget.size;
+    final String art = widget.asset ?? Nx2Assets.oracle(_pose);
     final Widget img = Image.asset(
-      Nx2Assets.oracle(_pose),
-      key: ValueKey<String>(_pose),
+      art,
+      key: ValueKey<String>(art),
       width: s,
       height: s,
       fit: BoxFit.contain,
-      alignment: Alignment.bottomCenter,
+      alignment: widget.asset != null ? Alignment.center : Alignment.bottomCenter,
       cacheWidth: (s * 2.2).round(),
       gaplessPlayback: true,
       errorBuilder: (_, __, ___) =>
@@ -280,7 +289,7 @@ class _OracleMascotState extends ConsumerState<OracleMascot>
     }
     return Semantics(
       button: true,
-      label: 'ORACLE',
+      label: widget.semanticLabel ?? 'ORACLE',
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: _tap,

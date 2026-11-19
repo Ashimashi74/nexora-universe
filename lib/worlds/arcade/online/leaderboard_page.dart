@@ -5,6 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/online/online_service.dart';
 import '../../../core/settings/app_settings.dart';
 import '../../../core/theme/nx_theme.dart';
+import '../../../core/profile/profile_service.dart';
+import '../../../core/ui2/anix_kit.dart';
 import '../../../core/ui2/nx2_assets.dart';
 import '../../../core/widgets/nx_widgets.dart';
 import '../../../games/arcade_kit/arcade_meta.dart';
@@ -293,6 +295,16 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
                                             ),
                                           ]),
                                     ),
+                                    if (!_solo) ...<Widget>[
+                                      AnixRankEmblem(
+                                          tier: _game == null
+                                              ? anixTierForLevel(ProfileService.levelForXp(
+                                                  (r['xp'] as num?)?.toInt() ?? 0))
+                                              : anixTierForRating(
+                                                  (r['rating'] as num?)?.toInt() ?? 1000),
+                                          size: 32),
+                                      const SizedBox(width: 6),
+                                    ],
                                     Text(
                                       _game == null
                                           ? 'XP ${r['xp'] ?? 0}'

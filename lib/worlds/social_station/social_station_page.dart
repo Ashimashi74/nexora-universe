@@ -11,6 +11,7 @@ import 'ui/community_create_sheet.dart';
 import 'ui/community_detail_page.dart';
 import 'ui/social_widgets.dart';
 
+import '../../core/ui2/anix_kit.dart';
 /// SOCIAL STATION — communities, events and community tournaments (offline-first).
 class SocialStationPage extends ConsumerStatefulWidget {
   const SocialStationPage({super.key});
@@ -36,7 +37,7 @@ class _SocialStationPageState extends ConsumerState<SocialStationPage> {
   }
 
   Future<void> _discover() async {
-    await showModalBottomSheet<void>(
+    await showAnixSheet<void>(
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
@@ -85,7 +86,7 @@ class _SocialStationPageState extends ConsumerState<SocialStationPage> {
           'No community has this code.');
       return;
     }
-    await showModalBottomSheet<void>(
+    await showAnixSheet<void>(
       context: context,
       builder: (BuildContext c) => Padding(
         padding:

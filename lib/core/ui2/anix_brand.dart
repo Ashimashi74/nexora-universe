@@ -6,6 +6,12 @@ class AnixBrand {
   static const String logo = 'assets/branding/anix_logo.webp';
   static const String mark = 'assets/branding/anix_mark.webp';
   static const String wordmark = 'assets/branding/anix_wordmark.webp';
+
+  /// Home screen emblem: the owner's NX ring logo with the ANIX wordmark.
+  static const String homeLogo = 'assets/branding/home_logo_anix.webp';
+
+  /// The same logo exactly as supplied (NEXORA wordmark), kept in case the owner prefers it.
+  static const String homeLogoNexora = 'assets/branding/home_logo_nexora.webp';
 }
 
 /// The stacked ANIX logo (emblem above the wordmark). [height] is the full logo height.

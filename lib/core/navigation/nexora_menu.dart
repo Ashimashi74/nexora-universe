@@ -8,6 +8,7 @@ import '../settings/app_settings.dart';
 import '../theme/nx_theme.dart';
 import '../../worlds/world_registry.dart';
 
+import '../ui2/anix_kit.dart';
 class NexoraMenuDestination {
   const NexoraMenuDestination({
     required this.path,
@@ -169,7 +170,7 @@ Future<void> showNexoraMenu(BuildContext context) {
   final router = GoRouter.of(context);
   final currentPath = router.routeInformationProvider.value.uri.path;
   final visual = NxThemeColors.of(context);
-  return showModalBottomSheet<void>(
+  return showAnixSheet<void>(
     context: context,
     useSafeArea: true,
     isScrollControlled: true,

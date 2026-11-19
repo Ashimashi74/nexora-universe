@@ -11,6 +11,7 @@ import '../../../core/widgets/nx_widgets.dart';
 import '../../orbit_network/models/arcade_refs.dart';
 import '../models/social_models.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 const WorldPalette kSocialPalette = WorldPalette.social;
 
 /// The current explorer acting in SOCIAL STATION.
@@ -262,7 +263,7 @@ Future<String?> askText(BuildContext context,
   final TextEditingController ctl = TextEditingController();
   return showDialog<String>(
     context: context,
-    builder: (BuildContext c) => AlertDialog(
+    builder: (BuildContext c) => AnixDialog(
       title: Text(c.tx(titleFa, titleEn)),
       content: TextField(
         controller: ctl,
@@ -284,7 +285,7 @@ Future<String?> askText(BuildContext context,
 Future<bool> confirmAction(BuildContext context, {required String fa, required String en}) async {
   final bool? ok = await showDialog<bool>(
     context: context,
-    builder: (BuildContext c) => AlertDialog(
+    builder: (BuildContext c) => AnixDialog(
       content: Text(c.tx(fa, en)),
       actions: <Widget>[
         TextButton(onPressed: () => Navigator.pop(c, false), child: Text(c.tx('انصراف', 'Cancel'))),

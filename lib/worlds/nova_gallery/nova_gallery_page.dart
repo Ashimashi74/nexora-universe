@@ -13,6 +13,7 @@ import 'ui/nova_post_card.dart';
 import 'ui/nova_tabs.dart';
 import 'ui/nova_visuals.dart';
 
+import '../../core/ui2/anix_kit.dart';
 /// NOVA GALLERY — the social network world (offline-first).
 class NovaGalleryPage extends ConsumerStatefulWidget {
   const NovaGalleryPage({super.key});
@@ -48,7 +49,7 @@ class _NovaGalleryPageState extends ConsumerState<NovaGalleryPage> {
       setState(() => _tab = _profile);
       return;
     }
-    showModalBottomSheet<void>(
+    showAnixSheet<void>(
       context: context,
       builder: (BuildContext c) => Padding(
         padding:

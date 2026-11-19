@@ -18,6 +18,7 @@ import '../domain/bracket.dart';
 import '../domain/prize_split.dart';
 import 't_common.dart';
 
+import '../../../core/ui2/anix_kit.dart';
 /// Tournaments list: registering / upcoming / live / finished / mine, with filters and live countdowns.
 class TournamentsPage extends ConsumerStatefulWidget {
   const TournamentsPage({super.key, this.game, this.joinCode});
@@ -190,7 +191,7 @@ class _TournamentsPageState extends ConsumerState<TournamentsPage>
     final TextEditingController c = TextEditingController();
     final String? code = await showDialog<String>(
       context: context,
-      builder: (BuildContext ctx) => AlertDialog(
+      builder: (BuildContext ctx) => AnixDialog(
         title: Text(ctx.tx('ورود با کد دعوت', 'Enter invite code')),
         content: TextField(
           controller: c,

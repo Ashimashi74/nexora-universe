@@ -14,6 +14,7 @@ import '../oracle_core/persona/oracle_tour.dart';
 import '../../features/admin/admin_access.dart';
 import 'account_page.dart';
 
+import '../../core/ui2/anix_kit.dart';
 /// Settings (STEP_12, P13, P16, P27, P28).
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -40,7 +41,7 @@ class SettingsPage extends ConsumerWidget {
           GlassPanel(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              SwitchListTile(
+              AnixSwitchTile(
                 contentPadding: EdgeInsets.zero,
                 value: s.music,
                 onChanged: (v) => s.music = v,
@@ -68,7 +69,7 @@ class SettingsPage extends ConsumerWidget {
           GlassPanel(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              SwitchListTile(
+              AnixSwitchTile(
                 contentPadding: EdgeInsets.zero,
                 value: s.appearanceMode == NxAppearanceMode.light,
                 onChanged: (v) => s.appearanceMode =
@@ -81,7 +82,9 @@ class SettingsPage extends ConsumerWidget {
               SegmentedButton<GraphicsQuality>(
                 segments: [
                   for (final q in GraphicsQuality.values)
-                    ButtonSegment(value: q, label: Text(qLabel(q))),
+                    ButtonSegment(
+                        value: q,
+                        label: FittedBox(fit: BoxFit.scaleDown, child: Text(qLabel(q), maxLines: 1, softWrap: false))),
                 ],
                 selected: {s.quality},
                 onSelectionChanged: (v) => s.quality = v.first,
@@ -94,7 +97,7 @@ class SettingsPage extends ConsumerWidget {
                     'Lower quality = fewer stars, particles and effects, better battery.'),
                 style: const TextStyle(color: NxColors.textDim, fontSize: 12),
               ),
-              SwitchListTile(
+              AnixSwitchTile(
                 contentPadding: EdgeInsets.zero,
                 value: s.reducedMotion,
                 onChanged: (v) => s.reducedMotion = v,
@@ -103,19 +106,19 @@ class SettingsPage extends ConsumerWidget {
                     'انیمیشن‌های بلند و حرکت دوربین خاموش',
                     'Disable long animations and camera moves')),
               ),
-              SwitchListTile(
+              AnixSwitchTile(
                 contentPadding: EdgeInsets.zero,
                 value: s.haptics,
                 onChanged: (v) => s.haptics = v,
                 title: Text(context.tx('لرزش لمسی', 'Haptics')),
               ),
-              SwitchListTile(
+              AnixSwitchTile(
                 contentPadding: EdgeInsets.zero,
                 value: s.sound,
                 onChanged: (v) => s.sound = v,
                 title: Text(context.tx('بازخورد بازی‌ها', 'Game feedback')),
               ),
-              SwitchListTile(
+              AnixSwitchTile(
                 contentPadding: EdgeInsets.zero,
                 value: s.oracleBuddy,
                 onChanged: (v) => s.oracleBuddy = v,
@@ -123,7 +126,7 @@ class SettingsPage extends ConsumerWidget {
                 subtitle: Text(context.tx('بکش تا جابه‌جا شود؛ دو بار بزن تا کوچک شود؛ نگه دار تا گفتگو باز شود',
                     'Drag to move; double-tap to minimise; long-press to chat')),
               ),
-              SwitchListTile(
+              AnixSwitchTile(
                 contentPadding: EdgeInsets.zero,
                 value: s.oracleTalk,
                 onChanged: s.oracleBuddy ? (v) => s.oracleTalk = v : null,
@@ -183,7 +186,7 @@ class SettingsPage extends ConsumerWidget {
                 onPressed: () async {
                   final ok = await showDialog<bool>(
                     context: context,
-                    builder: (ctx) => AlertDialog(
+                    builder: (ctx) => AnixDialog(
                       title: Text(ctx.tx('مطمئنی؟', 'Are you sure?')),
                       content: Text(ctx.tx(
                           'همه‌ی پیشرفت، آیتم‌ها و پست‌ها پاک می‌شوند. قابل بازگشت نیست.',
@@ -273,7 +276,7 @@ class _AdminInviteTile extends ConsumerWidget {
           final TextEditingController code = TextEditingController();
           final String? value = await showDialog<String>(
             context: context,
-            builder: (BuildContext ctx) => AlertDialog(
+            builder: (BuildContext ctx) => AnixDialog(
               title: Text(ctx.tx('کد دعوت ادمین', 'Admin invitation code')),
               content: TextField(
                 controller: code,

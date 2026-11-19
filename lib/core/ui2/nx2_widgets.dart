@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../profile/profile_service.dart';
 import '../settings/app_settings.dart';
+import 'anix_kit.dart';
 import 'nx2_assets.dart';
 import '../../worlds/oracle_core/persona/oracle_tour.dart';
 import '../../worlds/hub/hub_search.dart';
@@ -42,13 +43,27 @@ class Nx2 {
       TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: text);
 }
 
-/// The cosmic castle backdrop (main) or the room backdrop, darkened for contrast.
+/// Scene art behind a page: the ANIX world hub / social / arcade backgrounds, or the NX2 castle/room.
+enum Nx2Scene { castle, room, hub, social, arcade }
+
+/// The cosmic castle backdrop (main), the room backdrop or an ANIX scene background, darkened for contrast.
 class Nx2Background extends StatelessWidget {
   const Nx2Background(
-      {super.key, this.child, this.room = false, this.dim = 0.45});
+      {super.key, this.child, this.room = false, this.dim = 0.45, this.scene});
   final Widget? child;
   final bool room;
   final double dim;
+
+  /// Overrides [room] when set.
+  final Nx2Scene? scene;
+
+  String get _asset => switch (scene ?? (room ? Nx2Scene.room : Nx2Scene.castle)) {
+        Nx2Scene.castle => Nx2Assets.bgBgMain,
+        Nx2Scene.room => Nx2Assets.bgBgRoom,
+        Nx2Scene.hub => AnixAssets.bgWorldHub,
+        Nx2Scene.social => AnixAssets.bgSocial,
+        Nx2Scene.arcade => AnixAssets.bgArcade,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -56,8 +71,9 @@ class Nx2Background extends StatelessWidget {
     final int cw = (math.min(s.width, 600) * 2).round();
     return Stack(fit: StackFit.expand, children: <Widget>[
       const ColoredBox(color: Nx2.deep),
-      Image.asset(room ? Nx2Assets.bgBgRoom : Nx2Assets.bgBgMain,
+      Image.asset(_asset,
           fit: BoxFit.cover,
+          alignment: Alignment.topCenter,
           cacheWidth: cw,
           gaplessPlayback: true,
           errorBuilder: (_, __, ___) => const SizedBox.shrink()),
@@ -285,7 +301,7 @@ class Nx2Pressable extends StatelessWidget {
 
 enum Nx2ButtonKind { pink, violet, cyan }
 
-/// Art button (sliced from the owner's panels/buttons sheet), 9-slice stretched.
+/// App button: the ANIX pack button family (pink = primary, violet = secondary, cyan = ghost).
 class Nx2Button extends StatelessWidget {
   const Nx2Button({
     super.key,
@@ -295,6 +311,7 @@ class Nx2Button extends StatelessWidget {
     this.kind = Nx2ButtonKind.violet,
     this.height = 52,
     this.fontSize = 16,
+    this.loading = false,
   });
   final String label;
   final VoidCallback? onTap;
@@ -302,56 +319,22 @@ class Nx2Button extends StatelessWidget {
   final Nx2ButtonKind kind;
   final double height;
   final double fontSize;
+  final bool loading;
 
   @override
-  Widget build(BuildContext context) {
-    final String asset = switch (kind) {
-      Nx2ButtonKind.pink => Nx2Assets.framesBtnPink,
-      Nx2ButtonKind.violet => Nx2Assets.framesBtnViolet,
-      Nx2ButtonKind.cyan => Nx2Assets.framesBtnCyan,
-    };
-    // Source buttons are ~460x170 px; keep their rounded ends, stretch the middle.
-    final double scale = 170 / height;
-    final Widget face = Opacity(
-      opacity: onTap == null ? 0.45 : 1,
-      child: Container(
+  Widget build(BuildContext context) => AnixButton(
+        label: label,
+        onTap: onTap,
+        icon: icon,
+        loading: loading,
         height: height,
-        padding: EdgeInsets.symmetric(horizontal: height * 0.45),
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage(asset),
-            centerSlice: const Rect.fromLTRB(76, 56, 384, 112),
-            scale: scale,
-          ),
-        ),
-        alignment: Alignment.center,
-        child: Row(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              if (icon != null) ...<Widget>[
-                Icon(icon, color: Colors.white, size: fontSize + 4),
-                const SizedBox(width: 8),
-              ],
-              Flexible(
-                child: Text(label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: fontSize,
-                        letterSpacing: 0.8,
-                        shadows: const <Shadow>[
-                          Shadow(color: Color(0x99000000), blurRadius: 6)
-                        ])),
-              ),
-            ]),
-      ),
-    );
-    if (onTap == null) return face;
-    return _Pressable(onTap: onTap!, child: face);
-  }
+        fontSize: fontSize,
+        style: switch (kind) {
+          Nx2ButtonKind.pink => AnixButtonStyle.primary,
+          Nx2ButtonKind.violet => AnixButtonStyle.secondary,
+          Nx2ButtonKind.cyan => AnixButtonStyle.ghost,
+        },
+      );
 }
 
 /// Ornate title banner (winged violet plate) with centred text.
@@ -734,7 +717,7 @@ class Nx2Dock extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double bottom = MediaQuery.paddingOf(context).bottom;
-    Widget item(Nx2Tab t, IconData icon, String fa, String en) {
+    Widget item(Nx2Tab t, String? nav, IconData icon, String fa, String en) {
       final bool on = t == current;
       return Expanded(
         child: OracleTourTarget(
@@ -748,20 +731,16 @@ class Nx2Dock extends StatelessWidget {
             child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
               AnimatedContainer(
                 duration: const Duration(milliseconds: 220),
-                padding: const EdgeInsets.all(5),
+                padding: const EdgeInsets.all(3),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   boxShadow: on
-                      ? <BoxShadow>[BoxShadow(color: Nx2.cyan.withValues(alpha: 0.55), blurRadius: 16)]
+                      ? <BoxShadow>[BoxShadow(color: Nx2.gold.withValues(alpha: 0.45), blurRadius: 16)]
                       : const <BoxShadow>[],
                 ),
-                child: ShaderMask(
-                  shaderCallback: (Rect r) => (on
-                          ? const LinearGradient(colors: <Color>[Nx2.cyan, Nx2.magenta])
-                          : const LinearGradient(colors: <Color>[Color(0xFFB9A8E8), Color(0xFF8C7BC4)]))
-                      .createShader(r),
-                  child: Icon(icon, size: 20, color: Colors.white),
-                ),
+                child: nav != null
+                    ? AnixNavIcon(icon: nav, active: on, size: 26)
+                    : AnixTintedIcon(icon: icon, active: on, size: 24),
               ),
               SizedBox(
                 height: 16,
@@ -811,17 +790,17 @@ class Nx2Dock extends StatelessWidget {
                 child: Row(children: <Widget>[
                   Expanded(
                     child: Row(children: <Widget>[
-                      item(Nx2Tab.social, Icons.perm_media_rounded, 'چت و رسانه', 'Chat+Media'),
-                      item(Nx2Tab.oracle, Icons.auto_awesome_rounded, 'اوراکل', 'ORACLE'),
-                      item(Nx2Tab.tournaments, Icons.emoji_events_rounded, 'تورنمنت', 'Tournaments'),
+                      item(Nx2Tab.social, 'chat', Icons.perm_media_rounded, 'چت و رسانه', 'Chat+Media'),
+                      item(Nx2Tab.oracle, null, Icons.auto_awesome_rounded, 'اوراکل', 'ORACLE'),
+                      item(Nx2Tab.tournaments, null, Icons.emoji_events_rounded, 'تورنمنت', 'Tournaments'),
                     ]),
                   ),
                   const SizedBox(width: center - 2),
                   Expanded(
                     child: Row(children: <Widget>[
-                      item(Nx2Tab.shop, Icons.storefront_rounded, 'فروشگاه', 'Shop'),
-                      item(Nx2Tab.rewards, Icons.card_giftcard_rounded, 'جایزه و پک', 'Rewards'),
-                      item(Nx2Tab.profile, Icons.person_rounded, 'پروفایل', 'Profile'),
+                      item(Nx2Tab.shop, 'shop', Icons.storefront_rounded, 'فروشگاه', 'Shop'),
+                      item(Nx2Tab.rewards, 'rewards', Icons.card_giftcard_rounded, 'جایزه و پک', 'Rewards'),
+                      item(Nx2Tab.profile, 'profile', Icons.person_rounded, 'پروفایل', 'Profile'),
                     ]),
                   ),
                 ]),
@@ -859,8 +838,7 @@ class Nx2Dock extends StatelessWidget {
                     Image.asset(Nx2Assets.framesRingGold,
                         width: center, height: center, cacheWidth: 220, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
                     Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-                      const Icon(Icons.sports_esports_rounded, size: 24, color: Colors.white,
-                          shadows: <Shadow>[Shadow(color: Nx2.cyan, blurRadius: 12)]),
+                      AnixNavIcon(icon: 'arcade', active: gameOn, size: 28),
                       Text(context.tx('بازی', 'GAME'),
                           style: const TextStyle(
                               fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 0.7, color: Colors.white)),
@@ -981,25 +959,13 @@ class Nx2IconButton extends StatelessWidget {
       _RoundIcon(icon: icon, onTap: onTap, tooltip: tooltip);
 }
 
-/// Speech bubble for the mascot.
+/// Speech bubble for the mascot / hub logo (ANIX popover art, pointer at the bottom).
 class Nx2Bubble extends StatelessWidget {
   const Nx2Bubble({super.key, required this.text, this.maxWidth = 220});
   final String text;
   final double maxWidth;
   @override
-  Widget build(BuildContext context) {
-    return ConstrainedBox(
-      constraints: BoxConstraints(maxWidth: maxWidth),
-      child: Nx2Panel(
-        cut: 10,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-        borderColor: Nx2.cyan,
-        child: Text(text,
-            style: const TextStyle(
-                fontSize: 12.5, height: 1.35, color: Nx2.text)),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => AnixPopover(maxWidth: maxWidth, child: Text(text));
 }
 
 /// Neon segmented tabs bound to the nearest DefaultTabController.
