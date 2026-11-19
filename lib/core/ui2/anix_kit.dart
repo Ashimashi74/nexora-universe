@@ -45,6 +45,49 @@ class AnixAssets {
 
   static String avatar(String id) => '$_r/avatars/$id.webp';
 
+  /// Painted 3D icons (`assets/ui/anix/icons/<name>.webp`), e.g. 'trophy_gold', 'mic', 'chat', 'versus'.
+  static String icon(String name) => '$_r/icons/$name.webp';
+  static const List<String> iconNames = <String>[
+    'backgammon', 'calendar', 'cards', 'chat', 'chess', 'cup', 'friends', 'gamepad', 'gift', 'headset',
+    'joystick', 'leaderboard', 'ludo', 'mafia', 'megaphone', 'mic', 'poker', 'pool', 'rocket', 'roulette',
+    'settings', 'shield', 'shop', 'snake', 'soccer', 'star', 'target', 'trophy_gold', 'versus', 'wheel',
+  ];
+
+  /// Tournament trophies: bronze, silver, gold, diamond, amethyst, champion.
+  static String trophy(String tier) => '$_r/trophies/$tier.webp';
+  static const List<String> trophyTiers = <String>['bronze', 'silver', 'gold', 'diamond', 'amethyst', 'champion'];
+
+  /// Trophy for a finishing place (1 = champion cup, 2 = silver, 3 = bronze, otherwise null).
+  static String? trophyForPlace(int place) => switch (place) {
+        1 => trophy('champion'),
+        2 => trophy('silver'),
+        3 => trophy('bronze'),
+        _ => null,
+      };
+
+  // Scene backgrounds.
+  static const String sceneVoiceStage = '$_r/scenes/voice_stage.webp';
+  static const String sceneTrophyHall = '$_r/scenes/trophy_hall.webp';
+  static const String sceneHubPanorama = '$_r/scenes/hub_panorama.webp';
+  static const String scenePortalBlue = '$_r/scenes/portal_blue.webp';
+  static const String scenePortalGold = '$_r/scenes/portal_gold.webp';
+
+  /// Painted icon for a menu route (null = keep the vector icon).
+  static String? iconForRoute(String path) => switch (path) {
+        '/hub' => icon('rocket'),
+        '/tournaments' => icon('trophy_gold'),
+        '/leaderboard' => icon('leaderboard'),
+        '/rooms' => icon('mic'),
+        '/settings' => icon('settings'),
+        '/account' => icon('shield'),
+        '/world/arcade' => icon('gamepad'),
+        '/world/social_hub' || '/world/social_station' => icon('chat'),
+        '/world/orbit_network' => icon('friends'),
+        '/world/nexora_exchange' => icon('shop'),
+        '/journey' => icon('star'),
+        _ => null,
+      };
+
   static const List<String> avatarIds = <String>[
     '01-vanguard', '02-cyber-scout', '03-moon-elf', '04-iron-warden', '05-crimson-duelist', '06-onyx-knight',
     '07-star-fox', '08-void-assassin', '09-arcane-scholar', '10-frostborn', '11-sprout-drone', '12-shadow-mage',

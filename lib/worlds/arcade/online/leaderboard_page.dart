@@ -7,6 +7,7 @@ import '../../../core/settings/app_settings.dart';
 import '../../../core/theme/nx_theme.dart';
 import '../../../core/profile/profile_service.dart';
 import '../../../core/ui2/anix_kit.dart';
+import '../../../core/ui2/nx2_widgets.dart';
 import '../../../core/ui2/nx2_assets.dart';
 import '../../../core/widgets/nx_widgets.dart';
 import '../../../games/arcade_kit/arcade_meta.dart';
@@ -85,6 +86,7 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
     final String? me = ref.watch(onlineProvider).uid;
     final NxThemeColors visual = NxThemeColors.of(context);
     return NxWorldScaffold(
+      scene: Nx2Scene.trophyHall,
       title: context.tx('رتبه‌بندی جهانی', 'GLOBAL RANKINGS'),
       palette: WorldPalette.arcade,
       body: Column(children: <Widget>[
@@ -245,11 +247,7 @@ class _LeaderboardPageState extends ConsumerState<LeaderboardPage> {
                                   child: Row(children: <Widget>[
                                     if (i < 3)
                                       Image.asset(
-                                          <String>[
-                                            Nx2Assets.badgesRankGold,
-                                            Nx2Assets.badgesRankSilver,
-                                            Nx2Assets.badgesRankBronze
-                                          ][i],
+                                          AnixAssets.trophyForPlace(i + 1)!,
                                           width: 42,
                                           height: 42,
                                           cacheWidth: 130)

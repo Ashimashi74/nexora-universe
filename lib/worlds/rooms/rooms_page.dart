@@ -108,6 +108,7 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
   @override
   Widget build(BuildContext context) {
     return NxWorldScaffold(
+      scene: Nx2Scene.voiceStage,
       title: context.tx('اتاق‌ها', 'ROOMS'),
       palette: WorldPalette.arcade,
       dock: Nx2Tab.games,

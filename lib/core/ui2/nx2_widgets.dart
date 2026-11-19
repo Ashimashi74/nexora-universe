@@ -44,7 +44,7 @@ class Nx2 {
 }
 
 /// Scene art behind a page: the ANIX world hub / social / arcade backgrounds, or the NX2 castle/room.
-enum Nx2Scene { castle, room, hub, social, arcade }
+enum Nx2Scene { castle, room, hub, social, arcade, voiceStage, trophyHall, panorama }
 
 /// The cosmic castle backdrop (main), the room backdrop or an ANIX scene background, darkened for contrast.
 class Nx2Background extends StatelessWidget {
@@ -63,6 +63,9 @@ class Nx2Background extends StatelessWidget {
         Nx2Scene.hub => AnixAssets.bgWorldHub,
         Nx2Scene.social => AnixAssets.bgSocial,
         Nx2Scene.arcade => AnixAssets.bgArcade,
+        Nx2Scene.voiceStage => AnixAssets.sceneVoiceStage,
+        Nx2Scene.trophyHall => AnixAssets.sceneTrophyHall,
+        Nx2Scene.panorama => AnixAssets.sceneHubPanorama,
       };
 
   @override

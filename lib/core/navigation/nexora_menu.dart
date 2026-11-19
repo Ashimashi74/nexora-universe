@@ -373,7 +373,14 @@ class _MenuDestinationTile extends StatelessWidget {
               color: color.withValues(alpha: .13),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(destination.icon, color: color, size: 21),
+            child: AnixAssets.iconForRoute(destination.path) != null
+                ? Padding(
+                    padding: const EdgeInsets.all(3),
+                    child: Image.asset(AnixAssets.iconForRoute(destination.path)!,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Icon(destination.icon, color: color, size: 21)),
+                  )
+                : Icon(destination.icon, color: color, size: 21),
           ),
           title: Text(
             context.tx(destination.titleFa, destination.titleEn),

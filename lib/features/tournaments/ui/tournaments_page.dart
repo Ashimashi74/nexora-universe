@@ -228,6 +228,7 @@ class _TournamentsPageState extends ConsumerState<TournamentsPage>
     return DefaultTabController(
       length: tabs.length,
       child: NxWorldScaffold(
+        scene: Nx2Scene.trophyHall,
         title: context.tx('تورنمنت‌ها', 'TOURNAMENTS'),
         palette: WorldPalette.arcade,
         showWallet: false,
@@ -328,8 +329,9 @@ class _TournamentsPageState extends ConsumerState<TournamentsPage>
                           border: Border.all(
                               color: tAccent(context).withValues(alpha: 0.42)),
                         ),
-                        child: Icon(Icons.emoji_events_rounded,
-                            color: tAccent(context)),
+                        padding: const EdgeInsets.all(3),
+                        child: Image.asset(AnixAssets.trophy('gold'), fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => Icon(Icons.emoji_events_rounded, color: tAccent(context))),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -511,8 +513,7 @@ class _TournamentsPageState extends ConsumerState<TournamentsPage>
       child: items.isEmpty
           ? ListView(children: <Widget>[
               const SizedBox(height: 80),
-              const Icon(Icons.emoji_events_outlined,
-                  size: 56, color: NxColors.textDim),
+              Center(child: Image.asset(AnixAssets.trophy('champion'), height: 96)),
               const SizedBox(height: 10),
               Center(
                 child: Text(context.tx('چیزی اینجا نیست', 'Nothing here yet'),
