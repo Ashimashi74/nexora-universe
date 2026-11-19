@@ -6,12 +6,14 @@ import '../../games/game_registry.dart';
 import '../world_registry.dart';
 
 class _Hit {
-  const _Hit(this.title, this.subtitle, this.icon, this.color, this.route);
+  const _Hit(this.title, this.subtitle, this.icon, this.color, this.route,
+      [this.searchAliases = const <String>[]]);
   final String title;
   final String subtitle;
   final IconData icon;
   final Color color;
   final String route;
+  final List<String> searchAliases;
 }
 
 /// Global search across worlds, games and features (STEP_12).
@@ -27,7 +29,8 @@ class HubSearchDelegate extends SearchDelegate<void> {
             w.palette.primary, '/world/${w.id}'),
       for (final g in kGames)
         _Hit(isFa ? g.nameFa : g.nameEn, isFa ? g.taglineFa : g.taglineEn,
-            Icons.sports_esports_rounded, g.accent, '/arcade/${g.id}'),
+            Icons.sports_esports_rounded, g.accent, '/arcade/${g.id}',
+            <String>[g.nameFa, g.nameEn, g.id]),
       _Hit(
           isFa ? 'تنظیمات' : 'Settings',
           isFa ? 'کیفیت، کاهش حرکت، زبان' : 'Quality, reduced motion, language',
@@ -57,15 +60,22 @@ class HubSearchDelegate extends SearchDelegate<void> {
   }
 
   List<_Hit> _filter() {
-    final q = query.trim().toLowerCase();
+    final q = _searchKey(query);
     if (q.isEmpty) return _all();
     return _all()
-        .where((h) =>
-            h.title.toLowerCase().contains(q) ||
-            h.subtitle.toLowerCase().contains(q) ||
-            h.route.contains(q))
+        .where((h) => <String>[h.title, h.subtitle, h.route, ...h.searchAliases]
+            .any((value) => _searchKey(value).contains(q)))
         .toList();
   }
+
+  /// Match Persian/Arabic input consistently, including optional ZWNJ and
+  /// whitespace differences such as «تخته نرد» vs «تخته‌نرد».
+  String _searchKey(String value) => value
+      .toLowerCase()
+      .replaceAll('ي', 'ی')
+      .replaceAll('ى', 'ی')
+      .replaceAll('ك', 'ک')
+      .replaceAll(RegExp(r'[\s\u200c\u200d]+'), '');
 
   @override
   ThemeData appBarTheme(BuildContext context) {
