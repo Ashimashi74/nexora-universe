@@ -375,9 +375,9 @@ class _BermudaViewState extends State<BermudaView>
   Future<void> _loadMatchImages(BmConfig c) async {
     final BmFieldS f = kBmFields[c.field];
     final List<ui.Image?> r = await Future.wait(<Future<ui.Image?>>[
-      _img('${_a}fields/${f.id}.webp'),
-      _img('${_a}goals/${f.gs}.webp'),
-      _img('${_a}balls/b${c.ball}.webp'),
+      _img(f.asset),
+      f.builtInGoals ? Future<ui.Image?>.value(null) : _img('${_a}goals/${f.gs}.webp'),
+      Future<ui.Image?>.value(null),
       _img(bmTeam(c.teams[e.ct(0)]).asset, w: 192),
       _img(bmTeam(c.teams[e.ct(1)]).asset, w: 192),
     ]);
@@ -1227,7 +1227,7 @@ class _BermudaViewState extends State<BermudaView>
                           children: <Widget>[
                             for (int i = 0; i < kBmCats.length; i++)
                               _Chip(
-                                label: kBmCats[i][1] as String,
+                                label: launch.tx(kBmCats[i][2] as String, kBmCats[i][1] as String),
                                 on: _cat == i,
                                 onTap: () => setState(() {
                                   _cat = i;
@@ -1239,7 +1239,7 @@ class _BermudaViewState extends State<BermudaView>
                       ),
                       const SizedBox(height: 10),
                       SizedBox(
-                        height: 106,
+                        height: 128,
                         child: ListView.builder(
                           scrollDirection: Axis.horizontal,
                           itemCount: teams.length,
@@ -1292,15 +1292,10 @@ class _BermudaViewState extends State<BermudaView>
                                                 on ? visual.text : visual.muted,
                                             fontSize: 10,
                                             fontWeight: FontWeight.w800)),
-                                    if (on)
-                                      Container(
-                                          margin: const EdgeInsets.only(top: 3),
-                                          width: 18,
-                                          height: 2,
-                                          decoration: BoxDecoration(
-                                              color: visual.accent,
-                                              borderRadius:
-                                                  BorderRadius.circular(4))),
+                                    const SizedBox(height: 3),
+                                    _StatBar(icon: Icons.bolt_rounded, value: t.power, color: const Color(0xFFFFB020)),
+                                    const SizedBox(height: 2),
+                                    _StatBar(icon: Icons.gps_fixed_rounded, value: t.accuracy, color: const Color(0xFF3BD0FF)),
                                   ],
                                 ),
                               ),
@@ -1437,29 +1432,46 @@ class _BermudaViewState extends State<BermudaView>
                         const SizedBox(height: 13),
                         sectionTitle(
                             launch.tx('توپ', 'BALL'),
-                            launch.tx('توپ چرخان انیکس', 'ANIX spinning match ball'),
+                            launch.tx('توپ مسابقه را انتخاب کن', 'Pick the match ball'),
                             Icons.sports_soccer_outlined),
-                        // ANIX ships one match ball: the owner's 16-frame full-rotation sprite.
-                        Container(
-                          height: 74,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
-                            color: visual.accent.withValues(alpha: .10),
-                            border: Border.all(color: visual.accent.withValues(alpha: .7), width: 1.2),
-                          ),
-                          child: Row(
-                            children: <Widget>[
-                              Image.asset('${_a}balls/b0.webp', width: 60, height: 60, cacheWidth: 120),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(kBmBallN[0],
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(color: visual.text, fontSize: 13, fontWeight: FontWeight.w800)),
-                              ),
-                              Icon(Icons.check_circle_rounded, color: visual.accent, size: 20),
-                            ],
+                        SizedBox(
+                          height: 92,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: NB,
+                            itemBuilder: (BuildContext c, int i) {
+                              final bool on = my.ball == i;
+                              return GestureDetector(
+                                onTap: () => setState(() {
+                                  my.ball = i;
+                                  audio.sfx('ui');
+                                  unawaited(_savePrefs());
+                                }),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 160),
+                                  width: 86,
+                                  margin: const EdgeInsets.only(right: 8),
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(14),
+                                    color: on ? visual.accent.withValues(alpha: .14) : visual.background.withValues(alpha: .52),
+                                    border: Border.all(
+                                        color: on ? visual.accent : visual.border.withValues(alpha: .42), width: on ? 1.6 : 1),
+                                  ),
+                                  child: Column(
+                                    children: <Widget>[
+                                      Expanded(child: Image.asset(kBmAnimBalls[i]!.thumb, cacheWidth: 120)),
+                                      const SizedBox(height: 3),
+                                      Text(launch.tx(kBmBallFa[i], kBmBallN[i]),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                              color: on ? visual.text : visual.muted, fontSize: 9.5, fontWeight: FontWeight.w800)),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ],
@@ -1599,6 +1611,35 @@ class _Chip extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Ten-segment rating bar (team power / accuracy) on the team cards.
+class _StatBar extends StatelessWidget {
+  const _StatBar({required this.icon, required this.value, required this.color});
+  final IconData icon;
+  final int value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(children: <Widget>[
+      Icon(icon, size: 9, color: color),
+      const SizedBox(width: 2),
+      for (int i = 1; i <= 10; i++)
+        Expanded(
+          child: Container(
+            height: 4,
+            margin: const EdgeInsets.symmetric(horizontal: .5),
+            decoration: BoxDecoration(
+              color: i <= value ? color : Colors.white.withValues(alpha: .12),
+              borderRadius: BorderRadius.circular(1),
+            ),
+          ),
+        ),
+      const SizedBox(width: 2),
+      Text('$value', style: TextStyle(color: color, fontSize: 8, fontWeight: FontWeight.w900)),
+    ]);
   }
 }
 

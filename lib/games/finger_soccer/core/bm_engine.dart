@@ -7,9 +7,15 @@ import 'dart:math' as math;
 import 'bm_data.dart';
 
 // ---------------------------------------------------------------- constants (game.js line 4-6)
-const double K = 1.27, PR = 63.8, BR = 28.8, STEP = 1 / 240, RC = 70, LMAX = 320;
-// ANIX: a single match ball (index 0, the 16-frame full-rotation sprite). Visual only; physics unchanged.
-const int NB = 1;
+// PR / BR are the radii of the DRAWN disc and ball (rim of the normalised sprites, see kBmDiscArtFill /
+// kBmBallArtFill): the collider is exactly what the player sees. (The original 63.8 / 28.8 radii were drawn at 0.78x,
+// so pieces collided ~17 world units before they visibly touched.)
+const double K = 1.27, PR = 46.65, BR = 20.0, STEP = 1 / 240, LMAX = 320;
+/// Ball spin / curve keeps the original tuning radius so the smaller collider does not exaggerate curl after bounces.
+const double SPIN_R = 28.8;
+/// Visual scale of the separate goal sprites (posts, side nets and back net are built from the drawn sprite).
+const double kBmGoalArtScale = 0.82;
+const int NB = 4;
 /// Mini-soccer tuning (redesign-v1.1, owner request): ball mass 1.9 -> 1.805 (x0.95) and a kick factor on the
 /// ball's share of a disc->ball impulse so a disc striking the ball launches it exactly 5% faster than before
 /// (the lighter mass alone gives +1.40%, BKICK supplies the rest). Nothing else changed.
@@ -17,9 +23,8 @@ const double BALL_M = 1.805;
 const double BKICK = 1.05 * ((1 / 1.9) / (1 / 5 + 1 / 1.9)) / ((1 / BALL_M) / (1 / 5 + 1 / BALL_M));
 const double HV = 4, PF1 = 390, PF2 = .8, PV0 = 600, EPP = .48, PCAP = 190;
 
-/// Stable strike ratings for the ten player pieces. A piece keeps its rating
-/// across resets and matches; gameplay randomness must not change shot power.
-const List<int> kBmPiecePowers = <int>[8, 6, 7, 9, 5, 7, 9, 6, 8, 5];
+/// Largest aim error (radians, one side) at accuracy 1; accuracy 10 shoots exactly where the player aims.
+const double kBmMaxAimError = 0.11;
 
 /// Field size factor (game.js line 12).
 const double FS = 1.12 * 1.215;
@@ -37,31 +42,35 @@ class BmFieldS {
         T = _r(f.t0),
         B = _r(f.b0),
         cs = _r(f.cs0),
-        g = 169;
+        g = 169,
+        rc = f.rc,
+        builtInGoals = f.builtInGoals,
+        gh = f.gh0 * FS,
+        gr = f.gr0 * FS,
+        gd = f.gd0 * FS,
+        asset = f.asset ?? 'assets/games/bermuda/fields/${f.id}.webp';
   static double _r(int v) => (v * FS).round().toDouble(); // Math.round on positive values
   final String id, name, gs;
   final double W, H, L, R, T, B, cs, g;
+  /// Corner radius (world), built-in goal geometry (world): post-centre half width, post radius, net depth.
+  final double rc, gh, gr, gd;
+  final bool builtInGoals;
+  final String asset;
 }
 
 final List<BmFieldS> kBmFields = kBmFieldsRaw.map(BmFieldS.new).toList(growable: false);
 
 class BmTeam {
-  const BmTeam(this.id, this.cat, this.name, this.asset);
+  const BmTeam(this.id, this.cat, this.name, this.asset, this.power, this.accuracy);
   final String id, cat, name, asset;
+  /// 1..10: shot impulse multiplier (see [BmEngine.fire]) and aim precision.
+  final int power, accuracy;
 }
 
-/// TEAMS (game.js line 32): id = cat + index, image = `assets/teams/<cat><nn>.webp`
-final List<BmTeam> kBmTeams = () {
-  final List<BmTeam> o = <BmTeam>[];
-  for (final List<Object> c in kBmCats) {
-    final String k = c[0] as String;
-    final List<String> l = c[2] as List<String>;
-    for (int i = 0; i < l.length; i++) {
-      o.add(BmTeam('$k$i', k, l[i], 'assets/games/bermuda/teams/$k${i.toString().padLeft(2, '0')}.webp'));
-    }
-  }
-  return o;
-}();
+/// Every piece set, in picker order (see kBmTeamDefs: Club, National, Luxury).
+final List<BmTeam> kBmTeams = kBmTeamDefs
+    .map((BmTeamDef d) => BmTeam(d.id, d.cat, d.name, 'assets/games/bermuda/${d.art}.webp', d.power, d.accuracy))
+    .toList(growable: false);
 
 BmTeam bmTeam(String id) => kBmTeams.firstWhere((BmTeam t) => t.id == id, orElse: () => kBmTeams.first);
 
@@ -90,10 +99,14 @@ List<List<double>> bmSlots(int fi) {
 String bmBallName(int i) => '${kBmBallN[i]} Ball';
 
 // ---------------------------------------------------------------- bodies
+/// A goal: [x1]..[x2] is the open mouth between the posts' inner faces, [px1]/[px2] the post centres (circles of
+/// radius [pr]), [y] the goal line and [d] the direction into the net (-1 top, +1 bottom).
 class BmGoal {
-  BmGoal(this.team, this.y, this.x1, this.x2, this.d);
+  BmGoal(this.team, this.y, this.x1, this.x2, this.d, {double? px1, double? px2, this.pr = 5})
+      : px1 = px1 ?? x1,
+        px2 = px2 ?? x2;
   final int team;
-  final double y, x1, x2;
+  final double y, x1, x2, px1, px2, pr;
   final int d;
 }
 
@@ -109,8 +122,10 @@ class BmBody {
   double x, y, vx = 0, vy = 0;
   final double r, m, im;
   final int team;
-  /// Per-piece strike rating. 0 is reserved for the ball; player pieces are 1..10.
+  /// Per-piece strike rating (the team's power). 0 is reserved for the ball; player pieces are 1..10.
   int power;
+  /// Aim precision 1..10 (the team's accuracy); 10 = no aim error.
+  int accuracy = 10;
   double spin = 0, ang = 0, sq = 0, boost = 0;
   final List<double> R = <double>[1, 0, 0, 0, 1, 0, 0, 0, 1];
   int rv = 0;
@@ -207,9 +222,13 @@ class BmEngine {
   double tt = 0;
 
   // geometry
-  late double Fl, Fr, Ft, Fb, Fw, Fh, CX, CY, KY = 0, DEPTH = 112;
+  late double Fl, Fr, Ft, Fb, Fw, Fh, CX, CY, KY = 0, DEPTH = 112, RC = 70;
   late List<BmGoal> GOALS;
-  late double GGw, GGh, GGx;
+  /// Goal sprite placement (world): left x, drawn width, drawn height and the sprite's post-bottom fraction (the
+  /// sprite is drawn so its posts end exactly on the goal line). GGw == 0 for fields with goals built into the art.
+  late double GGw, GGh, GGx, GGleg = 1;
+  /// Visual depth reserved behind each goal line (layout).
+  double get goalVisualDepth => GGw > 0 ? GGh * GGleg : DEPTH;
   BmFieldS get field => kBmFields[setFld];
 
   List<String> sel = <String>['club0', 'club1'];
@@ -251,13 +270,35 @@ class BmEngine {
     CX = (Fl + Fr) / 2;
     CY = (Ft + Fb) / 2;
     KY = f.cs;
+    RC = f.rc;
+    if (f.builtInGoals) {
+      // Goals drawn into the field art: posts, mouth and net depth measured on the art.
+      GGw = 0;
+      GGh = 0;
+      GGx = CX;
+      GGleg = 1;
+      DEPTH = f.gd;
+      final double pl = CX - f.gh, pr = CX + f.gh;
+      GOALS = <BmGoal>[
+        BmGoal(0, Ft, pl + f.gr, pr - f.gr, -1, px1: pl, px2: pr, pr: f.gr),
+        BmGoal(1, Fb, pl + f.gr, pr - f.gr, 1, px1: pl, px2: pr, pr: f.gr),
+      ];
+      return;
+    }
+    // Separate goal sprite: [w, h, left post, right post, post half-width, back-bar inner edge, post bottom].
     final List<double> gi = kBmGS[f.gs]!;
-    final double gw = 2 * f.g / (gi[3] - gi[2]);
-    GGw = gw;
-    GGh = gw * gi[1] / gi[0] * 1.02; // goal depth +2% (owner request)
-    GGx = CX - f.g - gi[2] * gw;
-    DEPTH = _mx(106, (GGh * .95).roundToDouble());
-    GOALS = <BmGoal>[BmGoal(0, Ft, CX - f.g, CX + f.g, -1), BmGoal(1, Fb, CX - f.g, CX + f.g, 1)];
+    final double fullW = 2 * f.g / (gi[3] - gi[2]);
+    GGw = fullW * kBmGoalArtScale;
+    GGh = GGw * gi[1] / gi[0] * 1.02; // goal depth +2% (owner request)
+    GGleg = gi[6];
+    GGx = CX - GGw * (gi[2] + gi[3]) / 2; // post centres symmetric about the centre line
+    final double pl = GGx + gi[2] * GGw, pr = GGx + gi[3] * GGw, prad = gi[4] * GGw;
+    // The sprite's post bottoms sit on the goal line; the back net is the inner edge of its back bar.
+    DEPTH = GGh * (gi[6] - gi[5]);
+    GOALS = <BmGoal>[
+      BmGoal(0, Ft, pl + prad, pr - prad, -1, px1: pl, px2: pr, pr: prad),
+      BmGoal(1, Fb, pl + prad, pr - prad, 1, px1: pl, px2: pr, pr: prad),
+    ];
   }
 
   BmBody mk(double x, double y, int team, double r, double m, {int power = 0}) =>
@@ -280,7 +321,8 @@ class BmEngine {
           x = 2 * CX - x;
           y = 2 * CY - y;
         }
-        final BmBody b = mk(x, y, ct(cm), PR, 5, power: kBmPiecePowers[cm * 5 + i]);
+        final BmTeam tm = bmTeam(sel[ct(cm)]);
+        final BmBody b = mk(x, y, ct(cm), PR, 5, power: tm.power)..accuracy = tm.accuracy;
         b.cid = cm * 20 + i;
         b.boost = 0;
         bodies.add(b);
@@ -400,7 +442,7 @@ class BmEngine {
           wallFx(Fl, b.y, vs);
         }
         b.vx *= -_eN(bl, -b.vx);
-        b.spin += b.vy / r * .05;
+        b.spin += b.vy / (bl ? SPIN_R : r) * .05;
       }
     }
     if (b.x + r > Fr) {
@@ -411,7 +453,7 @@ class BmEngine {
           wallFx(Fr, b.y, vs);
         }
         b.vx *= -_eN(bl, b.vx);
-        b.spin -= b.vy / r * .05;
+        b.spin -= b.vy / (bl ? SPIN_R : r) * .05;
       }
     }
     for (final BmGoal g in GOALS) {
@@ -446,7 +488,7 @@ class BmEngine {
         }
         b.y = g.y - g.d * r;
         if (g.d * b.vy > 0) b.vy = -g.d * b.vy.abs() * _eN(bl, b.vy.abs());
-        b.spin += g.d * b.vx / r * .05;
+        b.spin += g.d * b.vx / (bl ? SPIN_R : r) * .05;
       }
     }
     for (final List<double> c in <List<double>>[
@@ -456,6 +498,7 @@ class BmEngine {
       <double>[Fr - RC, Fb - RC, -1, -1],
     ]) {
       final double cx = c[0], cy = c[1], sx = c[2], sy = c[3];
+      if (RC <= r) continue; // corner tighter than the body: the straight walls already hold it
       if ((b.x - cx) * sx < 0 && (b.y - cy) * sy < 0) {
         final double dx = b.x - cx, dy = b.y - cy, d = math.sqrt(dx * dx + dy * dy), lim = RC - r;
         if (d > lim && d > 0) {
@@ -472,8 +515,8 @@ class BmEngine {
     }
   }
 
-  void post(BmBody b, double px, double py) {
-    final double dx = b.x - px, dy = b.y - py, d = math.sqrt(dx * dx + dy * dy), m = b.r + 5;
+  void post(BmBody b, double px, double py, double pr) {
+    final double dx = b.x - px, dy = b.y - py, d = math.sqrt(dx * dx + dy * dy), m = b.r + pr;
     if (d >= m || d == 0) return;
     final double nx = dx / d, ny = dy / d, vn = b.vx * nx + b.vy * ny;
     b.x = px + nx * m;
@@ -572,7 +615,7 @@ class BmEngine {
       }
     }
     if (isB) {
-      bl.spin += (bl == b ? 1 : -1) * (-ny * (b.vx - a.vx) + nx * (b.vy - a.vy)) / bl.r * .3;
+      bl.spin += (bl == b ? 1 : -1) * (-ny * (b.vx - a.vx) + nx * (b.vy - a.vy)) / SPIN_R * .3;
       bl.spin = _mx(-34, _mn(34, bl.spin));
       final double pw = _mn(1, -vn / (1700 * K));
       if (pw > .2) {
@@ -673,11 +716,17 @@ class BmEngine {
     }
     if (bal != null) {
       for (final BmGoal g in GOALS) {
-        post(bal, g.x1, g.y);
-        post(bal, g.x2, g.y);
+        post(bal, g.px1, g.y, g.pr);
+        post(bal, g.px2, g.y, g.pr);
       }
     }
     for (final BmBody b in bodies) {
+      if (b != bal) {
+        for (final BmGoal g in GOALS) {
+          post(b, g.px1, g.y, g.pr);
+          post(b, g.px2, g.y, g.pr);
+        }
+      }
       walls(b);
     }
     if (phase == 'move' && !remote && bal != null) {
@@ -726,13 +775,21 @@ class BmEngine {
     cam = _mx(cam, .25);
   }
 
+  /// Shot multiplier of a power rating (unchanged ANIX tuning): 1 => 0.65x, 5 => 1.05x, 7 => 1.25x, 10 => 1.55x.
+  static double strikeOf(int power) => .55 + power.clamp(1, 10) * .1;
+
+  /// Aim error (radians) of an accuracy rating for a uniform sample u in [-1, 1].
+  static double aimErrorOf(int accuracy, double u) => (10 - accuracy.clamp(1, 10)) / 9 * kBmMaxAimError * u;
+
   void fire(BmBody b, double dx, double dy, double l) {
     final double p = _mn(l, LMAX) / LMAX;
-    // Rating is physical: 1 => 0.65x impulse, 5 => 1.05x, 10 => 1.55x.
-    // It is applied before launch, not merely displayed in the UI.
-    final double strike = .55 + b.power * .1;
-    final double v = (260 + 1085 * math.pow(p, .8).toDouble()) * K * 1.32 * strike;
-    final double vx = dx / l * v, vy = dy / l * v;
+    // Team stats are physical, applied before launch: power scales the impulse, accuracy bends the aimed direction by
+    // a random error (triangular, so most shots stay near the aim). Online the resulting velocity is what is sent, so
+    // both phones replay the same shot.
+    final double v = (260 + 1085 * math.pow(p, .8).toDouble()) * K * 1.32 * strikeOf(b.power);
+    final double err = aimErrorOf(b.accuracy, R_() - R_()), ca = math.cos(err), sa = math.sin(err);
+    final double ux = dx / l, uy = dy / l;
+    final double vx = (ux * ca - uy * sa) * v, vy = (ux * sa + uy * ca) * v;
     launch(b, vx, vy, false);
     final int sg = mirror ? -1 : 1;
     hooks.emit('shot', <String, dynamic>{'cid': b.cid, 'vx': vx * sg, 'vy': vy * sg, 'team': ct(b.team), 'power': b.power});

@@ -65,6 +65,7 @@ flutter:
     - assets/games/billiards/
     - assets/games/carrom/
     - assets/games/bermuda/balls/
+    - assets/games/bermuda/discs/
     - assets/games/bermuda/fields/
     - assets/games/bermuda/goals/
     - assets/games/bermuda/sfx/

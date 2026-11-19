@@ -5,15 +5,14 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../core/bm_data.dart';
 import '../core/bm_engine.dart';
 import 'bm_ball.dart';
 
-/// Visual-only sizing; BmEngine radii and collision geometry remain unchanged.
-// Presentation-only tuning. Physics radii stay unchanged so existing replays,
-// snapshots and online peers keep the same deterministic contract.
-const double kBmPlayerVisualScale = 0.78;
-const double kBmBallVisualScale = 0.78;
-const double kBmGoalArtScale = 0.82;
+/// Every sprite is drawn so its measured rim lands exactly on the physics radius (see kBmDiscArtFill /
+/// kBmBallArtFill and tool/build_fs_assets.py): what the player sees is what collides.
+double bmDiscSpriteHalf(BmBody b) => b.r / kBmDiscArtFill;
+double bmBallSpriteHalf(BmBody b) => b.r / kBmBallArtFill;
 
 class BmImages {
   ui.Image? field, goal, ball;
@@ -70,7 +69,7 @@ class BmView {
     final double H = fullH - top - insetBottom;
     if (W < 50 || H < 50) return;
     final double worldWidth = f.R - f.L + 56 * FS;
-    final double worldHeight = (f.B - f.T) + 2 * e.GGh * kBmGoalArtScale + 48;
+    final double worldHeight = (f.B - f.T) + 2 * e.goalVisualDepth + 48;
     s = math.min(W * matchWidthFraction / worldWidth, H * matchHeightFraction / worldHeight);
     ox = W / 2 - e.CX * s;
     // Keep the scoreboard clear of the top goal while preserving the same
@@ -84,7 +83,12 @@ class BmView {
 Color _rgba(int r, int g, int b, double a) => Color.fromRGBO(r, g, b, a.clamp(0.0, 1.0).toDouble());
 
 class BmPainter extends CustomPainter {
-  BmPainter(this.e, this.im, this.view, this.now, this.dpr, this.fancy, {required Listenable repaint}) : super(repaint: repaint);
+  BmPainter(this.e, this.im, this.view, this.now, this.dpr, this.fancy, {required Listenable repaint, this.debugColliders = false})
+      : super(repaint: repaint);
+
+  /// Draws every collider (walls, rounded corners, goal mouths, posts, back nets, disc and ball circles) over the
+  /// art. Used by test_render/finger_soccer_colliders_test.dart to check the physics against each field's drawing.
+  final bool debugColliders;
 
   final BmEngine e;
   final BmImages im;
@@ -112,7 +116,7 @@ class BmPainter extends CustomPainter {
       final List<int> c = e.turn != 0 ? <int>[255, 110, 110] : <int>[80, 170, 255];
       for (final BmBody b in e.bodies) {
         if (b.team == e.turn) {
-          final double visualRadius = b.r * kBmPlayerVisualScale;
+          final double visualRadius = b.r;
           canvas.drawCircle(Offset(b.x, b.y), visualRadius + 11,
               Paint()
                 ..style = PaintingStyle.stroke
@@ -129,7 +133,7 @@ class BmPainter extends CustomPainter {
     // Player-piece trails are intentionally disabled; only the ball leaves a trace.
     // soft shadows (SPR.shadow)
     for (final BmBody b in e.bodies) {
-      final double visualRadius = b == e.ball ? b.r * kBmBallVisualScale : b.r * kBmPlayerVisualScale;
+      final double visualRadius = b.r;
       final double w = visualRadius * 2.6;
       final Offset c = Offset(b.x + 5, b.y + 11);
       canvas.drawCircle(
@@ -143,20 +147,19 @@ class BmPainter extends CustomPainter {
       if (b != e.ball) _sprite(canvas, b, t);
     }
     if (e.ball != null) _sprite(canvas, e.ball!, t);
-    // goals (drawn over the ball: the net covers it)
+    // goals (drawn over the ball: the net covers it). The sprite's post bottoms sit exactly on the goal line and its
+    // posts on the engine's post colliders (BmEngine.geo builds the colliders from this same placement).
     final ui.Image? gi = im.goal;
-    if (gi != null) {
+    if (gi != null && e.GGw > 0) {
       for (final BmGoal g in e.GOALS) {
-        final double drawWidth = e.GGw * kBmGoalArtScale;
-        final double drawHeight = e.GGh * kBmGoalArtScale;
-        final double gx = e.GGx + (e.GGw - drawWidth) / 2 + math.sin(t / 25) * 8 * e.shake[g.team];
-        final double gy = g.d < 0 ? g.y - drawHeight - 2 : g.y + 2;
-        final Rect dst = Rect.fromLTWH(gx, gy, drawWidth, drawHeight);
+        final double gx = e.GGx + math.sin(t / 25) * 8 * e.shake[g.team];
+        final double top = g.d < 0 ? g.y - e.GGh * e.GGleg : g.y - e.GGh * (1 - e.GGleg);
+        final Rect dst = Rect.fromLTWH(gx, top, e.GGw, e.GGh);
         final Rect src = Rect.fromLTWH(0, 0, gi.width.toDouble(), gi.height.toDouble());
         final Paint p = Paint()..filterQuality = FilterQuality.medium;
         if (g.d > 0) {
           canvas.save();
-          canvas.translate(0, gy * 2 + drawHeight);
+          canvas.translate(0, top * 2 + e.GGh);
           canvas.scale(1, -1);
           canvas.drawImageRect(gi, src, dst, p);
           canvas.restore();
@@ -165,6 +168,7 @@ class BmPainter extends CustomPainter {
         }
       }
     }
+    if (debugColliders) _colliders(canvas);
     // Impact sparks, rings and the full-screen flash are removed by design.
     _aim(canvas, t);
     canvas.restore();
@@ -203,7 +207,7 @@ class BmPainter extends CustomPainter {
               Color(0xFF000000),
               Color(0xFF000000),
               Color(0x00000000)
-            ], const <double>[0, .07, .93, 1]));
+            ], const <double>[0, .012, .988, 1]));
       b.drawRect(
           Offset.zero & size,
           Paint()
@@ -213,7 +217,7 @@ class BmPainter extends CustomPainter {
               Color(0xFF000000),
               Color(0xFF000000),
               Color(0x00000000)
-            ], const <double>[0, .04, .96, 1]));
+            ], const <double>[0, .012, .988, 1]));
       b.restore();
       final ui.Picture pic = rec.endRecording();
       im.bg = pic.toImageSync(math.max(1, (size.width * d).round()), math.max(1, (size.height * d).round()));
@@ -229,14 +233,15 @@ class BmPainter extends CustomPainter {
   // ------------------------------------------------------------ sprite()
   void _sprite(Canvas canvas, BmBody b, double t) {
     final bool isBall = b == e.ball;
-    final double renderRadius = isBall ? b.r * kBmBallVisualScale : b.r * kBmPlayerVisualScale;
-    final ui.Image? sp = isBall ? im.ball : im.team[b.team == 0 ? 0 : 1];
+    final double renderRadius = b.r;
+    final ui.Image? sp = isBall ? (im.ballSheet ?? im.ball) : im.team[b.team == 0 ? 0 : 1];
     if (sp == null) {
       canvas.drawCircle(Offset(b.x, b.y), renderRadius, Paint()..color = isBall ? Colors.white : (b.team != 0 ? const Color(0xFFFF5B5B) : const Color(0xFF3B9BFF)));
       return;
     }
+    final double half = isBall ? bmBallSpriteHalf(b) : bmDiscSpriteHalf(b);
     final Rect src = Rect.fromLTWH(0, 0, sp.width.toDouble(), sp.height.toDouble());
-    final Rect dst = Rect.fromLTWH(-renderRadius, -renderRadius, renderRadius * 2, renderRadius * 2);
+    final Rect dst = Rect.fromLTWH(-half, -half, half * 2, half * 2);
     canvas.save();
     double drawY = b.y;
     if (isBall) {
@@ -280,8 +285,7 @@ class BmPainter extends CustomPainter {
       canvas.restore();
       return;
     }
-    final double ph = b.cid * 1.7;
-    drawY += math.sin(t / 1000 * 1.6 + ph) * 1.6 * (b.vx != 0 || b.vy != 0 ? 0 : 1);
+    // No idle bobbing: the sprite stays exactly on its collider.
     canvas.translate(b.x, drawY);
     final double sv = math.sqrt(b.vx * b.vx + b.vy * b.vy);
     if (sv > 60 || b.sq > .02) {
@@ -293,11 +297,65 @@ class BmPainter extends CustomPainter {
     final Paint dark = Paint()
       ..filterQuality = FilterQuality.medium
       ..colorFilter = const ColorFilter.mode(Color.fromRGBO(6, 8, 24, .66), BlendMode.srcATop);
-    for (int k = 4; k >= 1; k--) {
-      canvas.drawImageRect(sp, src, dst.shift(Offset(0, renderRadius * .052 * k)), dark);
+    // Thin coin edge (3 px-ish) so the top face - the collider - stays where it is drawn.
+    for (int k = 3; k >= 1; k--) {
+      canvas.drawImageRect(sp, src, dst.shift(Offset(0, renderRadius * .03 * k)), dark);
     }
     canvas.drawImageRect(sp, src, dst, Paint()..filterQuality = FilterQuality.medium);
     canvas.restore();
+  }
+
+  // ------------------------------------------------------------ debug collider overlay
+  void _colliders(Canvas canvas) {
+    final Paint wall = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..color = const Color(0xFFFF2D55);
+    final Paint post = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..color = const Color(0xFF00E5FF);
+    final Paint net = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..color = const Color(0xFFFFD60A);
+    final double rc = e.RC;
+    // straight walls (the goal mouths are open between the inner post faces)
+    final Path p = Path();
+    for (final BmGoal g in e.GOALS) {
+      p
+        ..moveTo(e.Fl + rc, g.y)
+        ..lineTo(g.x1, g.y)
+        ..moveTo(g.x2, g.y)
+        ..lineTo(e.Fr - rc, g.y);
+    }
+    p
+      ..moveTo(e.Fl, e.Ft + rc)
+      ..lineTo(e.Fl, e.Fb - rc)
+      ..moveTo(e.Fr, e.Ft + rc)
+      ..lineTo(e.Fr, e.Fb - rc);
+    canvas.drawPath(p, wall);
+    if (rc > 0) {
+      canvas.drawArc(Rect.fromCircle(center: Offset(e.Fl + rc, e.Ft + rc), radius: rc), math.pi, math.pi / 2, false, wall);
+      canvas.drawArc(Rect.fromCircle(center: Offset(e.Fr - rc, e.Ft + rc), radius: rc), -math.pi / 2, math.pi / 2, false, wall);
+      canvas.drawArc(Rect.fromCircle(center: Offset(e.Fl + rc, e.Fb - rc), radius: rc), math.pi / 2, math.pi / 2, false, wall);
+      canvas.drawArc(Rect.fromCircle(center: Offset(e.Fr - rc, e.Fb - rc), radius: rc), 0, math.pi / 2, false, wall);
+    }
+    for (final BmGoal g in e.GOALS) {
+      final double back = g.y + g.d * e.DEPTH;
+      canvas.drawPath(
+          Path()
+            ..moveTo(g.x1, g.y)
+            ..lineTo(g.x1, back)
+            ..lineTo(g.x2, back)
+            ..lineTo(g.x2, g.y),
+          net);
+      canvas.drawCircle(Offset(g.px1, g.y), g.pr, post);
+      canvas.drawCircle(Offset(g.px2, g.y), g.pr, post);
+    }
+    for (final BmBody b in e.bodies) {
+      canvas.drawCircle(Offset(b.x, b.y), b.r, b == e.ball ? net : post);
+    }
   }
 
   // ------------------------------------------------------------ drawTrail()
