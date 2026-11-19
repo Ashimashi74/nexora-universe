@@ -1,7 +1,7 @@
-name: NEXORA Quick Check
+name: ANIX Quick Check
 on:
   push:
-    branches: ['check-redesign-*']
+    branches: ['work/**']
 jobs:
   check:
     runs-on: ubuntu-latest

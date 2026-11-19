@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ashkanshams-dev/Nexora-Online/redesign/docs/media/banner.png" alt="NEXORA" width="100%"/>
+  <img src="https://raw.githubusercontent.com/Ashimashi74/nexora-universe/main/docs/media/banner.png" alt="NEXORA" width="100%"/>
 </p>
 
 <h2 align="center">🤖 NEXORA Redesign — «ORACLE جاااااااااان!» Update</h2>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/ashkanshams-dev/Nexora-Online/redesign/docs/media/oracle.png" alt="ORACLE" width="160"/>
+  <img src="https://raw.githubusercontent.com/Ashimashi74/nexora-universe/main/docs/media/oracle.png" alt="ORACLE" width="160"/>
 </p>
 
 <div dir="rtl">

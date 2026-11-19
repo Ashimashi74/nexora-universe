@@ -20,7 +20,7 @@ const PROVIDERS: Record<string, Provider> = {
     name: "openrouter",
     base: "https://openrouter.ai/api/v1",
     models: ["google/gemini-3.5-flash-lite", "deepseek/deepseek-v4-flash-0731"],
-    headers: { "HTTP-Referer": "https://github.com/ashkanshams-dev/Nexora-Online", "X-Title": "NEXORA ORACLE" },
+    headers: { "HTTP-Referer": "https://github.com/Ashimashi74/nexora-universe", "X-Title": "NEXORA ORACLE" },
   },
   dahl: {
     name: "dahl",

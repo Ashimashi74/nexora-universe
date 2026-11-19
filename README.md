@@ -8,8 +8,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/ashkanshams-dev/Nexora-Online-Redesign/releases"><img alt="Download APK" src="https://img.shields.io/badge/Download-APK-ff3cac?style=for-the-badge&logo=android&logoColor=white"/></a>
-  <a href="https://github.com/ashkanshams-dev/Nexora-Online-Redesign/actions/workflows/android.yml"><img alt="Android build" src="https://github.com/ashkanshams-dev/Nexora-Online-Redesign/actions/workflows/android.yml/badge.svg?branch=anix-release"/></a>
+  <a href="https://github.com/Ashimashi74/nexora-universe/releases"><img alt="Download APK" src="https://img.shields.io/badge/Download-APK-ff3cac?style=for-the-badge&logo=android&logoColor=white"/></a>
+  <a href="https://github.com/Ashimashi74/nexora-universe/actions/workflows/android.yml"><img alt="Android build" src="https://github.com/Ashimashi74/nexora-universe/actions/workflows/android.yml/badge.svg?branch=main"/></a>
   <img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.50-02569B?logo=flutter&logoColor=white"/>
   <img alt="Supabase" src="https://img.shields.io/badge/Supabase-Postgres%20%7C%20Realtime%20%7C%20Edge-3ECF8E?logo=supabase&logoColor=white"/>
   <img alt="LiveKit" src="https://img.shields.io/badge/LiveKit-voice%20%26%20video-7B61FF"/>
@@ -21,7 +21,7 @@
 
 ## 📥 Download
 
-Grab the newest **`ANIX-universal.apk`** from **[Releases](https://github.com/ashkanshams-dev/Nexora-Online-Redesign/releases)** (look for the `anix-*` tags; `ANIX-arm64-v8a.apk` is smaller and fits most phones).
+Grab the newest **`ANIX-universal.apk`** from **[Releases](https://github.com/Ashimashi74/nexora-universe/releases)** (look for the `anix-*` tags; `ANIX-arm64-v8a.apk` is smaller and fits most phones).
 
 1. Download the APK on your phone.
 2. Allow *Install unknown apps* for your browser / file manager when Android asks.
@@ -29,7 +29,7 @@ Grab the newest **`ANIX-universal.apk`** from **[Releases](https://github.com/as
 
 <div dir="rtl">
 
-**فارسی:** آخرین فایل `ANIX-universal.apk` را از بخش [Releases](https://github.com/ashkanshams-dev/Nexora-Online-Redesign/releases) دانلود و نصب کن. اپ خودش نسخه‌های جدید را خبر می‌دهد.
+**فارسی:** آخرین فایل `ANIX-universal.apk` را از بخش [Releases](https://github.com/Ashimashi74/nexora-universe/releases) دانلود و نصب کن. اپ خودش نسخه‌های جدید را خبر می‌دهد.
 
 </div>
 
@@ -86,8 +86,8 @@ No other servers — game state, tournaments and economy are server-authoritativ
 ## 🛠️ Build from source
 
 ```bash
-git clone -b anix-release https://github.com/ashkanshams-dev/Nexora-Online-Redesign.git
-cd Nexora-Online-Redesign
+git clone -b main https://github.com/Ashimashi74/nexora-universe.git
+cd nexora-universe
 flutter create --platforms=android --org com.nexora --project-name nexora .   # generates android/ (CI does the same)
 flutter pub get
 flutter analyze && flutter test
