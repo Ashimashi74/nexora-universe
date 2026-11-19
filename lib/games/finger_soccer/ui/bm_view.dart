@@ -1424,7 +1424,8 @@ class _BermudaViewState extends State<BermudaView>
                           height: 98,
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
-                            itemCount: NB,
+                            // NB includes the two animated balls b36/b37.
+                            itemCount: kBmBallN.length,
                             itemBuilder: (BuildContext c, int i) {
                               final bool on = my.ball == i;
                               return GestureDetector(

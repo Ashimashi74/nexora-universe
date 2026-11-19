@@ -8,13 +8,18 @@ import 'bm_data.dart';
 
 // ---------------------------------------------------------------- constants (game.js line 4-6)
 const double K = 1.27, PR = 63.8, BR = 28.8, STEP = 1 / 240, RC = 70, LMAX = 320;
-const int NB = 36;
+// Includes the two animated owner-provided balls (indices 36 and 37).
+const int NB = 38;
 /// Mini-soccer tuning (redesign-v1.1, owner request): ball mass 1.9 -> 1.805 (x0.95) and a kick factor on the
 /// ball's share of a disc->ball impulse so a disc striking the ball launches it exactly 5% faster than before
 /// (the lighter mass alone gives +1.40%, BKICK supplies the rest). Nothing else changed.
 const double BALL_M = 1.805;
 const double BKICK = 1.05 * ((1 / 1.9) / (1 / 5 + 1 / 1.9)) / ((1 / BALL_M) / (1 / 5 + 1 / BALL_M));
 const double HV = 4, PF1 = 390, PF2 = .8, PV0 = 600, EPP = .48, PCAP = 190;
+
+/// Stable strike ratings for the ten player pieces. A piece keeps its rating
+/// across resets and matches; gameplay randomness must not change shot power.
+const List<int> kBmPiecePowers = <int>[8, 6, 7, 9, 5, 7, 9, 6, 8, 5];
 
 /// Field size factor (game.js line 12).
 const double FS = 1.12 * 1.215;
@@ -255,8 +260,8 @@ class BmEngine {
     GOALS = <BmGoal>[BmGoal(0, Ft, CX - f.g, CX + f.g, -1), BmGoal(1, Fb, CX - f.g, CX + f.g, 1)];
   }
 
-  BmBody mk(double x, double y, int team, double r, double m) =>
-      BmBody(x, y, team, r, m, power: team == 2 ? 0 : 1 + rnd.nextInt(10));
+  BmBody mk(double x, double y, int team, double r, double m, {int power = 0}) =>
+      BmBody(x, y, team, r, m, power: power);
 
   void reset(int k) {
     bodies = <BmBody>[];
@@ -275,7 +280,7 @@ class BmEngine {
           x = 2 * CX - x;
           y = 2 * CY - y;
         }
-        final BmBody b = mk(x, y, ct(cm), PR, 5);
+        final BmBody b = mk(x, y, ct(cm), PR, 5, power: kBmPiecePowers[cm * 5 + i]);
         b.cid = cm * 20 + i;
         b.boost = 0;
         bodies.add(b);

@@ -46,6 +46,7 @@ void main() {
     expect(BR, 28.8);
     expect(STEP, 1 / 240);
     expect(kBmFields.length, 30);
+    expect(NB, 38);
     final BmFieldS f = kBmFields.firstWhere((BmFieldS x) => x.id == 'forest');
     expect(f.W, (1086 * FS).roundToDouble());
     expect(f.L, (195 * FS).roundToDouble());
@@ -76,6 +77,15 @@ void main() {
     expect(kBmGoalArtScale, 0.82);
     expect(e.bodies.first.r, discPhysicsRadius);
     expect(e.ball!.r, ballPhysicsRadius);
+  });
+
+  test('each player piece keeps its dedicated strike power across resets', () {
+    final BmEngine e = BmEngine(_Hooks(), rng: math.Random(1))..startMatch(_cfg());
+    final List<int> first = e.bodies.take(10).map((BmBody b) => b.power).toList();
+    expect(first, kBmPiecePowers);
+    e.reset(0);
+    expect(e.bodies.take(10).map((BmBody b) => b.power).toList(), first);
+    expect(e.ball!.power, 0);
   });
 
   test('bot vs bot plays a long match without escaping the pitch', () {
