@@ -81,3 +81,13 @@ Future<void> shoot(WidgetTester tester, String path) async {
     f.writeAsBytesSync(bd!.buffer.asUint8List());
   });
 }
+
+/// audioplayers has no platform side under `flutter test`: answer its channels with no-ops.
+void mockAudio() {
+  final TestDefaultBinaryMessenger m = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+  for (final String ch in <String>['xyz.luan/audioplayers', 'xyz.luan/audioplayers.global']) {
+    m.setMockMethodCallHandler(MethodChannel(ch), (MethodCall c) async => null);
+  }
+  m.setMockStreamHandler(const EventChannel('xyz.luan/audioplayers.global/events'),
+      MockStreamHandler.inline(onListen: (Object? args, MockStreamHandlerEventSink sink) {}));
+}

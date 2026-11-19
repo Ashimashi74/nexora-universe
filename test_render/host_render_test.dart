@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nexora/core/settings/app_settings.dart';
 import 'package:nexora/core/storage/local_store.dart';
 import 'package:nexora/core/theme/nx_theme.dart';
-import 'package:nexora/games/core/game_contract.dart';
 import 'package:nexora/games/game_registry.dart';
 import 'package:nexora/worlds/arcade/game_host_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,8 +13,8 @@ import 'render_util.dart';
 /// Every game inside the real host (exit + ORACLE buttons) on a POCO C65-sized phone
 /// (720x1600 px = 360x800 dp) with status-bar and gesture-bar insets.
 const String only = String.fromEnvironment('ONLY');
-const double kW = double.fromEnvironment('W', defaultValue: 360);
-const double kH = double.fromEnvironment('H', defaultValue: 800);
+const int kW = int.fromEnvironment('W', defaultValue: 360);
+const int kH = int.fromEnvironment('H', defaultValue: 800);
 
 void main() {
   setUp(() async {
@@ -23,11 +22,12 @@ void main() {
     SharedPreferences.setMockInitialValues(<String, Object>{'settings.lang': 'en'});
     await LocalStore.init();
     await loadFonts();
+    mockAudio();
   });
   for (final GameInfo g in kGames) {
     if (only.isNotEmpty && !only.split(',').contains(g.id)) continue;
     testWidgets('host ${g.id}', (WidgetTester tester) async {
-      phone(tester, w: kW, h: kH);
+      phone(tester, w: kW.toDouble(), h: kH.toDouble());
       tester.view.padding = const FakeViewPadding(top: 64, bottom: 40);
       addTearDown(tester.view.resetPadding);
       final ProviderContainer c = ProviderContainer();
@@ -45,7 +45,7 @@ void main() {
         ),
       ));
       await settle(tester, frames: 30);
-      await shoot(tester, 'host/${g.id}_${kW.toInt()}x${kH.toInt()}.png');
+      await shoot(tester, 'host/${g.id}_${kW}x$kH.png');
       await tester.pumpWidget(const SizedBox());
       await tester.pump(const Duration(seconds: 1));
     });
