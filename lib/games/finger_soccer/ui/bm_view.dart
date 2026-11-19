@@ -19,6 +19,9 @@ import '../core/bm_engine.dart';
 import 'bm_audio.dart';
 import 'bm_ball.dart';
 import 'bm_painter.dart';
+import '../intro/fs_game_bar.dart';
+import '../intro/fs_intro_data.dart';
+import '../intro/fs_intro_ui.dart' show FsBarHandle;
 
 const String _a = 'assets/games/bermuda/';
 
@@ -33,8 +36,12 @@ const double kBmScoreboardHeight = 64;
 const double kBmOnlineTurnSeconds = 10;
 
 class BermudaView extends StatefulWidget {
-  const BermudaView({super.key, required this.launch, this.autoStart = false});
+  const BermudaView({super.key, required this.launch, this.autoStart = false, this.pick});
   final GameLaunch launch;
+
+  /// Offline: teams and formations chosen in the pre-match intro (intro/fs_intro_flow.dart); with [autoStart] the
+  /// match starts with them once the saved field / ball are loaded.
+  final FsMatchPick? pick;
 
   /// Offline only: skip the setup screen with the saved/default picks (used by tests).
   final bool autoStart;
@@ -96,6 +103,7 @@ class _BermudaViewState extends State<BermudaView>
   bool _reported = false;
   bool _disposed = false;
   bool _paused = false;
+  final FsBarSettings _barSettings = FsBarSettings();
 
   // online
   NetInbox? _inbox;
@@ -116,7 +124,7 @@ class _BermudaViewState extends State<BermudaView>
     _ticker = createTicker(_onTick)..start();
     WidgetsBinding.instance.addObserver(this);
     unawaited(audio.init());
-    unawaited(_loadPrefs());
+    final Future<void> prefs = _loadPrefs();
     final NetLink? net = launch.net;
     if (net != null) {
       _netReady = false;
@@ -128,6 +136,10 @@ class _BermudaViewState extends State<BermudaView>
               seat: -1,
               kind: 'replayDone',
               data: <String, dynamic>{})));
+    } else if (widget.autoStart && widget.pick != null) {
+      prefs.then((_) {
+        if (mounted && stage == 'setup') _startOffline();
+      });
     } else if (widget.autoStart) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && stage == 'setup') _startOffline();
@@ -292,7 +304,9 @@ class _BermudaViewState extends State<BermudaView>
     final List<BmTeam> clubs = kBmTeams
         .where((BmTeam t) => t.id != my.team && (t.cat != 'lux' || r.nextInt(4) == 0))
         .toList();
-    final String opp = clubs[r.nextInt(clubs.length)].id;
+    final FsMatchPick? pk = widget.pick;
+    final String opp = pk != null ? pk.teams[1] : clubs[r.nextInt(clubs.length)].id;
+    final String mine = pk != null ? pk.teams[0] : my.team;
     final bool bot = launch.vsBot;
     final int lvl = switch (launch.difficulty) {
       BotDifficulty.easy => 0,
@@ -303,8 +317,10 @@ class _BermudaViewState extends State<BermudaView>
         launch.playerName.isEmpty ? 'Player 1' : launch.playerName;
     _begin(BmConfig(
       mode: bot ? 'bot' : 'local',
-      teams: <String>[my.team, opp],
-      form: <int>[my.form, r.nextInt(6)],
+      teams: <String>[mine, opp],
+      form: pk != null
+          ? <int>[pk.forms[0].clamp(0, kBmForms.length - 1).toInt(), pk.forms[1].clamp(0, kBmForms.length - 1).toInt()]
+          : <int>[my.form, r.nextInt(kBmForms.length)],
       names: bot
           ? <String>[
               me,
@@ -622,38 +638,32 @@ class _BermudaViewState extends State<BermudaView>
     _paused = true;
     unawaited(audio
         .crowd(false)); // game.js crowdSync: no crowd while the menu is open
-    final String? act = await showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext ctx) => _BmDialog(
-        title: launch.tx('توقف', 'Paused'),
-        actions: <(String, String, IconData)>[
-          (
-            'continue',
-            launch.tx('ادامه', 'Continue'),
-            Icons.play_arrow_rounded
-          ),
-          if (!isOnline && !bot)
-            (
-              'restart',
-              launch.tx('شروع دوباره', 'Restart'),
-              Icons.refresh_rounded
-            ),
-          (
-            'sound',
-            launch.tx('صدا روشن/خاموش', 'Sound on/off'),
-            Icons.volume_up_rounded
-          ),
-          (
-            'ann',
-            audio.announcer
-                ? launch.tx('گزارشگر گل: روشن', 'Goal announcer: on')
-                : launch.tx('گزارشگر گل: خاموش', 'Goal announcer: off'),
-            Icons.record_voice_over_rounded
-          ),
-          ('leave', launch.tx('خروج', 'Leave'), Icons.logout_rounded),
-        ],
-      ),
+    // Reference game bar ("نوار بازی", intro/fs_game_bar.dart) instead of the old pause dialog: exit, mute all and the
+    // game volume act on this match; restart (pass-and-play) and the goal announcer keep their old actions.
+    String? act;
+    _barSettings.mutedAll = audio.muted;
+    _barSettings.gameVolume = audio.master;
+    await FsGameBar.show(
+      context,
+      settings: _barSettings,
+      players: cfg?.names ?? <String>[launch.playerName],
+      me: online ? _mySide : 0,
+      online: isOnline,
+      connected: _netReady,
+      onRestart: (!isOnline && !bot) ? () => act = 'restart' : null,
+      extra: <FsBarToggle>[
+        FsBarToggle(launch.tx('گزارشگر گل', 'Goal announcer'), audio.announcer, (bool v) {
+          audio.announcer = v;
+          unawaited(SharedPreferences.getInstance()
+              .then((SharedPreferences p) => p.setBool('bm.ann', audio.announcer))
+              .then((_) {}, onError: (Object _) {}));
+        }),
+      ],
+      onChanged: (FsBarSettings s) {
+        if (audio.muted != s.mutedAll) audio.setMuted(s.mutedAll);
+        audio.master = s.gameVolume;
+      },
+      onExit: () => act = 'leave',
     );
     _paused = false;
     if (!mounted) return;
@@ -662,21 +672,14 @@ class _BermudaViewState extends State<BermudaView>
       case 'restart':
         e.restart(0);
         break;
-      case 'sound':
-        audio.setMuted(!audio.muted);
-        break;
-      case 'ann':
-        audio.announcer = !audio.announcer;
-        unawaited(SharedPreferences.getInstance()
-            .then((SharedPreferences p) => p.setBool('bm.ann', audio.announcer))
-            .then((_) {}, onError: (Object _) {}));
-        break;
       case 'leave':
         if (isOnline || bot) {
           // flow.js: leaving counts as a loss
           _report(forfeit: true);
         } else {
-          unawaited(Navigator.of(context).maybePop());
+          // Already confirmed in the game bar: leave without the host's second confirmation.
+          final NavigatorState nav = Navigator.of(context);
+          if (nav.canPop()) nav.pop();
         }
         break;
     }
@@ -785,9 +788,9 @@ class _BermudaViewState extends State<BermudaView>
               left: 0, right: 0, top: 0, child: SafeArea(child: _scoreboard())),
           Positioned.fill(child: IgnorePointer(child: _overlays())),
           Positioned(
-            left: 12,
+            left: 0,
             bottom: 12 + MediaQuery.paddingOf(context).bottom,
-            child: _RoundBtn(icon: Icons.pause_rounded, onTap: _pause),
+            child: FsBarHandle(players: cfg?.names.length ?? 2, onTap: _pause),
           ),
         ]),
       ),
@@ -1839,103 +1842,6 @@ class _ToastPill extends StatelessWidget {
             fontSize: big ? 30 : 15,
             fontWeight: FontWeight.w900,
             letterSpacing: .8),
-      ),
-    );
-  }
-}
-
-class _RoundBtn extends StatelessWidget {
-  const _RoundBtn({required this.icon, required this.onTap});
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final NxThemeColors visual = NxThemeColors.of(context);
-    return Material(
-      color: visual.surfaceRaised.withValues(alpha: .96),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-        side: BorderSide(color: visual.border.withValues(alpha: .72)),
-      ),
-      elevation: 5,
-      shadowColor: Colors.black.withValues(alpha: .38),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(15),
-        onTap: onTap,
-        child: SizedBox(
-          width: 48,
-          height: 48,
-          child: Icon(icon, color: visual.accent, size: 23),
-        ),
-      ),
-    );
-  }
-}
-
-class _BmDialog extends StatelessWidget {
-  const _BmDialog({required this.title, required this.actions});
-  final String title;
-  final List<(String, String, IconData)> actions;
-
-  @override
-  Widget build(BuildContext context) {
-    final NxThemeColors visual = NxThemeColors.of(context);
-    return Dialog(
-      backgroundColor: visual.surfaceRaised,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: visual.border.withValues(alpha: .75)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                  color: visual.accent.withValues(alpha: .12),
-                  shape: BoxShape.circle,
-                  border:
-                      Border.all(color: visual.accent.withValues(alpha: .42))),
-              child: Icon(Icons.pause_rounded, color: visual.accent, size: 24),
-            ),
-            const SizedBox(height: 9),
-            Text(title,
-                style: TextStyle(
-                    color: visual.text,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900)),
-            const SizedBox(height: 12),
-            for (final (String, String, IconData) a in actions)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: a.$1 == 'continue'
-                          ? visual.accent
-                          : a.$1 == 'leave'
-                              ? const Color(0xFFD9364A)
-                              : visual.backgroundMid,
-                      foregroundColor:
-                          a.$1 == 'continue' ? visual.background : visual.text,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                    ),
-                    onPressed: () => Navigator.of(context).pop(a.$1),
-                    icon: Icon(a.$3),
-                    label: Text(a.$2),
-                  ),
-                ),
-              ),
-          ],
-        ),
       ),
     );
   }

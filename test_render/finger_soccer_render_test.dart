@@ -14,7 +14,7 @@ import 'render_util.dart';
 
 /// Finger soccer inside the real host on a 360x800 phone (status + gesture insets), game sound OFF
 /// (settings.sound=false -> launch.soundOn=false, so BmAudio never touches a player):
-/// the setup screen, then a mid-match frame after START MATCH.
+/// the intro's team select and formation select, then a mid-match frame.
 const int kW = int.fromEnvironment('W', defaultValue: 360);
 const int kH = int.fromEnvironment('H', defaultValue: 800);
 const int kMatchMs = int.fromEnvironment('MATCH_MS', defaultValue: 420);
@@ -46,14 +46,24 @@ void main() {
         home: GameHostPage(game: g, mode: GameMode.vsBot, difficulty: BotDifficulty.normal, players: g.defaultPlayers),
       ),
     ));
+    // Pre-match intro (lib/games/finger_soccer/intro): splash -> team select -> formation select -> match.
+    await settle(tester, frames: 10);
+    for (int i = 0; i < 200; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
     await settle(tester, frames: 30);
     await shoot(tester, 'final/finger_soccer_setup.png');
 
-    final Finder start = find.text('START MATCH');
-    expect(start, findsOneWidget);
-    await tester.ensureVisible(start);
-    await tester.pump();
-    await tester.tap(start);
+    final Finder ready = find.text('آماده');
+    expect(ready, findsOneWidget);
+    await tester.tap(ready);
+    await settle(tester, frames: 30);
+    await shoot(tester, 'final/finger_soccer_formation.png');
+    await tester.tap(find.text('انتخاب').first);
+    for (int i = 0; i < 90; i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    await settle(tester, frames: 10);
     // Let kickoff happen and the ORACLE tutorial banner (9 s) pass.
     await _run(tester, 10500);
     // Mid-match: flick one of our discs at the ball the way a finger would (drag back, release),

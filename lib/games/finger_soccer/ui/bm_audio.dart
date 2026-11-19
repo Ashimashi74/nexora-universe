@@ -128,6 +128,9 @@ class BmAudio {
   bool announcer;
   bool muted = false;
 
+  /// Game volume from the game bar (0..1), applied to every sound effect.
+  double master = 1;
+
   final Map<String, _Pool> _pools = <String, _Pool>{};
   final Map<String, int> _ts = <String, int>{};
   final math.Random _r = math.Random();
@@ -168,7 +171,7 @@ class BmAudio {
     if (!enabled || muted || _disposed) return;
     final _Pool? p = _pools[k];
     if (p == null) return;
-    unawaited(p.play(vol.clamp(0.0, 1.0).toDouble(), rate));
+    unawaited(p.play((vol * master).clamp(0.0, 1.0).toDouble(), rate));
   }
 
   double _b(String key) => (kBmSfx[key]![1] as num).toDouble();
