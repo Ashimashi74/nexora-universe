@@ -304,7 +304,7 @@ class _BermudaViewState extends State<BermudaView>
     _begin(BmConfig(
       mode: bot ? 'bot' : 'local',
       teams: <String>[my.team, opp],
-      form: <int>[my.form, r.nextInt(6)],
+      form: <int>[my.form, r.nextInt(kBmForms.length)],
       names: bot
           ? <String>[
               me,
@@ -965,7 +965,39 @@ class _BermudaViewState extends State<BermudaView>
                         ? accent.withValues(alpha: .72)
                         : Colors.transparent),
               ),
-              child: Row(children: children),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Row(children: children),
+                  // Reference turn clock: an orange bar under each name, full while waiting, draining toward the
+                  // left on the side whose turn it is.
+                  if (e.tt > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Container(
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: .45),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        alignment: Alignment.centerLeft,
+                        child: FractionallySizedBox(
+                          widthFactor: on ? (e.tleft / e.tt).clamp(0.0, 1.0).toDouble() : 1,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(2),
+                              gradient: const LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: <Color>[Color(0xFFFFC23A), Color(0xFFFF8A00)],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           );
         }
@@ -1453,21 +1485,33 @@ class _BermudaViewState extends State<BermudaView>
                           launch.tx(
                               'آرایش مهره‌های تیم', 'Set your team shape'),
                           Icons.account_tree_outlined),
-                      Wrap(
-                        spacing: 7,
-                        runSpacing: 7,
-                        children: <Widget>[
-                          for (int i = 0; i < kBmForms.length; i++)
-                            _Chip(
-                              label: '${kBmForms[i][0]} · ${kBmForms[i][1]}',
-                              on: my.form == i,
-                              onTap: () => setState(() {
-                                my.form = i;
-                                audio.sfx('ui');
-                                unawaited(_savePrefs());
-                              }),
-                            ),
-                        ],
+                      // The reference's 3 x 3 formation board: a mini pitch per shape (own goal on the left,
+                      // halfway line on the right), its name and a select button.
+                      LayoutBuilder(
+                        builder: (BuildContext context, BoxConstraints c) {
+                          final double w = (c.maxWidth - 2 * 8) / 3;
+                          return Wrap(
+                            spacing: 8,
+                            runSpacing: 10,
+                            children: <Widget>[
+                              for (int i = 0; i < kBmForms.length; i++)
+                                SizedBox(
+                                  width: w,
+                                  child: BmFormationCard(
+                                    form: kBmForms[i],
+                                    on: my.form == i,
+                                    selectLabel: launch.tx('انتخاب', 'Select'),
+                                    selectedLabel: launch.tx('انتخاب شده', 'Selected'),
+                                    onTap: () => setState(() {
+                                      my.form = i;
+                                      audio.sfx('ui');
+                                      unawaited(_savePrefs());
+                                    }),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -1705,6 +1749,133 @@ class _BermudaViewState extends State<BermudaView>
       ),
     );
   }
+}
+
+/// One formation on the setup board: a mini horizontal pitch (own goal left, halfway right, like the reference's
+/// formation screen) with the five discs, the Persian name, the English label and a select button.
+class BmFormationCard extends StatelessWidget {
+  const BmFormationCard(
+      {super.key, required this.form, required this.on, required this.onTap, this.selectLabel = 'Select', this.selectedLabel = 'Selected'});
+  final BmFormation form;
+  final bool on;
+  final VoidCallback onTap;
+  final String selectLabel, selectedLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final NxThemeColors visual = NxThemeColors.of(context);
+    return Semantics(
+      button: true,
+      selected: on,
+      label: form.label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            AspectRatio(
+              aspectRatio: 82 / 54,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border.all(color: on ? const Color(0xFF7CFF4A) : Colors.white24, width: on ? 2 : 1),
+                ),
+                child: CustomPaint(painter: BmFormationMiniPainter(form)),
+              ),
+            ),
+            const SizedBox(height: 3),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1C1E22),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: Column(
+                children: <Widget>[
+                  Text(form.fa,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textDirection: TextDirection.rtl,
+                      style: const TextStyle(
+                          fontFamily: 'Estedad', color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800, height: 1.2)),
+                  Text(form.en,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: visual.muted, fontSize: 8.5, fontWeight: FontWeight.w700)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(5),
+                gradient: on
+                    ? const LinearGradient(colors: <Color>[Color(0xFFE6E6E6), Color(0xFFBDBDBD)])
+                    : const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: <Color>[Color(0xFFB6F55A), Color(0xFF5FB61E)]),
+              ),
+              child: Text(on ? selectedLabel : selectLabel,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontFamily: 'Estedad',
+                      color: on ? const Color(0xFF555555) : const Color(0xFF14320A),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      height: 1.2)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Mini pitch of a formation: striped grass, white lines, the own goal box on the left and the centre circle on
+/// the right edge; discs at the formation's slots (depth -> x, width -> y; the width is drawn stretched 1.3x like
+/// the reference board).
+class BmFormationMiniPainter extends CustomPainter {
+  BmFormationMiniPainter(this.form);
+  final BmFormation form;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width, h = size.height;
+    for (int i = 0; i < 8; i++) {
+      canvas.drawRect(Rect.fromLTWH(i * w / 8, 0, w / 8 + .5, h),
+          Paint()..color = i.isEven ? const Color(0xFF4FA83A) : const Color(0xFF5DB845));
+    }
+    final Paint line = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(1, w / 110)
+      ..color = Colors.white.withValues(alpha: .85);
+    canvas.drawRect(Rect.fromLTWH(1, 1, w - 2, h - 2), line);
+    canvas.drawRect(Rect.fromLTWH(1, h * .22, w * .2, h * .56), line);
+    canvas.drawRect(Rect.fromLTWH(1, h * .36, w * .08, h * .28), line);
+    canvas.drawArc(Rect.fromCircle(center: Offset(w - 1, h / 2), radius: h * .2), math.pi / 2, math.pi, false, line);
+    final double r = math.max(3, h * .075);
+    for (final List<double> s in form.slots) {
+      final Offset c = Offset(w * (.03 + .94 * s[1]), h * (.5 + (s[0] - .5) * 1.3).clamp(.08, .92).toDouble());
+      canvas.drawCircle(c + Offset(r * .25, r * .35), r, Paint()..color = Colors.black38);
+      canvas.drawCircle(c, r, Paint()..color = const Color(0xFFE53935));
+      canvas.drawCircle(c, r * .45, Paint()..color = const Color(0xFFFFD54F));
+      canvas.drawCircle(
+          c,
+          r,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = math.max(.8, r * .22)
+            ..color = const Color(0xFF1A1A1A));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant BmFormationMiniPainter old) => old.form != form;
 }
 
 class _Chip extends StatelessWidget {

@@ -304,4 +304,92 @@ void main() {
     expect(r.shooterSeat(0), e.shooterSeat(0));
     expect(r.shooterSeat(1), e.shooterSeat(1));
   });
+
+  test('formations: the nine reference shapes, five discs each, legal kickoff layouts', () {
+    expect(kBmForms.map((BmFormation f) => f.fa).toList(),
+        <String>['الماس', 'عقاب', 'موج', 'ماه', 'دیوانه', 'لبه', 'نیش', 'بازو', 'حمله همه جانبه']);
+    for (final BmFormation f in kBmForms) {
+      expect(f.slots.length, 5, reason: f.en);
+      expect(f.en, isNotEmpty);
+      for (final List<double> s in f.slots) {
+        expect(s[0], inInclusiveRange(0, 1), reason: f.en);
+        expect(s[1], inInclusiveRange(0, 1), reason: f.en);
+      }
+    }
+    // an old saved index past the list still loads
+    expect(bmSlots(42), kBmForms.last.slots);
+    for (final int fld in <int>[0, 6]) {
+      for (int a = 0; a < kBmForms.length; a++) {
+        for (int b = 0; b < kBmForms.length; b++) {
+          final BmEngine e = BmEngine(_Hooks(), rng: math.Random(1))
+            ..startMatch(BmConfig(
+                mode: 'local', teams: const <String>['club0', 'club1'], form: <int>[a, b], names: const <String>['A', 'B'],
+                field: fld, ball: 0));
+          final List<BmBody> d = e.bodies.where((BmBody x) => x != e.ball).toList();
+          expect(d.length, 10);
+          for (final BmBody x in d) {
+            expect(x.x - x.r, greaterThanOrEqualTo(e.Fl), reason: '$a/$b');
+            expect(x.x + x.r, lessThanOrEqualTo(e.Fr), reason: '$a/$b');
+            // each side kicks off in its own half
+            expect(x.team == 0 ? x.y > e.CY : x.y < e.CY, isTrue, reason: '$a/$b');
+            final BmBody bl = e.ball!;
+            expect(math.sqrt(math.pow(x.x - bl.x, 2) + math.pow(x.y - bl.y, 2)), greaterThan(x.r + bl.r), reason: '$a/$b');
+            for (final BmBody y in d) {
+              if (identical(x, y)) continue;
+              expect(math.sqrt(math.pow(x.x - y.x, 2) + math.pow(x.y - y.y, 2)), greaterThan(2 * PR), reason: '$a/$b');
+            }
+          }
+        }
+      }
+    }
+  });
+
+  test('formations: depth and width follow the slots; the top side is the same shape turned round', () {
+    for (int fi = 0; fi < kBmForms.length; fi++) {
+      final BmEngine e = BmEngine(_Hooks(), rng: math.Random(1))
+        ..startMatch(BmConfig(
+            mode: 'local', teams: const <String>['club0', 'club1'], form: <int>[fi, fi], names: const <String>['A', 'B'],
+            field: 0, ball: 0));
+      final List<BmBody> bot = e.bodies.where((BmBody x) => x.team == 0).toList();
+      final List<BmBody> top = e.bodies.where((BmBody x) => x.team == 1).toList();
+      for (int k = 0; k < 5; k++) {
+        final List<double> s = kBmForms[fi].slots[k];
+        expect(bot[k].y, closeTo(e.Fb - s[1] * e.Fh / 2, 1e-6));
+        expect(bot[k].x, closeTo((e.Fl + s[0] * e.Fw).clamp(e.Fl + PR + 6, e.Fr - PR - 6), 1e-6));
+        expect(top[k].x, closeTo(2 * e.CX - bot[k].x, 1e-6));
+        expect(top[k].y, closeTo(2 * e.CY - bot[k].y, 1e-6));
+      }
+    }
+    // Nish as measured on the reference kickoff: keeper 0.126 deep, wide pair 0.275 / 0.725 of the width.
+    final List<List<double>> nish = kBmForms.firstWhere((BmFormation f) => f.fa == 'نیش').slots;
+    expect(nish.first, <double>[.5, .126]);
+    expect(nish[3], <double>[.275, .898]);
+  });
+
+  test('formations online: both phones put every global side in the same place (mirror)', () {
+    BmEngine mk(bool mirror) => BmEngine(_Hooks(), rng: math.Random(1))
+      ..startMatch(BmConfig(
+          mode: 'online', teams: const <String>['club0', 'club1'], form: const <int>[7, 4], names: const <String>['A', 'B'],
+          field: 0, ball: 0, mirror: mirror));
+    final BmEngine h = mk(false), g = mk(true);
+    for (int t = 0; t < 2; t++) {
+      final List<BmBody> a = h.bodies.where((BmBody x) => x.team == t).toList();
+      final List<BmBody> b = g.bodies.where((BmBody x) => x.team == t).toList();
+      expect(a.length, 5);
+      for (int k = 0; k < 5; k++) {
+        expect(b[k].x, closeTo(2 * h.CX - a[k].x, 1e-6));
+        expect(b[k].y, closeTo(2 * h.CY - a[k].y, 1e-6));
+      }
+    }
+  });
+
+  test('reference aim: arrow, pull circle and dots scale with the pull', () {
+    expect(bmAimPower(LMAX * 2), 1);
+    expect(bmAimArrowTip(PR, 1) / PR, closeTo(4.0, 1e-9));
+    expect(bmAimArrowTip(PR, 0) / PR, closeTo(2.4, 1e-9));
+    expect(bmAimCircleRadius(PR, 1) / PR, closeTo(4.8, 1e-9));
+    expect(bmAimDots(20, PR), 1);
+    expect(bmAimDots(LMAX, PR), 3);
+    expect(bmAimDots(LMAX * 3, PR), 5);
+  });
 }

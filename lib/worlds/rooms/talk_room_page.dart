@@ -1028,7 +1028,7 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
         Wrap(spacing: 6, runSpacing: 6, children: <Widget>[
           for (int i = 0; i < kBmForms.length; i++)
             ChoiceChip(
-              label: Text('${kBmForms[i][0]}'),
+              label: Text(kBmForms[i].fa),
               selected: form == i && pr.containsKey('form'),
               onSelected: (_) => unawaited(save(<String, dynamic>{'form': i})),
             ),

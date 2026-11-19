@@ -6,6 +6,7 @@ import 'package:nexora/core/storage/local_store.dart';
 import 'package:nexora/core/theme/nx_theme.dart';
 import 'package:nexora/games/finger_soccer/core/bm_engine.dart';
 import 'package:nexora/games/finger_soccer/ui/bm_painter.dart';
+import 'package:nexora/games/finger_soccer/ui/bm_view.dart';
 import 'package:nexora/games/game_registry.dart';
 import 'package:nexora/worlds/arcade/game_host_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -48,6 +49,13 @@ void main() {
     ));
     await settle(tester, frames: 30);
     await shoot(tester, 'final/finger_soccer_setup.png');
+    // The reference formation board (3 x 3 mini pitches).
+    final Finder board = find.byType(BmFormationCard);
+    await tester.scrollUntilVisible(board.at(7), 160,
+        scrollable: find.descendant(of: find.byType(ListView).first, matching: find.byType(Scrollable)).first);
+    await tester.pump();
+    expect(board, findsWidgets);
+    await shoot(tester, 'final/finger_soccer_formations.png');
 
     final Finder start = find.text('START MATCH');
     expect(start, findsOneWidget);
@@ -73,13 +81,18 @@ void main() {
     Offset scr(double x, double y) => Offset(x * p.view.s + p.view.ox, y * p.view.s + p.view.oy);
     final Offset from = scr(d.x, d.y);
     final Offset toBall = scr(ball.x, ball.y) - from;
-    final Offset pull = -toBall / toBall.distance * 70;
+    final Offset pull = -toBall / toBall.distance * 110;
     final TestGesture gst = await tester.startGesture(from);
     for (int i = 1; i <= 10; i++) {
       await gst.moveTo(from + pull * (i / 10));
       await tester.pump(const Duration(milliseconds: 16));
     }
+    // Mid-drag: reference aim arrow, pull dots and pull circle, with the turn rings on our discs.
+    await shoot(tester, 'final/finger_soccer_aim.png');
     await gst.up();
+    await _run(tester, 120);
+    // Pieces in motion: ball streak, disc water ribbon, rings staying on through the shot.
+    await shoot(tester, 'final/finger_soccer_motion.png');
     await _run(tester, kMatchMs);
     await shoot(tester, 'final/finger_soccer_midmatch.png');
     expect(tester.takeException(), isNull);

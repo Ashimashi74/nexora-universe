@@ -105,27 +105,42 @@ final List<BmTeam> kBmTeams = kBmTeamDefs
 
 BmTeam bmTeam(String id) => kBmTeams.firstWhere((BmTeam t) => t.id == id, orElse: () => kBmTeams.first);
 
-/// FORMS (game.js line 37): [name, label, rows [ny, count]].
-const List<List<Object>> kBmForms = <List<Object>>[
-  <Object>['1-2-2', 'Balanced', <List<double>>[<double>[.09, 1], <double>[.22, 2], <double>[.36, 2]]],
-  <Object>['2-2-1', 'Cautious', <List<double>>[<double>[.10, 2], <double>[.24, 2], <double>[.37, 1]]],
-  <Object>['3-1-1', 'Wall', <List<double>>[<double>[.10, 3], <double>[.25, 1], <double>[.37, 1]]],
-  <Object>['2-1-2', 'Diamond', <List<double>>[<double>[.10, 2], <double>[.24, 1], <double>[.37, 2]]],
-  <Object>['1-3-1', 'Midfield', <List<double>>[<double>[.09, 1], <double>[.23, 3], <double>[.37, 1]]],
-  <Object>['1-1-3', 'Attack', <List<double>>[<double>[.09, 1], <double>[.22, 1], <double>[.36, 3]]],
+/// A team shape: five discs (the keeper first) as [x, d] in the team's own frame. x is the fraction of the playing
+/// width, left to right as the team sees it from its own goal; d is the depth from its own goal line as a fraction of
+/// the half pitch (0 = goal line, 1 = halfway line).
+class BmFormation {
+  const BmFormation(this.fa, this.en, this.slots);
+  final String fa, en;
+  final List<List<double>> slots;
+  String get label => '$fa · $en';
+}
+
+/// The nine formations of the owner's reference game (formation-select screen of the 2026-11-20 recording, same
+/// order and names). Read from its mini pitches (depth as drawn; the width is drawn ~1.3x stretched there, mapped
+/// back with 0.77) and, for Nish and Oghab, measured directly on the reference kickoff frames.
+const List<BmFormation> kBmForms = <BmFormation>[
+  BmFormation('الماس', 'Almas · Diamond', <List<double>>[
+    <double>[.500, .133], <double>[.270, .386], <double>[.730, .386], <double>[.418, .762], <double>[.582, .762]]),
+  BmFormation('عقاب', 'Oghab · Eagle', <List<double>>[
+    <double>[.500, .230], <double>[.210, .423], <double>[.790, .423], <double>[.500, .610], <double>[.500, .780]]),
+  BmFormation('موج', 'Mowj · Wave', <List<double>>[
+    <double>[.307, .299], <double>[.693, .299], <double>[.168, .595], <double>[.500, .595], <double>[.832, .595]]),
+  BmFormation('ماه', 'Mah · Moon', <List<double>>[
+    <double>[.500, .207], <double>[.270, .347], <double>[.730, .347], <double>[.170, .598], <double>[.830, .598]]),
+  BmFormation('دیوانه', 'Divaneh · Crazy', <List<double>>[
+    <double>[.500, .662], <double>[.190, .833], <double>[.336, .820], <double>[.632, .821], <double>[.792, .817]]),
+  BmFormation('لبه', 'Labeh · Edge', <List<double>>[
+    <double>[.500, .128], <double>[.500, .368], <double>[.500, .595], <double>[.257, .841], <double>[.743, .841]]),
+  BmFormation('نیش', 'Nish · Sting', <List<double>>[
+    <double>[.500, .126], <double>[.275, .516], <double>[.725, .516], <double>[.275, .898], <double>[.725, .898]]),
+  BmFormation('بازو', 'Bazoo · Arm', <List<double>>[
+    <double>[.500, .128], <double>[.250, .568], <double>[.500, .573], <double>[.760, .569], <double>[.760, .886]]),
+  BmFormation('حمله همه جانبه', 'All-out attack', <List<double>>[
+    <double>[.500, .128], <double>[.410, .785], <double>[.590, .785], <double>[.275, .890], <double>[.725, .890]]),
 ];
 
-List<List<double>> bmSlots(int fi) {
-  final List<List<double>> o = <List<double>>[];
-  for (final List<double> row in kBmForms[fi][2] as List<List<double>>) {
-    final double ny = row[0];
-    final int c = row[1].toInt();
-    for (int i = 0; i < c; i++) {
-      o.add(<double>[c == 1 ? .5 : c == 2 ? .27 + .46 * i : .17 + .33 * i, ny]);
-    }
-  }
-  return o;
-}
+/// The slots of formation [fi] (clamped to the list, so an old saved index still loads).
+List<List<double>> bmSlots(int fi) => kBmForms[fi.clamp(0, kBmForms.length - 1)].slots;
 
 String bmBallName(int i) => '${kBmBallN[i]} Ball';
 
@@ -349,10 +364,16 @@ class BmEngine {
     slow = 0;
     cam = 0;
     for (int cm = 0; cm < 2; cm++) {
-      final List<List<double>> sl = bmSlots(form[cm]);
+      // Each side's own formation (form is global), laid out in that side's own frame: the top side is the bottom
+      // layout turned half a circle, so its left is the screen's right.
+      final List<List<double>> sl = bmSlots(form[ct(cm)]);
       for (int i = 0; i < sl.length; i++) {
-        final double nx = sl[i][0], ny = sl[i][1];
-        double x = Fl + PR + 10 + nx * (Fw - 2 * (PR + 10)), y = cm != 0 ? Ft + ny * Fh : Fb - ny * Fh;
+        final double nx = sl[i][0], nd = sl[i][1];
+        double x = _mx(Fl + PR + 6, _mn(Fr - PR - 6, Fl + nx * Fw)), y = Fb - nd * Fh / 2;
+        if (cm != 0) {
+          x = 2 * CX - x;
+          y = 2 * CY - y;
+        }
         if (mirror) {
           x = 2 * CX - x;
           y = 2 * CY - y;
