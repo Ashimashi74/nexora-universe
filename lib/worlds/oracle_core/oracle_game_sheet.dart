@@ -7,6 +7,7 @@ import '../../core/ui2/oracle_mascot.dart';
 import '../../games/game_registry.dart';
 import 'persona/oracle_persona.dart';
 import 'persona/oracle_persona_store.dart';
+import 'persona/oracle_persona_widgets.dart';
 
 /// In-game ORACLE: rules, a hint, coaching and free questions about the current game (nx-oracle, mode=game).
 /// Offline / no session → the game's bundled rules text.
@@ -127,6 +128,11 @@ class _OracleGameSheetState extends ConsumerState<OracleGameSheet> {
             Expanded(
               child: Text('ORACLE · ${_fa ? widget.game.nameFa : widget.game.nameEn}',
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
+            ),
+            TextButton.icon(
+              onPressed: () => showGameTutorial(context, widget.game.id),
+              icon: const Icon(Icons.help_outline_rounded, color: Color(0xFFFFD86B), size: 18),
+              label: Text(_fa ? 'راهنما' : 'Guide', style: const TextStyle(color: Color(0xFFFFD86B))),
             ),
             IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded, color: Colors.white70)),
           ]),

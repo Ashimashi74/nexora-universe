@@ -14,6 +14,8 @@ import '../../core/settings/app_settings.dart';
 import '../../core/ui2/anix_kit.dart';
 import '../../core/ui2/nx2_widgets.dart';
 import '../../core/widgets/user_avatar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../games/finger_soccer/core/bm_data.dart';
 import '../../games/finger_soccer/core/bm_engine.dart';
 import '../../games/game_registry.dart';
@@ -63,6 +65,9 @@ class RoomMessage {
 }
 
 class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
+  /// Finger soccer: a picked player with no room team yet gets the team they last chose in the game's own setup.
+  bool _fsTeamSeeded = false;
+
   SupabaseClient? get _c => ref.read(onlineProvider).games;
   String? get _me => ref.read(onlineProvider).uid;
 
@@ -901,6 +906,14 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
     final int form = (pr['form'] as num?)?.toInt() ?? 0;
     Future<void> save(Map<String, dynamic> patch) =>
         _rpc('nx_room_set_prefs', <String, dynamic>{'p_room': widget.roomId, 'p_prefs': <String, dynamic>{...pr, ...patch}});
+    if (team.isEmpty && !_fsTeamSeeded) {
+      _fsTeamSeeded = true;
+      unawaited(SharedPreferences.getInstance().then((SharedPreferences p) {
+        final String? t = p.getString('bm.team');
+        if (t != null && kBmTeams.any((BmTeam x) => x.id == t) && mounted) return save(<String, dynamic>{'team': t});
+        return null;
+      }).catchError((Object _) => null));
+    }
     return Nx2Panel(
       padding: const EdgeInsets.all(12),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
@@ -912,18 +925,15 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
                   'In team games each side plays its captain’s (first player’s) team and formation; yours is saved as a suggestion.'),
               style: const TextStyle(color: Nx2.muted, fontSize: 11)),
         const SizedBox(height: 6),
-        for (final String cat in <String>['club', 'national', 'luxury']) ...<Widget>[
-          Text(switch (cat) {
-            'club' => context.tx('باشگاهی', 'Club'),
-            'national' => context.tx('ملی', 'National'),
-            _ => context.tx('لوکس', 'Luxury'),
-          }, style: const TextStyle(color: Nx2.gold, fontSize: 12, fontWeight: FontWeight.w800)),
+        for (final List<Object> cat in kBmCats) ...<Widget>[
+          Text(context.tx('${cat[2]}', '${cat[1]}'),
+              style: const TextStyle(color: Nx2.gold, fontSize: 12, fontWeight: FontWeight.w800)),
           SizedBox(
             height: 64,
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: <Widget>[
-                for (final BmTeam t in kBmTeams.where((BmTeam t) => t.cat == cat))
+                for (final BmTeam t in kBmTeams.where((BmTeam t) => t.cat == cat[0]))
                   GestureDetector(
                     onTap: () => unawaited(save(<String, dynamic>{'team': t.id})),
                     child: Container(

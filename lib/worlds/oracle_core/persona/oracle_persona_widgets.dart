@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import 'package:nexora/core/storage/local_store.dart';
+
 import 'oracle_persona.dart';
 import 'oracle_persona_store.dart';
 
@@ -23,9 +25,12 @@ class _OracleTutorialBannerState extends State<OracleTutorialBanner> {
   @override
   void initState() {
     super.initState();
+    // First time only (per game): later matches never show it again; the in-game help button replays it.
+    if (gameTutorialSeen(widget.gameId)) return;
     _in = Timer(widget.delay, () {
       if (!mounted) return;
       final OracleTutorial? t = OraclePersona.instance.nextTutorial(widget.gameId, OraclePersonaStore.tutorialViews());
+      unawaited(markGameTutorialSeen(widget.gameId));
       if (t == null) return;
       OraclePersonaStore.markTutorial(t);
       setState(() => _t = t);
@@ -56,9 +61,81 @@ class _OracleTutorialBannerState extends State<OracleTutorialBanner> {
   }
 }
 
+String _tutKey(String gameId) => 'tutorial.seen.$gameId';
+
+/// True once the game's tutorial has been shown (persisted per game).
+bool gameTutorialSeen(String gameId) {
+  try {
+    return LocalStore.instance.getBool(_tutKey(gameId)) ?? false;
+  } catch (_) {
+    return false;
+  }
+}
+
+Future<void> markGameTutorialSeen(String gameId) async {
+  try {
+    await LocalStore.instance.setBool(_tutKey(gameId), true);
+  } catch (_) {}
+}
+
+/// Help button: replays every tutorial card of [gameId] in a sheet (the only way to see it after the first match).
+Future<void> showGameTutorial(BuildContext context, String gameId) {
+  final List<OracleTutorial> all = OraclePersona.instance.tutorials(gameId);
+  return showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: const Color(0xF20B1030),
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+    builder: (BuildContext c) => SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(c).height * .7),
+        child: Directionality(
+          textDirection: TextDirection.rtl,
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(0, 14, 0, 18),
+            children: <Widget>[
+              const Center(
+                  child: Text('راهنمای بازی',
+                      style: TextStyle(color: Color(0xFFFFD86B), fontSize: 16, fontWeight: FontWeight.w900))),
+              const SizedBox(height: 10),
+              if (all.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Text('برای این بازی هنوز راهنمایی ثبت نشده است.',
+                      textAlign: TextAlign.center, style: TextStyle(color: Colors.white70)),
+                ),
+              for (final OracleTutorial t in all)
+                Padding(padding: const EdgeInsets.only(bottom: 10), child: OracleTutorialCard(tutorial: t, margin: 14)),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+/// Round "?" button that replays the game's tutorial.
+class GameHelpButton extends StatelessWidget {
+  const GameHelpButton({super.key, required this.gameId});
+  final String gameId;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: Colors.black.withValues(alpha: 0.35),
+        shape: const CircleBorder(),
+        child: IconButton(
+          tooltip: 'راهنما',
+          icon: const Icon(Icons.help_outline_rounded, color: Color(0xFFFFD86B)),
+          onPressed: () => showGameTutorial(context, gameId),
+        ),
+      );
+}
+
 class OracleTutorialCard extends StatelessWidget {
-  const OracleTutorialCard({super.key, required this.tutorial});
+  const OracleTutorialCard({super.key, required this.tutorial, this.margin = 56});
   final OracleTutorial tutorial;
+  final double margin;
 
   @override
   Widget build(BuildContext context) {
@@ -67,7 +144,7 @@ class OracleTutorialCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 56),
+          margin: EdgeInsets.symmetric(horizontal: margin),
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),

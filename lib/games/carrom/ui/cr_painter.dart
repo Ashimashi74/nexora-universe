@@ -18,6 +18,8 @@ class CrImages {
   ui.Image? white;
   ui.Image? black;
   ui.Image? queen;
+  /// Men sprites are the ANIX wooden pucks (rim at [kWoodPieceFill] of the sprite): crop to the rim.
+  double menFill = 1;
   ui.Image? striker0;
   ui.Image? striker1;
 }
@@ -191,9 +193,11 @@ class CrPainter extends CustomPainter {
   void _paintDisc(
       Canvas canvas, Offset center, double r, ui.Image? img, Color fallback) {
     if (img != null) {
+      final double f = (img == images.white || img == images.black) ? images.menFill : 1;
+      final double iw = img.width.toDouble(), ih = img.height.toDouble();
       canvas.drawImageRect(
           img,
-          Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble()),
+          Rect.fromCenter(center: Offset(iw / 2, ih / 2), width: iw * f, height: ih * f),
           Rect.fromCircle(center: center, radius: r),
           _imgPaint);
     } else {

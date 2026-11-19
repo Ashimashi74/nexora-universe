@@ -22,60 +22,56 @@ const List<BmField> kBmFieldsRaw = <BmField>[
   // Owner-provided default pitch (697x1280). Bounds match its red inner
   // frame; kickoff matches the visible centre spot.
   BmField('nexora_green', 'ANIX Green', 697, 1280, 25, 672, 81, 1197, 640, 115, 'white', rc: 22),
-  BmField('forest', 'Forest', 1086, 1448, 195, 890, 127, 1311, 702, 130, 'wood', rc: 70),
-  BmField('ice', 'Ice', 1086, 1448, 190, 895, 134, 1308, 700, 132, 'ice', rc: 110),
-  BmField('ocean', 'Ocean', 1086, 1448, 191, 897, 108, 1313, 701, 132, 'blue', rc: 150),
-  BmField('street', 'Street', 1086, 1448, 182, 902, 157, 1313, 706, 134, 'gold', rc: 110),
-  BmField('streetarena', 'Street Arena', 1086, 1448, 194, 888, 117, 1309, 702, 130, 'rope', rc: 150),
-  BmField('lava', 'Lava', 1086, 1448, 200, 884, 127, 1305, 699, 128, 'black', rc: 150),
+  BmField('forest', 'Forest', 1086, 1448, 195, 890, 127, 1311, 702, 130, 'white', rc: 70),
+  BmField('ice', 'Ice', 1086, 1448, 190, 895, 134, 1308, 700, 132, 'white', rc: 110),
+  BmField('ocean', 'Ocean', 1086, 1448, 191, 897, 108, 1313, 701, 132, 'white', rc: 150),
+  BmField('street', 'Street', 1086, 1448, 182, 902, 157, 1313, 706, 134, 'white', rc: 110),
+  BmField('streetarena', 'Street Arena', 1086, 1448, 194, 888, 117, 1309, 702, 130, 'white', rc: 150),
+  BmField('lava', 'Lava', 1086, 1448, 200, 884, 127, 1305, 699, 128, 'white', rc: 150),
   BmField('stadium', 'Stadium', 1086, 1448, 196, 888, 115, 1311, 701, 129, 'white', rc: 150),
-  BmField('checker', 'Checker', 1086, 1448, 193, 890, 102, 1353, 704, 130, 'red', rc: 50),
-  BmField('futsal', 'Futsal', 1086, 1448, 190, 895, 104, 1318, 697, 132, 'gold', rc: 110),
-  BmField('arena', 'Arena', 1086, 1448, 199, 884, 118, 1313, 694, 128, 'red', rc: 90),
-  BmField('arena2', 'Grand Arena', 1086, 1448, 164, 921, 135, 1302, 703, 134, 'gold', rc: 110),
-  BmField('desert', 'Desert', 1086, 1448, 163, 920, 84, 1315, 694, 134, 'black', rc: 150),
-  BmField('grove', 'Grove', 1086, 1448, 172, 918, 108, 1320, 695, 134, 'rope', rc: 110),
+  BmField('checker', 'Checker', 1086, 1448, 193, 890, 102, 1353, 704, 130, 'white', rc: 50),
+  BmField('futsal', 'Futsal', 1086, 1448, 190, 895, 104, 1318, 697, 132, 'white', rc: 110),
+  BmField('arena', 'Arena', 1086, 1448, 199, 884, 118, 1313, 694, 128, 'white', rc: 90),
+  BmField('arena2', 'Grand Arena', 1086, 1448, 164, 921, 135, 1302, 703, 134, 'white', rc: 110),
+  BmField('desert', 'Desert', 1086, 1448, 163, 920, 84, 1315, 694, 134, 'white', rc: 150),
+  BmField('grove', 'Grove', 1086, 1448, 172, 918, 108, 1320, 695, 134, 'white', rc: 110),
   BmField('pool', 'Pool', 1086, 1448, 160, 925, 98, 1312, 697, 134, 'white', rc: 150),
-  BmField('neon', 'Neon Tech', 1024, 1536, 141, 883, 131, 1385, 745, 139, 'black', rc: 110),
-  BmField('royal', 'Royal', 1024, 1536, 148, 877, 147, 1350, 730, 136, 'gold', rc: 110),
-  BmField('mahogany', 'Mahogany', 1024, 1536, 97, 925, 90, 1393, 729, 155, 'wood', rc: 150),
-  BmField('leather', 'Leather', 1024, 1536, 99, 925, 99, 1405, 730, 154, 'gold', rc: 150),
-  BmField('aqua', 'Aquarium', 1024, 1536, 122, 905, 122, 1390, 742, 146, 'blue', rc: 110),
-  BmField('asphalt', 'Asphalt', 1024, 1536, 97, 925, 113, 1417, 742, 155, 'rope', rc: 110),
+  BmField('neon', 'Neon Tech', 1024, 1536, 141, 883, 131, 1385, 745, 139, 'white', rc: 110),
+  BmField('royal', 'Royal', 1024, 1536, 148, 877, 147, 1350, 730, 136, 'white', rc: 110),
+  BmField('mahogany', 'Mahogany', 1024, 1536, 97, 925, 90, 1393, 729, 155, 'white', rc: 150),
+  BmField('leather', 'Leather', 1024, 1536, 99, 925, 99, 1405, 730, 154, 'white', rc: 150),
+  BmField('aqua', 'Aquarium', 1024, 1536, 122, 905, 122, 1390, 742, 146, 'white', rc: 110),
+  BmField('asphalt', 'Asphalt', 1024, 1536, 97, 925, 113, 1417, 742, 155, 'white', rc: 110),
   BmField('court', 'Court', 1024, 1536, 118, 907, 115, 1377, 715, 148, 'white', rc: 50),
-  BmField('cyberbox', 'Cyber Box', 1024, 1536, 118, 906, 108, 1378, 706, 147, 'black', rc: 110),
-  BmField('realmadrid', 'Real Madrid', 1086, 1448, 195, 889, 100, 1330, 722, 130, 'black', rc: 110),
-  BmField('psg', 'Paris SG', 1086, 1448, 204, 881, 115, 1296, 666, 130, 'red', rc: 70),
+  BmField('cyberbox', 'Cyber Box', 1024, 1536, 118, 906, 108, 1378, 706, 147, 'white', rc: 110),
+  BmField('realmadrid', 'Real Madrid', 1086, 1448, 195, 889, 100, 1330, 722, 130, 'white', rc: 110),
+  BmField('psg', 'Paris SG', 1086, 1448, 204, 881, 115, 1296, 666, 130, 'white', rc: 70),
   BmField('acmilan', 'AC Milan', 1086, 1448, 195, 889, 100, 1330, 722, 130, 'white', rc: 110),
-  BmField('barcelona', 'FC Barcelona', 1086, 1448, 194, 889, 101, 1329, 721, 130, 'gold', rc: 110),
+  BmField('barcelona', 'FC Barcelona', 1086, 1448, 194, 889, 101, 1329, 721, 130, 'white', rc: 110),
   BmField('persepolis', 'Persepolis', 1152, 1536, 207, 943, 105, 1410, 770, 130, 'white', rc: 150),
-  BmField('esteghlal', 'Esteghlal', 1086, 1448, 195, 890, 100, 1322, 690, 130, 'gold', rc: 110),
-  BmField('mancity', 'Man City', 1086, 1448, 195, 889, 102, 1329, 719, 130, 'red', rc: 110),
-  // Owner art pack (2026-11): boundaries measured on the art (barrier inner edge / touch line), goals built into
-  // the frame art where the field draws them (gs 'none'): posts and net depth measured on the art too.
-  BmField('neon_cup', 'Neon Cup', 1024, 1536, 99, 923, 100, 1398, 731, 130, 'none', rc: 75, gh0: 167.5, gr0: 15, gd0: 78),
-  BmField('street_cage', 'Street Cage', 1024, 1536, 100, 922, 112, 1413, 740, 130, 'black', rc: 55),
-  BmField('sockerbox', 'Sockerbox', 1024, 1536, 108, 916, 100, 1394, 704, 130, 'none', rc: 60, gh0: 179, gr0: 12, gd0: 70),
-  BmField('gold_leather', 'Gold Leather', 1024, 1536, 80, 944, 82, 1414, 722, 130, 'none', rc: 85, gh0: 168, gr0: 15, gd0: 60),
-  BmField('neon_grass', 'Neon Grass', 1024, 1536, 108, 915, 102, 1408, 744, 130, 'none', rc: 75, gh0: 152, gr0: 15, gd0: 75),
-  BmField('royal_gold', 'Royal Gold', 1024, 1536, 131, 890, 131, 1364, 724, 130, 'gold', rc: 70),
+  BmField('esteghlal', 'Esteghlal', 1086, 1448, 195, 890, 100, 1322, 690, 130, 'white', rc: 110),
+  BmField('mancity', 'Man City', 1086, 1448, 195, 889, 102, 1329, 719, 130, 'white', rc: 110),
+  // Owner art pack (2026-11): boundaries measured on the art (barrier inner edge / touch line). Their painted frame
+  // goals were painted out (tool/fs_goal_cleanup.py) so every pitch uses the one white goal sprite.
+  BmField('neon_cup', 'Neon Cup', 1024, 1536, 99, 923, 100, 1398, 731, 130, 'white', rc: 75),
+  BmField('street_cage', 'Street Cage', 1024, 1536, 100, 922, 112, 1413, 740, 130, 'white', rc: 55),
+  BmField('sockerbox', 'Sockerbox', 1024, 1536, 108, 916, 100, 1394, 704, 130, 'white', rc: 60),
+  BmField('gold_leather', 'Gold Leather', 1024, 1536, 80, 944, 82, 1414, 722, 130, 'white', rc: 85),
+  BmField('neon_grass', 'Neon Grass', 1024, 1536, 108, 915, 102, 1408, 744, 130, 'white', rc: 75),
+  BmField('royal_gold', 'Royal Gold', 1024, 1536, 131, 890, 131, 1364, 724, 130, 'white', rc: 70),
 ];
 
 /// Goal art measured on each sprite (alpha): [width, height, left post centre, right post centre, post half-width,
 /// inner edge of the back bar, bottom of the posts] - x values are fractions of the width, y values of the height.
 /// The engine builds the posts, the side nets and the back net from these numbers, so the drawn goal is the collider.
 const Map<String, List<double>> kBmGS = <String, List<double>>{
+  // The only goal art (owner asset goalpost_139462.png: white tubular frame, hexagonal net, front view).
   'white': <double>[840, 307, 0.0470, 0.9548, 0.0167, 0.0945, 0.9967],
-  'wood': <double>[840, 306, 0.0458, 0.9536, 0.0190, 0.0948, 1.0000],
-  'ice': <double>[840, 305, 0.0548, 0.9440, 0.0202, 0.1311, 0.9508],
-  'black': <double>[840, 235, 0.0500, 0.9554, 0.0167, 0.0681, 1.0000],
-  'rope': <double>[840, 246, 0.0470, 0.9560, 0.0190, 0.2195, 1.0000],
-  'gold': <double>[840, 237, 0.0417, 0.9565, 0.0185, 0.0675, 1.0000],
-  'red': <double>[840, 233, 0.0488, 0.9524, 0.0179, 0.1760, 0.9785],
-  'blue': <double>[840, 236, 0.0429, 0.9542, 0.0173, 0.1864, 1.0000],
 };
 
 /// Team categories: Club (باشگاهی), National (ملی), Luxury (لاکچری). The old car / brand / sports pieces are luxury.
+/// The black / green / oak ANIX wooden pucks are NOT soccer discs: they are the Carrom men and Backgammon checkers
+/// (assets/games/carrom/pieces, assets/games/backgammon/pieces).
 const List<List<Object>> kBmCats = <List<Object>>[
   <Object>['club', 'Club', 'باشگاهی'],
   <Object>['nat', 'National', 'ملی'],
@@ -207,18 +203,6 @@ const List<BmTeamDef> kBmTeamDefs = <BmTeamDef>[
   BmTeamDef('spt12', 'lux', 'NBA', 'teams/spt12', 10, 10),
   BmTeamDef('spt13', 'lux', 'Umbro', 'teams/spt13', 10, 10),
   BmTeamDef('barca_gold', 'lux', 'Barcelona Gold', 'discs/barcelona_gold', 10, 10),
-  BmTeamDef('nx_star_dark', 'lux', 'ANIX Star Noir', 'discs/nx_star_dark', 10, 10),
-  BmTeamDef('nx_star_light', 'lux', 'ANIX Star Oak', 'discs/nx_star_light', 10, 10),
-  BmTeamDef('nx_ring_dark', 'lux', 'ANIX Ring Noir', 'discs/nx_ring_dark', 10, 10),
-  BmTeamDef('nx_ring_light', 'lux', 'ANIX Ring Oak', 'discs/nx_ring_light', 10, 10),
-  BmTeamDef('nx_carved_dark', 'lux', 'ANIX Carved Noir', 'discs/nx_carved_dark', 10, 10),
-  BmTeamDef('nx_carved_light', 'lux', 'ANIX Carved Oak', 'discs/nx_carved_light', 10, 10),
-  BmTeamDef('nx_hex_dark', 'lux', 'ANIX Hex Noir', 'discs/nx_hex_dark', 10, 10),
-  BmTeamDef('nx_hex_light', 'lux', 'ANIX Hex Oak', 'discs/nx_hex_light', 10, 10),
-  BmTeamDef('nx_carbon_dark', 'lux', 'ANIX Carbon Noir', 'discs/nx_carbon_dark', 10, 10),
-  BmTeamDef('nx_carbon_light', 'lux', 'ANIX Carbon Oak', 'discs/nx_carbon_light', 10, 10),
-  BmTeamDef('nx_minimal_dark', 'lux', 'ANIX Minimal Noir', 'discs/nx_minimal_dark', 10, 10),
-  BmTeamDef('nx_minimal_light', 'lux', 'ANIX Minimal Oak', 'discs/nx_minimal_light', 10, 10),
 ];
 
 class BmTrail {

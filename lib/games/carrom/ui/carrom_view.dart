@@ -5,6 +5,7 @@ import 'package:flutter/scheduler.dart';
 
 import 'package:nexora/core/assets/app_assets.dart';
 import 'package:nexora/core/storage/local_store.dart';
+import 'package:nexora/games/shared/wood_pieces.dart';
 import 'package:nexora/core/theme/nx_theme.dart';
 import 'package:nexora/games/core/game_contract.dart';
 import '../core/carrom_config.dart';
@@ -52,6 +53,12 @@ class _CarromViewState extends State<CarromView>
   int _skin = LocalStore.instance.getInt('carrom.board_skin') ?? 0;
 
   /// Cycles the table art (wood → black/green → silver → classic), remembered on the device.
+  /// Cycles the ANIX wooden men (ring, star, carved, hex, carbon, minimal), remembered on the device.
+  Future<void> _nextPieces() async {
+    await setWoodPieceIndex('carrom', (woodPieceIndex('carrom') + 1) % kWoodPieceSets.length);
+    await _loadImages();
+  }
+
   Future<void> _nextSkin() async {
     _skin = (_skin + 1) % kCrBoardSkins.length;
     await LocalStore.instance.setInt('carrom.board_skin', _skin);
@@ -70,8 +77,9 @@ class _CarromViewState extends State<CarromView>
   Future<void> _loadImages() async {
     final CrBoardSkin skin = crBoardSkin(_skin);
     final board = await crLoadImage(skin.asset, 1024);
-    final white = await crLoadImage(AppAssets.gamesSharedDiscsDiscCream, 96);
-    final black = await crLoadImage(AppAssets.gamesSharedDiscsDiscBlack, 96);
+    final WoodPieceSet set = kWoodPieceSets[woodPieceIndex('carrom')];
+    final white = await crLoadImage(set.light, 128);
+    final black = await crLoadImage(set.dark, 128);
     final queen = await crLoadImage(AppAssets.disc('disc_red'), 96);
     final s0 = await crLoadImage(AppAssets.disc(_c.strikerSkin0), 128);
     final s1 = await crLoadImage(AppAssets.disc(_c.strikerSkin1), 128);
@@ -80,6 +88,7 @@ class _CarromViewState extends State<CarromView>
       _images.board = board;
       _images.boardPockets = skin.pockets;
       _images.white = white;
+      _images.menFill = kWoodPieceFill;
       _images.black = black;
       _images.queen = queen;
       _images.striker0 = s0;
@@ -184,6 +193,7 @@ class _CarromViewState extends State<CarromView>
                                     launch: launch,
                                     onRules: _showRules,
                                     onSkin: _nextSkin,
+                                    onPieces: _nextPieces,
                                     theme: theme,
                                     error: scheme.error),
                       ),
@@ -273,6 +283,7 @@ class _CrHud extends StatelessWidget {
       required this.launch,
       required this.onRules,
       required this.onSkin,
+      required this.onPieces,
       required this.theme,
       required this.error});
   final CrHudData hud;
@@ -280,6 +291,7 @@ class _CrHud extends StatelessWidget {
   final GameLaunch launch;
   final VoidCallback onRules;
   final VoidCallback onSkin;
+  final VoidCallback onPieces;
   final NxThemeColors theme;
   final Color error;
   bool get _motion => launch.fancyEffects && !launch.reducedMotion;
@@ -440,6 +452,19 @@ class _CrHud extends StatelessWidget {
                     fontSize: 12.5,
                     fontWeight: FontWeight.w700,
                   ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
+            InkWell(
+              onTap: onPieces,
+              borderRadius: BorderRadius.circular(20),
+              child: Tooltip(
+                message: launch.tx('مهره‌ها', 'Pieces'),
+                child: SizedBox(
+                  width: 30,
+                  height: 30,
+                  child: Image.asset(kWoodPieceSets[woodPieceIndex('carrom')].dark, cacheWidth: 64),
                 ),
               ),
             ),

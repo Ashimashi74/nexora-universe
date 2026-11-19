@@ -8,20 +8,27 @@ import 'bm_data.dart';
 
 // ---------------------------------------------------------------- constants (game.js line 4-6)
 // PR / BR are the radii of the DRAWN disc and ball (rim of the normalised sprites, see kBmDiscArtFill /
-// kBmBallArtFill): the collider is exactly what the player sees. (The original 63.8 / 28.8 radii were drawn at 0.78x,
-// so pieces collided ~17 world units before they visibly touched.)
-const double K = 1.27, PR = 46.65, BR = 20.0, STEP = 1 / 240, LMAX = 320;
-/// Ball spin / curve keeps the original tuning radius so the smaller collider does not exaggerate curl after bounces.
+// kBmBallArtFill): the collider is exactly what the player sees.
+// Table-football scale (owner request 2026-11): disc diameter = 112 world units, about 1/8.5 of the playing width
+// (880-945 on every pitch), so pieces read like a real finger-soccer set; the ball is 48% of the disc diameter.
+const double K = 1.27, PR = 56.0, BR = 27.0, STEP = 1 / 240, LMAX = 320;
+/// Ball spin / curve keeps the original tuning radius so the bigger collider does not change curl after bounces.
 const double SPIN_R = 28.8;
-/// Visual scale of the separate goal sprites (posts, side nets and back net are built from the drawn sprite).
-const double kBmGoalArtScale = 0.82;
+/// Visual scale of the goal sprite (assets/games/bermuda/goals/white.webp, the only goal art): drawn at full size so
+/// the mouth (inner width between the two side tubes) is about three discs wide. Posts, side nets and back net are
+/// built from the drawn sprite.
+const double kBmGoalArtScale = 1.0;
 const int NB = 4;
-/// Mini-soccer tuning (redesign-v1.1, owner request): ball mass 1.9 -> 1.805 (x0.95) and a kick factor on the
-/// ball's share of a disc->ball impulse so a disc striking the ball launches it exactly 5% faster than before
-/// (the lighter mass alone gives +1.40%, BKICK supplies the rest). Nothing else changed.
-const double BALL_M = 1.805;
-const double BKICK = 1.05 * ((1 / 1.9) / (1 / 5 + 1 / 1.9)) / ((1 / BALL_M) / (1 / 5 + 1 / BALL_M));
-const double HV = 4, PF1 = 390, PF2 = .8, PV0 = 600, EPP = .48, PCAP = 190;
+/// Weighty pieces (owner request 2026-11): discs are heavy (mass 8) and the ball lighter (2.6) but not a ping-pong
+/// ball. BKICK keeps a disc striking the ball launching it 5% harder than plain elastic transfer.
+const double DISC_M = 8.0;
+const double BALL_M = 2.6;
+const double BKICK = 1.05;
+/// Disc sliding friction (constant + speed-proportional part), disc<->disc restitution and the disc speed cap after
+/// touching the ball: heavier felt so shots stop where they are aimed instead of skating around.
+const double HV = 4, PF1 = 520, PF2 = 1.1, PV0 = 600, EPP = .30, PCAP = 190;
+/// Wall / post restitution of a disc (a heavy wooden puck loses most of its speed into the rail).
+const double kBmDiscWallE = .45;
 
 /// Largest aim error (radians, one side) at accuracy 1; accuracy 10 shoots exactly where the player aims.
 const double kBmMaxAimError = 0.11;
@@ -327,7 +334,7 @@ class BmEngine {
           y = 2 * CY - y;
         }
         final BmTeam tm = bmTeam(sel[ct(cm)]);
-        final BmBody b = mk(x, y, ct(cm), PR, 5, power: tm.power)..accuracy = tm.accuracy;
+        final BmBody b = mk(x, y, ct(cm), PR, DISC_M, power: tm.power)..accuracy = tm.accuracy;
         b.cid = cm * 20 + i;
         b.boost = 0;
         bodies.add(b);
@@ -423,7 +430,7 @@ class BmEngine {
   double _clock = 0;
   void _later(double sec, void Function() f) => _timers.add(MapEntry<double, void Function()>(_clock + sec, f));
 
-  double _eN(bool bl, double vn) => bl ? .84 - .22 * _mn(1, _mx(0, (vn - 270 * K) / (1350 * K))) : .82;
+  double _eN(bool bl, double vn) => bl ? .74 - .18 * _mn(1, _mx(0, (vn - 270 * K) / (1350 * K))) : kBmDiscWallE;
 
   void walls(BmBody b) {
     final bool bl = b == ball;
@@ -528,7 +535,7 @@ class BmEngine {
     b.x = px + nx * m;
     b.y = py + ny * m;
     if (vn < 0) {
-      final double kp = b == ball ? 1.7 - .16 * _mn(1, -vn / (2000 * K)) : 1.7;
+      final double kp = b == ball ? 1.7 - .16 * _mn(1, -vn / (2000 * K)) : 1 + kBmDiscWallE;
       b.vx -= kp * vn * nx;
       b.vy -= kp * vn * ny;
       if (b == ball) {
@@ -580,7 +587,7 @@ class BmEngine {
     b.y += ny * pen * wb;
     final double vn = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
     if (vn >= 0) return;
-    final double e = vn < -40 * K ? (isB ? .61 - .12 * _mn(1, _mx(0, (-vn - 500 * K) / (1200 * K))) : EPP) : 0,
+    final double e = vn < -40 * K ? (isB ? .55 - .12 * _mn(1, _mx(0, (-vn - 500 * K) / (1200 * K))) : EPP) : 0,
         j = -(1 + e) * vn / sm;
     final BmBody? pa = isB ? (a == bl ? b : a) : null;
     final double pre = pa != null ? math.sqrt(pa.vx * pa.vx + pa.vy * pa.vy) : 0;

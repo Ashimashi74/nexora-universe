@@ -44,8 +44,8 @@ BmConfig _cfg({bool mirror = false, String mode = 'bot'}) => BmConfig(
 void main() {
   test('constants, fields and the art-measured goal geometry', () {
     expect(K, 1.27);
-    expect(PR, closeTo(63.8 * 0.78 * 120 / 128, 0.01)); // the disc as it was drawn, now also its collider
-    expect(BR, 20.0);
+    expect(PR, 56.0); // table-football scale: disc diameter ~1/8.5 of the playing width
+    expect(BR / PR, closeTo(.48, .01)); // ball = 48% of the disc diameter
     expect(STEP, 1 / 240);
     expect(kBmFields.length, 36);
     expect(NB, 4);
@@ -62,8 +62,9 @@ void main() {
     e.startMatch(_cfg());
     expect(e.bodies.length, 11);
     expect(e.ball!.r, BR);
-    expect(e.ball!.m, closeTo(1.805, 1e-9));
-    expect(e.bodies.first.m, 5);
+    expect(e.ball!.m, closeTo(BALL_M, 1e-9));
+    expect(e.bodies.first.m, DISC_M);
+    expect(DISC_M, greaterThan(2.5 * BALL_M));
   });
 
   test('every field: posts, mouth and net come from the drawn goal (sprite or built into the art)', () {
@@ -145,6 +146,11 @@ void main() {
     expect(bmTeam('club0').name, 'Real Madrid');
     expect(bmTeam('club0').power, greaterThan(bmTeam('club38').power));
     expect(kBmTeams.where((BmTeam t) => t.cat == 'lux').length, greaterThanOrEqualTo(40));
+    // the ANIX wooden pucks belong to Carrom / Backgammon, never to finger soccer
+    expect(kBmTeams.where((BmTeam t) => t.id.startsWith('nx_')), isEmpty);
+    for (final BmFieldS f in kBmFields) {
+      expect(f.gs, 'white', reason: f.id); // the one goal asset on every pitch
+    }
     for (final BmFieldS f in kBmFields) {
       expect(File(f.asset).existsSync(), isTrue, reason: f.asset);
       expect(File('assets/games/bermuda/thumbs/${f.id}.webp').existsSync(), isTrue, reason: f.id);

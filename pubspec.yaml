@@ -77,6 +77,7 @@ flutter:
     - assets/games/finger_soccer/pucks/thumb/
     - assets/games/finger_soccer/pucks/top/
     - assets/games/shared/discs/
+    - assets/games/shared/pieces/
     - assets/games/kart_racing/
     - assets/games/obstacle_race/
     - assets/games/bomb_arena/

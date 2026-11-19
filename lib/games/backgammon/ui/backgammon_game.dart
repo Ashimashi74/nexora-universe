@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 import 'dart:math';
 
@@ -12,6 +13,7 @@ import 'bg_geometry.dart';
 import 'bg_skins.dart';
 import '../../../core/ui2/nx2_board_art.dart';
 import 'bg_widgets.dart';
+import 'package:nexora/games/shared/wood_pieces.dart';
 
 enum _Phase { opening, awaitRoll, rolling, playing, bot, gameOver }
 
@@ -675,6 +677,12 @@ class _BackgammonGameState extends State<BackgammonGame>
         Expanded(child: _playerCard(0)),
         const SizedBox(width: 6),
         Nx2BoardButton(onTap: _nextSkin, size: 34),
+        const SizedBox(width: 4),
+        GestureDetector(
+          onTap: () => setState(() => unawaited(setWoodPieceIndex(
+              'backgammon', (bgPieceSetIndex() + 1) % (kWoodPieceSets.length + 1)))),
+          child: const SizedBox(width: 34, height: 34, child: BgChecker(player: 1, size: 30)),
+        ),
         const SizedBox(width: 6),
         Expanded(child: _playerCard(1)),
       ],

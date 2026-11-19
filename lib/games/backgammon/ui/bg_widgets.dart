@@ -4,7 +4,11 @@ import 'package:flutter/material.dart';
 
 import 'package:nexora/core/assets/app_assets.dart';
 import 'package:nexora/core/theme/nx_theme.dart';
+import 'package:nexora/games/shared/wood_pieces.dart';
 import 'bg_geometry.dart';
+
+/// Backgammon checker set: 0 classic wood, 1..6 the ANIX pucks.
+int bgPieceSetIndex() => woodPieceIndex('backgammon', count: kWoodPieceSets.length + 1);
 
 /// One textured checker (asset with procedural fallback).
 class BgChecker extends StatelessWidget {
@@ -25,7 +29,27 @@ class BgChecker extends StatelessWidget {
               color: Color(0x99000000), blurRadius: 8, offset: Offset(0, 4)),
         ],
       ),
-      child: Image.asset(
+      child: _image(),
+    );
+  }
+
+  /// 0 = the classic wooden checkers; 1..6 = the ANIX black / green / oak pucks (see [kWoodPieceSets]).
+  Widget _image() {
+    final int set = bgPieceSetIndex();
+    if (set > 0) {
+      final WoodPieceSet w = kWoodPieceSets[set - 1];
+      return Transform.scale(
+        scale: 1 / kWoodPieceFill,
+        child: Image.asset(player == 0 ? w.light : w.dark,
+            width: size,
+            height: size,
+            cacheWidth: 128,
+            filterQuality: FilterQuality.medium,
+            errorBuilder: (BuildContext c, Object e, StackTrace? s) =>
+                CustomPaint(size: Size(size, size), painter: BgCheckerPainter(player))),
+      );
+    }
+    return Image.asset(
         player == 0
             ? AppAssets.gamesBackgammonCheckerLight
             : AppAssets.gamesBackgammonCheckerDark,
@@ -36,8 +60,7 @@ class BgChecker extends StatelessWidget {
         filterQuality: FilterQuality.medium,
         errorBuilder: (BuildContext c, Object e, StackTrace? s) => CustomPaint(
             size: Size(size, size), painter: BgCheckerPainter(player)),
-      ),
-    );
+      );
   }
 }
 

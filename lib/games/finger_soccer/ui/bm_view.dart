@@ -284,8 +284,9 @@ class _BermudaViewState extends State<BermudaView>
   // ------------------------------------------------------------------ start / end
   void _startOffline() {
     final math.Random r = math.Random(launch.seed);
+    // Bots / local opponents draw from every category (Club, National, Luxury) so all supplied crests appear.
     final List<BmTeam> clubs = kBmTeams
-        .where((BmTeam t) => t.cat == 'club' && t.id != my.team)
+        .where((BmTeam t) => t.id != my.team && (t.cat != 'lux' || r.nextInt(4) == 0))
         .toList();
     final String opp = clubs[r.nextInt(clubs.length)].id;
     final bool bot = launch.vsBot;
