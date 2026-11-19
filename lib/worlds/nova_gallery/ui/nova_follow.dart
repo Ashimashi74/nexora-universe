@@ -5,6 +5,7 @@ import '../../../core/settings/app_settings.dart';
 import '../../../core/theme/nx_theme.dart';
 import '../data/supabase_nova_repository.dart';
 import '../state/nova_controller.dart';
+import 'nova_visuals.dart';
 
 /// Followers / following of a real account (shared `follows` table), with a follow toggle for other people.
 class NovaFollowBar extends ConsumerStatefulWidget {
@@ -77,8 +78,22 @@ class _NovaFollowBarState extends ConsumerState<NovaFollowBar> {
     setState(() => _busy = true);
     try {
       await r.setFollow(widget.uid, on);
-    } catch (_) {}
-    _busy = false;
+      if (mounted) {
+        setState(() {
+          _following = on;
+          if (_n != null) {
+            _n = (followers: _n!.followers + (on ? 1 : -1), following: _n!.following);
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(context.tx('عملیات دنبال‌کردن ناموفق بود.', 'Follow action failed.'))));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
     await _load();
   }
 }
@@ -93,7 +108,7 @@ class NovaUserLookup extends ConsumerWidget {
     final SupabaseNovaRepository? r = ref.read(novaControllerProvider).online;
     if (r == null) return const SizedBox.shrink();
     return FutureBuilder<List<dynamic>>(
-      future: r.c.from('profiles').select('id, username, level, bio').ilike('username', username.replaceAll('%', '')).limit(1),
+      future: r.c.from('profiles').select('id, username, level, bio, avatar_url').ilike('username', username.replaceAll('%', '')).limit(1),
       builder: (BuildContext c, AsyncSnapshot<List<dynamic>> s) {
         if (!s.hasData) return const Padding(padding: EdgeInsets.all(12), child: Center(child: CircularProgressIndicator()));
         if (s.data!.isEmpty) {
@@ -103,6 +118,8 @@ class NovaUserLookup extends ConsumerWidget {
         final Map<dynamic, dynamic> p = s.data!.first as Map;
         final String uid = '${p['id']}';
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+          NovaAvatar(name: '${p['username'] ?? username}', avatarUrl: p['avatar_url'] as String?, size: 64, ring: true),
+          const SizedBox(height: 8),
           Text('Lv ${p['level'] ?? 1}${(p['bio'] ?? '').toString().isEmpty ? '' : ' · ${p['bio']}'}',
               style: const TextStyle(color: NxColors.textDim)),
           const SizedBox(height: 10),

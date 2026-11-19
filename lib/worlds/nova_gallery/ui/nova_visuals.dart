@@ -47,8 +47,9 @@ String novaAgo(BuildContext context, DateTime t) {
 
 /// Round avatar with initial (official channel shows the NEXORA mark).
 class NovaAvatar extends StatelessWidget {
-  const NovaAvatar({super.key, required this.name, this.official = false, this.size = 40, this.ring = false});
+  const NovaAvatar({super.key, required this.name, this.avatarUrl, this.official = false, this.size = 40, this.ring = false});
   final String name;
+  final String? avatarUrl;
   final bool official;
   final double size;
   final bool ring;
@@ -77,7 +78,10 @@ class NovaAvatar extends StatelessWidget {
         alignment: Alignment.center,
         child: official
             ? Icon(Icons.auto_awesome, color: Colors.white, size: size * 0.5)
-            : Text(initial, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: size * 0.42)),
+            : (avatarUrl != null && avatarUrl!.isNotEmpty
+                ? ClipOval(child: Image.network(avatarUrl!, width: size, height: size, fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Text(initial, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: size * 0.42))))
+                : Text(initial, style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: size * 0.42))),
       ),
     );
   }

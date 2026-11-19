@@ -565,7 +565,7 @@ class _NovaProfileTabState extends ConsumerState<NovaProfileTab> {
           child: GlassPanel(
             child: Column(children: <Widget>[
               Row(children: <Widget>[
-                NovaAvatar(name: name, size: 72, ring: true),
+                NovaAvatar(name: name, avatarUrl: profile.avatarUrl, size: 72, ring: true),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[

@@ -71,6 +71,8 @@ class ProfileService extends ChangeNotifier {
   String username = '';
   String bio = '';
   String avatarCore = 'hero_front';
+  String? avatarUrl;
+  String? avatarPath;
   int xp = 0;
   int coins = 0;
   int crystals = 0;
@@ -106,6 +108,8 @@ class ProfileService extends ChangeNotifier {
     username = j['username'] as String? ?? '';
     bio = j['bio'] as String? ?? '';
     avatarCore = j['avatar'] as String? ?? 'hero_front';
+    avatarUrl = j['avatarUrl'] as String?;
+    avatarPath = j['avatarPath'] as String?;
     xp = (j['xp'] as num?)?.toInt() ?? 0;
     coins = (j['coins'] as num?)?.toInt() ?? 0;
     crystals = (j['crystals'] as num?)?.toInt() ?? 0;
@@ -135,6 +139,8 @@ class ProfileService extends ChangeNotifier {
         'username': username,
         'bio': bio,
         'avatar': avatarCore,
+        'avatarUrl': avatarUrl,
+        'avatarPath': avatarPath,
         'xp': xp,
         'coins': coins,
         'crystals': crystals,
@@ -363,6 +369,13 @@ class ProfileService extends ChangeNotifier {
       onNameChanged?.call(username);
     }
     if (newBio != null) bio = newBio;
+    await _save();
+    notifyListeners();
+  }
+
+  Future<void> setAvatarPhoto({required String url, required String path}) async {
+    avatarUrl = url;
+    avatarPath = path;
     await _save();
     notifyListeners();
   }

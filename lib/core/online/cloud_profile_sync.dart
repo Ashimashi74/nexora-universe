@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,8 +71,11 @@ class CloudProfileSync {
     _linking = true;
     try {
       final String? lastUid = _store.getString(_kUid);
-      final Map<String, dynamic>? prof =
-          await c.from('profiles').select('username, xp, coins, avatar').eq('id', uid).maybeSingle();
+      final Map<String, dynamic>? prof = await c
+          .from('profiles')
+          .select('username, xp, coins, avatar, avatar_url, avatar_path')
+          .eq('id', uid)
+          .maybeSingle();
       final Map<String, dynamic>? nx = await c.from('nx_profiles').select('data, avatar_core').eq('id', uid).maybeSingle();
       final bool otherAccount = lastUid != null && lastUid != uid;
       if (otherAccount) await _store.remove(_kQueue);
@@ -87,6 +91,7 @@ class CloudProfileSync {
         } else if (prof != null) {
           _profile.applyWallet(xp: (prof['xp'] as num?)?.toInt(), coins: (prof['coins'] as num?)?.toInt());
         }
+        _applyAvatarFromProfile(prof);
         if (otherAccount) {
           _profile.applyCloudBlob(const <String, dynamic>{}, replace: true, serverName: prof?['username'] as String?);
         }
@@ -103,6 +108,7 @@ class CloudProfileSync {
         if (prof != null) {
           _profile.applyWallet(xp: (prof['xp'] as num?)?.toInt(), coins: (prof['coins'] as num?)?.toInt());
         }
+        _applyAvatarFromProfile(prof);
         await _upload();
       }
       await _store.setString(_kUid, uid);
@@ -120,6 +126,14 @@ class CloudProfileSync {
   void _applyWalletJson(dynamic r) {
     if (r is Map) {
       _profile.applyWallet(xp: (r['xp'] as num?)?.toInt(), coins: (r['coins'] as num?)?.toInt());
+    }
+  }
+
+  void _applyAvatarFromProfile(Map<String, dynamic>? prof) {
+    final String? url = prof?['avatar_url'] as String?;
+    final String? path = prof?['avatar_path'] as String?;
+    if (url != null && url.isNotEmpty && path != null && path.isNotEmpty) {
+      unawaited(_profile.setAvatarPhoto(url: url, path: path));
     }
   }
 
@@ -196,10 +210,38 @@ class CloudProfileSync {
         'data': _profile.cloudBlob(),
         'updated_at': DateTime.now().toUtc().toIso8601String(),
       });
-      await c.from('profiles').update(<String, dynamic>{'bio': _profile.bio}).eq('id', uid);
+      await c.from('profiles').update(<String, dynamic>{
+        'bio': _profile.bio,
+        'avatar_url': _profile.avatarUrl,
+        'avatar_path': _profile.avatarPath,
+      }).eq('id', uid);
     } catch (e) {
       debugPrint('cloud upload failed: $e');
     }
+  }
+
+  Future<void> uploadAvatar(Uint8List bytes, {required String extension}) async {
+    final SupabaseClient? c = _c;
+    final String? uid = _online.uid;
+    if (c == null || uid == null) throw StateError('online_profile_required');
+    final String ext = extension.toLowerCase().replaceAll('.', '').isEmpty
+        ? 'jpg'
+        : extension.toLowerCase().replaceAll('.', '');
+    final String mime = ext == 'png'
+        ? 'image/png'
+        : (ext == 'webp' ? 'image/webp' : 'image/jpeg');
+    final String path = '$uid/avatar.$ext';
+    await c.storage.from('nx-media').uploadBinary(
+          path,
+          bytes,
+          fileOptions: FileOptions(contentType: mime, upsert: true),
+        );
+    final String url = c.storage.from('nx-media').getPublicUrl(path);
+    await c.from('profiles').update(<String, dynamic>{
+      'avatar_url': url,
+      'avatar_path': path,
+    }).eq('id', uid);
+    await _profile.setAvatarPhoto(url: url, path: path);
   }
 
   Future<void> _pushName(String name) async {

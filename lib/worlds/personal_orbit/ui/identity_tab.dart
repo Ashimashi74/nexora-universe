@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../../core/catalog/catalog.dart';
+import '../../../core/online/cloud_profile_sync.dart';
 import '../../../core/online/online_service.dart';
 import '../../../core/profile/profile_service.dart';
 import '../../../core/settings/app_settings.dart';
@@ -80,7 +82,7 @@ class IdentityTab extends ConsumerWidget {
           ),
           child: Column(children: <Widget>[
             const SizedBox(height: 8),
-            const Center(child: OrbitAvatar(size: 190)),
+            _ProfileAvatarPicker(profile: p),
             const SizedBox(height: 12),
             Text(
               p.username.isEmpty
@@ -256,6 +258,70 @@ class IdentityTab extends ConsumerWidget {
         ),
       ],
     );
+  }
+}
+
+class _ProfileAvatarPicker extends ConsumerStatefulWidget {
+  const _ProfileAvatarPicker({required this.profile});
+  final ProfileService profile;
+
+  @override
+  ConsumerState<_ProfileAvatarPicker> createState() => _ProfileAvatarPickerState();
+}
+
+class _ProfileAvatarPickerState extends ConsumerState<_ProfileAvatarPicker> {
+  bool _busy = false;
+
+  Future<void> _pick() async {
+    final online = ref.read(onlineProvider);
+    if (!online.isOnline || online.isGuest) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(context.tx('برای عکس پروفایل وارد حساب شو.', 'Sign in to set a profile photo.'))));
+      return;
+    }
+    final XFile? file = await ImagePicker().pickImage(
+        source: ImageSource.gallery, maxWidth: 1600, maxHeight: 1600, imageQuality: 85);
+    if (file == null) return;
+    setState(() => _busy = true);
+    try {
+      final String name = file.name.toLowerCase();
+      final String ext = name.contains('.') ? name.split('.').last : 'jpg';
+      await ref.read(cloudSyncProvider).uploadAvatar(await file.readAsBytes(), extension: ext);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(context.tx('عکس پروفایل ذخیره شد.', 'Profile photo saved.'))));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(context.tx('آپلود عکس ناموفق بود.', 'Profile photo upload failed.'))));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final String? url = widget.profile.avatarUrl;
+    return Column(children: <Widget>[
+      Stack(alignment: Alignment.bottomRight, children: <Widget>[
+        if (url != null && url.isNotEmpty)
+          CircleAvatar(radius: 95, backgroundImage: NetworkImage(url))
+        else
+          const OrbitAvatar(size: 190),
+        FloatingActionButton.small(
+          heroTag: 'profile-photo-picker',
+          onPressed: _busy ? null : _pick,
+          child: _busy
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.camera_alt_rounded),
+        ),
+      ]),
+      const SizedBox(height: 6),
+      Text(context.tx('تغییر عکس پروفایل', 'Change profile photo'),
+          style: TextStyle(color: PoColors.inkDim(context), fontSize: 12)),
+    ]);
   }
 }
 
