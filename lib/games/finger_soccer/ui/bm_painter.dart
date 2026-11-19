@@ -91,6 +91,8 @@ Color _rgba(int r, int g, int b, double a) => Color.fromRGBO(r, g, b, a.clamp(0.
 double bmAimPower(double l) => math.min(l, LMAX) / LMAX;
 double bmAimCircleRadius(double r, double p) => r * (1.3 + 3.5 * p);
 double bmAimArrowTip(double r, double p) => r * (2.4 + 1.6 * p);
+/// Disc water ribbon length in disc radii (reference ~3.4 diameters).
+const double kBmDiscTrailLen = 6.8;
 const List<double> kBmAimDotR = <double>[.70, .60, .54, .50, .47];
 /// Dots shown for a drag of [l]: one per 1.85 r of finger travel past the first, 1..5.
 int bmAimDots(double l, double r) => ((l / r + 1.2 - 2.55) / 1.85).floor().clamp(0, 4).toInt() + 1;
@@ -420,7 +422,7 @@ class BmPainter extends CustomPainter {
       al.add(al.last);
     }
     if (pts.length < 2) return;
-    final List<double> hw = <double>[for (final double a in al) BR * .62 * math.pow(a, 1.2).toDouble()];
+    final List<double> hw = <double>[for (final double a in al) BR * .62 * math.pow(a, .7).toDouble()];
     hw[0] = 0;
     canvas.drawPath(
         _ribbon(pts, hw),
@@ -430,49 +432,91 @@ class BmPainter extends CustomPainter {
   }
 
   /// Discs: the reference's blue water ribbon (cyan head, royal-blue body, violet edge, white glints) with
-  /// droplets flung off its sides, over the last ~0.25 s of the slide (BmBody.tr).
+  /// droplets flung off its sides. It keeps its width for most of its length and tapers sharply at the tail, and
+  /// covers the last ~3.4 disc diameters of the slide (BmBody.tr, trimmed by path length).
   void _discTrails(Canvas canvas, double now) {
     for (final BmBody b in e.bodies) {
       if (b == e.ball || b.tr.isEmpty) continue;
-      final List<Offset> pts = <Offset>[];
+      final List<Offset> raw = <Offset>[];
       for (final BmTrailPt q in b.tr) {
         final Offset o = Offset(q.x, q.y);
-        if (pts.isEmpty || (o - pts.last).distance >= 2) pts.add(o);
+        if (raw.isEmpty || (o - raw.last).distance >= 2) raw.add(o);
       }
       final Offset head = Offset(b.x, b.y);
-      if ((head - pts.last).distance >= 2) pts.add(head);
+      if ((head - raw.last).distance >= 2) raw.add(head);
+      // keep the newest kBmDiscTrailLen * r of path
+      final double maxLen = b.r * kBmDiscTrailLen;
+      final List<Offset> pts = <Offset>[raw.last];
+      double acc = 0;
+      for (int i = raw.length - 2; i >= 0 && acc < maxLen; i--) {
+        final double sl = (raw[i] - raw[i + 1]).distance;
+        if (acc + sl > maxLen) {
+          pts.insert(0, raw[i + 1] + (raw[i] - raw[i + 1]) * ((maxLen - acc) / sl));
+          acc = maxLen;
+        } else {
+          pts.insert(0, raw[i]);
+          acc += sl;
+        }
+      }
       final int n = pts.length;
-      if (n < 3) continue;
-      final List<double> hw = <double>[for (int i = 0; i < n; i++) b.r * .78 * math.pow(i / (n - 1), .75).toDouble()];
+      if (n < 3 || acc < b.r * .8) continue;
+      // fraction of the path from the tail (0) to the disc (1)
+      final List<double> ft = <double>[0];
+      double run = 0;
+      for (int i = 1; i < n; i++) {
+        run += (pts[i] - pts[i - 1]).distance;
+        ft.add(run / acc);
+      }
+      final double grow = math.min(1, acc / maxLen); // a fresh slide fans out as it lengthens
+      final List<double> hw = <double>[
+        for (final double f in ft) b.r * .82 * grow * (f < .4 ? math.sin(f / .4 * math.pi / 2) : 1)
+      ];
       final Offset a = pts.first, z = pts.last;
+      List<Offset> shifted(double k) {
+        final List<Offset> o = <Offset>[];
+        for (int i = 0; i < n; i++) {
+          Offset d = pts[math.min(n - 1, i + 1)] - pts[math.max(0, i - 1)];
+          final double len = d.distance;
+          d = len < 1e-6 ? const Offset(1, 0) : d / len;
+          o.add(pts[i] + Offset(-d.dy, d.dx) * hw[i] * k);
+        }
+        return o;
+      }
+
       canvas.drawPath(
           _ribbon(pts, hw),
           Paint()
             ..shader = ui.Gradient.linear(a, z, <Color>[
-              _rgba(120, 70, 255, 0),
-              _rgba(92, 78, 255, .62),
-              _rgba(46, 104, 255, .86),
-              _rgba(80, 214, 255, .92)
+              _rgba(110, 70, 255, .15),
+              _rgba(70, 72, 240, .78),
+              _rgba(38, 110, 255, .9),
+              _rgba(70, 205, 255, .95)
             ], <double>[0, .3, .7, 1]));
+      // violet swirl along one edge, cyan-white glint along the other
       canvas.drawPath(
-          _ribbon(pts, <double>[for (final double w in hw) w * .42]),
+          _ribbon(shifted(.5), <double>[for (final double w in hw) w * .3]),
           Paint()
-            ..shader = ui.Gradient.linear(a, z, <Color>[_rgba(255, 255, 255, 0), _rgba(200, 245, 255, .55), _rgba(255, 255, 255, .8)],
+            ..shader = ui.Gradient.linear(a, z, <Color>[_rgba(170, 90, 255, 0), _rgba(165, 95, 255, .75), _rgba(120, 150, 255, .6)],
+                <double>[0, .5, 1]));
+      canvas.drawPath(
+          _ribbon(shifted(-.3), <double>[for (final double w in hw) w * .28]),
+          Paint()
+            ..shader = ui.Gradient.linear(a, z, <Color>[_rgba(255, 255, 255, 0), _rgba(190, 245, 255, .7), _rgba(255, 255, 255, .9)],
                 <double>[0, .55, 1]));
       // droplets: fixed per trail point (hashed), fading toward the tail
       for (int i = 1; i < n - 1; i++) {
         final Offset d = pts[i + 1] - pts[i - 1];
         final double len = d.distance;
         if (len < 1e-6) continue;
-        final Offset nn = Offset(-d.dy / len, d.dx / len);
-        for (int k = 0; k < 2; k++) {
+        final Offset nn = Offset(-d.dy / len, d.dx / len), tg = d / len;
+        for (int k = 0; k < 3; k++) {
           final int h = ((pts[i].dx * 7.3).round() * 73856093) ^ ((pts[i].dy * 5.1).round() * 19349663) ^ (k * 83492791) ^ b.cid;
           final double u1 = (h & 1023) / 1023, u2 = ((h >> 10) & 1023) / 1023, u3 = ((h >> 20) & 1023) / 1023;
-          final double side = (u1 - .5) * 2, off = hw[i] * (.9 + .6 * u2) * side.sign + hw[i] * .3 * side;
-          final Offset c = pts[i] + nn * off;
-          final double al = .85 * i / (n - 1);
-          final Color col = u3 < .4 ? _rgba(255, 255, 255, al) : (u3 < .75 ? _rgba(120, 190, 255, al) : _rgba(70, 90, 255, al));
-          canvas.drawCircle(c, b.r * (.045 + .07 * u3), Paint()..color = col);
+          final double side = u1 < .5 ? -1 : 1, off = b.r * .82 * grow * (.75 + .75 * u2) * side;
+          final Offset c = pts[i] + nn * off - tg * b.r * .3 * u3;
+          final double al = .9 * ft[i];
+          final Color col = u3 < .4 ? _rgba(255, 255, 255, al) : (u3 < .75 ? _rgba(110, 185, 255, al) : _rgba(70, 90, 255, al));
+          canvas.drawCircle(c, b.r * (.05 + .09 * u3), Paint()..color = col);
         }
       }
     }
@@ -515,7 +559,7 @@ class BmPainter extends CustomPainter {
     }
     // arrow
     final double base = r * 1.3, tip = bmAimArrowTip(r, a.p), neck = tip - r * .82;
-    final double sw0 = r * .07, sw1 = r * .14, hw = r * .45;
+    final double sw0 = r * .10, sw1 = r * .17, hw = r * .46;
     Offset at(double d, double w) => Offset(b.x + ux * d + nx * w, b.y + uy * d + ny * w);
     final Path arrow = Path()
       ..moveTo(at(base, sw0).dx, at(base, sw0).dy)
