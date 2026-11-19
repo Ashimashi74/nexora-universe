@@ -46,8 +46,10 @@ void main() {
     expect(K, 1.27);
     expect(PR, 75.0); // finger-soccer proportions: disc diameter ~1/6 of the playing width
     expect(BR / PR, closeTo(.5, .01)); // ball = half the disc diameter
-    expect(PF1, greaterThan(520)); // anti-drift: more felt friction than the old tuning
-    expect(PF2, greaterThan(1.1));
+    // reference-calibrated felt friction: small constant part, strong speed drag, short launch glide
+    expect(PF2, closeTo(5.0, 1e-9));
+    expect(PF1 * K / 2.88, closeTo(123, 1));
+    expect(BmEngine.strikeOf(2) / BmEngine.strikeOf(10), closeTo(.40, .01));
     expect(STEP, 1 / 240);
     expect(kBmFields.length, 36);
     expect(NB, 4);
