@@ -364,9 +364,10 @@ class BmEngine {
     slow = 0;
     cam = 0;
     for (int cm = 0; cm < 2; cm++) {
-      // Each side's own formation (form is global), laid out in that side's own frame: the top side is the bottom
-      // layout turned half a circle, so its left is the screen's right.
-      final List<List<double>> sl = bmSlots(form[ct(cm)]);
+      // Each side's formation laid out in that side's own frame: the top side is the bottom layout turned half a
+      // circle, so its left is the screen's right. Indexed by cm like the piece ids (cid), so a mirrored phone lays
+      // out every cid exactly where the host does (snapshots and remote shots are keyed by cid).
+      final List<List<double>> sl = bmSlots(form[cm]);
       for (int i = 0; i < sl.length; i++) {
         final double nx = sl[i][0], nd = sl[i][1];
         double x = _mx(Fl + PR + 6, _mn(Fr - PR - 6, Fl + nx * Fw)), y = Fb - nd * Fh / 2;

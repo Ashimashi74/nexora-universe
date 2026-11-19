@@ -372,15 +372,9 @@ void main() {
           mode: 'online', teams: const <String>['club0', 'club1'], form: const <int>[7, 4], names: const <String>['A', 'B'],
           field: 0, ball: 0, mirror: mirror));
     final BmEngine h = mk(false), g = mk(true);
-    for (int t = 0; t < 2; t++) {
-      final List<BmBody> a = h.bodies.where((BmBody x) => x.team == t).toList();
-      final List<BmBody> b = g.bodies.where((BmBody x) => x.team == t).toList();
-      expect(a.length, 5);
-      for (int k = 0; k < 5; k++) {
-        expect(b[k].x, closeTo(2 * h.CX - a[k].x, 1e-6));
-        expect(b[k].y, closeTo(2 * h.CY - a[k].y, 1e-6));
-      }
-    }
+    // snapshots are global and keyed by piece id: identical at kickoff means both phones agree on every disc
+    expect(g.snapshot()['b'], h.snapshot()['b']);
+    expect((h.snapshot()['b'] as List<dynamic>).length, 11);
   });
 
   test('reference aim: arrow, pull circle and dots scale with the pull', () {
