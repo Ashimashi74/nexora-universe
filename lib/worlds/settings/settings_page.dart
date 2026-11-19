@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../../core/audio/sfx_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -63,6 +65,28 @@ class SettingsPage extends ConsumerWidget {
                 ),
                 const Icon(Icons.volume_up_rounded, color: NxColors.textDim),
               ]),
+              AnixSwitchTile(
+                contentPadding: EdgeInsets.zero,
+                value: s.sound,
+                onChanged: (v) => s.sound = v,
+                secondary: const Icon(Icons.graphic_eq_rounded),
+                title: Text(context.tx('جلوه‌های صوتی', 'Sound effects')),
+                subtitle: Text(context.tx('دکمه‌ها، اتاق‌ها، برد و باخت و صداهای داخل بازی',
+                    'Buttons, rooms, wins and losses and in-game sounds')),
+              ),
+              Row(children: [
+                const Icon(Icons.volume_down_rounded, color: NxColors.textDim),
+                Expanded(
+                  child: Slider(
+                    value: s.sfxVolume,
+                    onChanged: s.sound ? (v) => s.sfxVolume = v : null,
+                    onChangeEnd: (_) => NxSfx.instance.play('tick'),
+                    label: '${(s.sfxVolume * 100).round()}%',
+                    divisions: 20,
+                  ),
+                ),
+                const Icon(Icons.volume_up_rounded, color: NxColors.textDim),
+              ]),
             ]),
           ),
           _section(context, context.tx('گرافیک و حرکت', 'Graphics & motion')),
@@ -111,12 +135,6 @@ class SettingsPage extends ConsumerWidget {
                 value: s.haptics,
                 onChanged: (v) => s.haptics = v,
                 title: Text(context.tx('لرزش لمسی', 'Haptics')),
-              ),
-              AnixSwitchTile(
-                contentPadding: EdgeInsets.zero,
-                value: s.sound,
-                onChanged: (v) => s.sound = v,
-                title: Text(context.tx('بازخورد بازی‌ها', 'Game feedback')),
               ),
               AnixSwitchTile(
                 contentPadding: EdgeInsets.zero,

@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../../core/audio/sfx_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -62,6 +64,7 @@ class _GameHostPageState extends ConsumerState<GameHostPage> {
   void _onFinish(GameResult r) {
     if (_finished) return;
     _finished = true;
+    if (r.outcome != GameOutcome.draw) NxSfx.instance.play(r.outcome == GameOutcome.win ? 'win' : 'lose');
     final p = ref.read(profileProvider);
     final outcome = switch (r.outcome) {
       GameOutcome.win => 'win',

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nexora/core/audio/sfx_service.dart';
 import 'package:nexora/core/ui2/anix_kit.dart';
 import 'package:nexora/games/game_registry.dart';
 
@@ -31,5 +32,14 @@ void main() {
     for (final GameInfo g in kGames.where((GameInfo g) => g.supportsOnline)) {
       expect(File('assets/arcade/pedestals/${g.id}.webp').existsSync(), isTrue, reason: g.id);
     }
+  });
+
+  test('every UI sound effect exists and is declared', () {
+    expect(File('pubspec.yaml').readAsStringSync().contains('assets/sfx/ui/'), isTrue);
+    for (final String n in NxSfx.names) {
+      expect(File('assets/sfx/ui/$n.mp3').existsSync(), isTrue, reason: n);
+    }
+    NxSfx.instance.configure(enabled: true, volume: 0.5);
+    NxSfx.instance.play('tick'); // no-op under tests, must not throw
   });
 }

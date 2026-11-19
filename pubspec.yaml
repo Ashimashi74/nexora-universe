@@ -106,6 +106,7 @@ flutter:
     - assets/worlds/hub/props/set/
     - assets/worlds/personal_orbit/decor/
     - assets/media/
+    - assets/sfx/ui/
     - assets/ui/nx2/badges/
     - assets/ui/nx2/bars/
     - assets/ui/nx2/bg/

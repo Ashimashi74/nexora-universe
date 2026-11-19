@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../core/audio/sfx_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -88,6 +90,7 @@ class _NexoraAppState extends ConsumerState<NexoraApp> {
     final settings = ref.watch(settingsProvider);
     MusicService.instance
         .configure(enabled: settings.music, volume: settings.musicVolume);
+    NxSfx.instance.configure(enabled: settings.sound, volume: settings.sfxVolume);
     return MaterialApp.router(
       title: 'ANIX',
       debugShowCheckedModeBanner: false,

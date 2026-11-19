@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+
+import '../../../core/audio/sfx_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -98,6 +100,10 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
     _poll = Timer.periodic(const Duration(seconds: 6), (_) {
       if (_roomId != null) {
         unawaited(_refresh());
+        // Heartbeat: quick match only pairs with players whose lobby is still open on their phone.
+        if (_room?['status'] == 'lobby' && !_inMatch) {
+          unawaited(_c?.rpc('nx_lobby_ping', params: <String, dynamic>{'p_room': _roomId}).then((_) {}, onError: (Object _) {}));
+        }
       } else {
         unawaited(_loadOpen());
       }
@@ -320,6 +326,7 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
 
   Future<void> _openMatch(String matchId) async {
     _inMatch = true;
+    NxSfx.instance.play('ready');
     _lastMatchSeen = matchId;
     await Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => OnlineMatchPage(matchId: matchId, gameId: widget.gameId),

@@ -29,6 +29,7 @@ class AppSettings extends ChangeNotifier {
     }
     _music = _store.getBool(_kMusic) ?? true;
     _musicVolume = (_store.getInt(_kMusicVol) ?? 60).clamp(0, 100) / 100.0;
+    _sfxVolume = (_store.getInt(_kSfxVol) ?? 80).clamp(0, 100) / 100.0;
     _sound = _store.getBool(_kSound) ?? true;
     _haptics = _store.getBool(_kHaptics) ?? true;
     _journeySeen = _store.getBool(_kJourney) ?? false;
@@ -73,6 +74,7 @@ class AppSettings extends ChangeNotifier {
   static const _kAuthMode = 'settings.auth_mode';
   static const _kMusic = 'settings.music';
   static const _kMusicVol = 'settings.music_volume';
+  static const _kSfxVol = 'settings.sfx_volume';
   static const _kAppearance = 'settings.appearance';
 
   late GraphicsQuality _quality;
@@ -87,6 +89,7 @@ class AppSettings extends ChangeNotifier {
   late String _authMode;
   late bool _music;
   late double _musicVolume;
+  late double _sfxVolume;
 
   /// Background music on menus (default on).
   bool get music => _music;
@@ -97,6 +100,15 @@ class AppSettings extends ChangeNotifier {
   set music(bool v) {
     _music = v;
     _store.setBool(_kMusic, v);
+    notifyListeners();
+  }
+
+  /// 0..1 sound-effects volume (menus, rooms, results).
+  double get sfxVolume => _sfxVolume;
+
+  set sfxVolume(double v) {
+    _sfxVolume = v.clamp(0.0, 1.0);
+    _store.setInt(_kSfxVol, (_sfxVolume * 100).round());
     notifyListeners();
   }
 

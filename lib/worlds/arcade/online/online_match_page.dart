@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/audio/music_service.dart';
+import '../../../core/audio/sfx_service.dart';
 import '../../../core/online/cloud_profile_sync.dart';
 import '../../../core/online/match_link.dart';
 import '../../../core/online/online_service.dart';
@@ -148,6 +149,7 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
   void _finish(GameResult r, {required bool report}) {
     if (_finished) return;
     _finished = true;
+    if (r.outcome != GameOutcome.draw) NxSfx.instance.play(r.outcome == GameOutcome.win ? 'win' : 'lose');
     final SupabaseMatchLink? l = _link;
     if (ref.read(settingsProvider).haptics) HapticFeedback.heavyImpact();
     if (l != null && report) {

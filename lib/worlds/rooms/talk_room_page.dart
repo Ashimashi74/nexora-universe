@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart' as lk;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../../core/audio/sfx_service.dart';
 import '../../core/backend/backend_gateway.dart';
 import '../../core/backend/supabase_backend.dart';
 import '../../core/online/online_config.dart';
@@ -172,6 +173,7 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
   void _addMessage(Map<String, dynamic> r) {
     final String id = '${r['id']}';
     if (r['deleted'] == true || _messages.any((RoomMessage m) => m.id == id)) return;
+    if (_joined && '${r['author']}' != _me && _messages.isNotEmpty) NxSfx.instance.play('chat', gain: 0.7);
     _messages.add(RoomMessage(id, '${r['author']}', '${r['text']}',
         DateTime.tryParse('${r['created_at']}')?.toLocal() ?? DateTime.now()));
     _messages.sort((RoomMessage a, RoomMessage b) => a.at.compareTo(b.at));
@@ -222,6 +224,8 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
           .eq('room_id', widget.roomId)
           .order('seat');
       if (!mounted) return;
+      final int before = _members.length;
+      if (before > 0 && mem.length != before) NxSfx.instance.play(mem.length > before ? 'join' : 'leave', gain: 0.6);
       setState(() {
         _room = room;
         _members = mem.map((dynamic r) {
@@ -251,6 +255,7 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
 
   Future<void> _openMatch(String matchId) async {
     _inMatch = true;
+    NxSfx.instance.play('ready');
     _lastMatch = matchId;
     final bool micWas = _mic;
     if (micWas) await _setMic(false);

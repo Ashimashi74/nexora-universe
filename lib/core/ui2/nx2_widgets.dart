@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
+import '../audio/sfx_service.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -281,6 +283,7 @@ class _PressableState extends State<_Pressable> {
       onTapUp: (_) => setState(() => _down = false),
       onTap: () {
         HapticFeedback.selectionClick();
+        NxSfx.instance.play('tick', gain: 0.6);
         widget.onTap();
       },
       child: AnimatedScale(
