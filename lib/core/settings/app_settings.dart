@@ -20,6 +20,10 @@ class AppSettings extends ChangeNotifier {
     );
     // NX2 redesign: the cosmic neon skin is the only app skin now.
     _visualTheme = NxVisualTheme.neon;
+    _appearanceMode = NxAppearanceMode.values.firstWhere(
+      (e) => e.name == _store.getString(_kAppearance),
+      orElse: () => NxAppearanceMode.dark,
+    );
     _music = _store.getBool(_kMusic) ?? true;
     _musicVolume = (_store.getInt(_kMusicVol) ?? 60).clamp(0, 100) / 100.0;
     _sound = _store.getBool(_kSound) ?? true;
@@ -66,11 +70,13 @@ class AppSettings extends ChangeNotifier {
   static const _kAuthMode = 'settings.auth_mode';
   static const _kMusic = 'settings.music';
   static const _kMusicVol = 'settings.music_volume';
+  static const _kAppearance = 'settings.appearance';
 
   late GraphicsQuality _quality;
   late bool _reducedMotion;
   late String _languageCode;
   late NxVisualTheme _visualTheme;
+  late NxAppearanceMode _appearanceMode;
   late bool _sound;
   late bool _haptics;
   late bool _journeySeen;
@@ -101,6 +107,7 @@ class AppSettings extends ChangeNotifier {
   bool get reducedMotion => _reducedMotion;
   String get languageCode => _languageCode;
   NxVisualTheme get visualTheme => _visualTheme;
+  NxAppearanceMode get appearanceMode => _appearanceMode;
   bool get isFa => _languageCode == 'fa';
   Locale get locale => Locale(_languageCode);
   bool get sound => _sound;
@@ -152,6 +159,13 @@ class AppSettings extends ChangeNotifier {
     if (_visualTheme == v) return;
     _visualTheme = v;
     _store.setString(_kVisualTheme, v.name);
+    notifyListeners();
+  }
+
+  set appearanceMode(NxAppearanceMode v) {
+    if (_appearanceMode == v) return;
+    _appearanceMode = v;
+    _store.setString(_kAppearance, v.name);
     notifyListeners();
   }
 

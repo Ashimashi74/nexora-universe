@@ -66,6 +66,13 @@ class SettingsPage extends ConsumerWidget {
           GlassPanel(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: s.appearanceMode == NxAppearanceMode.light,
+                onChanged: (v) => s.appearanceMode =
+                    v ? NxAppearanceMode.light : NxAppearanceMode.dark,
+                title: Text(context.tx('نمایش روشن', 'Light appearance')),
+              ),
               Text(context.tx('کیفیت گرافیک', 'Graphics quality'),
                   style: const TextStyle(fontWeight: FontWeight.w700)),
               const SizedBox(height: 10),

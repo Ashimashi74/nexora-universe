@@ -139,3 +139,25 @@ class HubSearchDelegate extends SearchDelegate<void> {
     );
   }
 }
+
+/// Standalone route used by deep links and older callers of the global search.
+class NexoraSearchPage extends StatelessWidget {
+  const NexoraSearchPage({super.key});
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text('Global search')),
+        body: Center(
+          child: FilledButton.icon(
+            onPressed: () => showSearch<void>(
+              context: context,
+              delegate: HubSearchDelegate(
+                isFa: Localizations.localeOf(context).languageCode == 'fa',
+              ),
+            ),
+            icon: const Icon(Icons.search_rounded),
+            label: const Text('Search'),
+          ),
+        ),
+      );
+}

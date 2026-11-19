@@ -22,6 +22,8 @@ class NxColors {
   static const textDim = Color(0xB3EAF6FF);
 }
 
+enum NxAppearanceMode { dark, light }
+
 enum NxVisualTheme { gold, neon }
 
 /// Colors and surface treatment for the two selectable NEXORA visual themes.
@@ -73,6 +75,30 @@ class NxThemeColors extends ThemeExtension<NxThemeColors> {
     border: Color(0xFF7A45E6),
     text: Color(0xFFF4F0FF),
     muted: Color(0xFFBFB3E6),
+  );
+
+  static const neonLight = NxThemeColors(
+    accent: Color(0xFF087EA4),
+    accentSecondary: Color(0xFF6D35B5),
+    background: Color(0xFFF5F3FF),
+    backgroundMid: Color(0xFFEAE4FF),
+    surface: Color(0xFFFFFFFF),
+    surfaceRaised: Color(0xFFF0ECFF),
+    border: Color(0xFF9A7AD8),
+    text: Color(0xFF171329),
+    muted: Color(0xFF625B78),
+  );
+
+  static const goldLight = NxThemeColors(
+    accent: Color(0xFF9A6500),
+    accentSecondary: Color(0xFF8A4B08),
+    background: Color(0xFFFFFBF1),
+    backgroundMid: Color(0xFFFFF2D4),
+    surface: Color(0xFFFFFFFF),
+    surfaceRaised: Color(0xFFFFF7E5),
+    border: Color(0xFFC49A48),
+    text: Color(0xFF241A08),
+    muted: Color(0xFF6C5A38),
   );
 
   /// Original visual language used inside active game boards and their HUDs.
@@ -192,25 +218,37 @@ class NxMotion {
 }
 
 /// The NX2 redesign ships one skin: cosmic neon. [style] is kept for API compatibility.
-ThemeData buildNxTheme([NxVisualTheme style = NxVisualTheme.neon]) =>
-    _buildTheme(NxThemeColors.neon);
+ThemeData buildNxTheme([
+  NxVisualTheme style = NxVisualTheme.neon,
+  NxAppearanceMode appearance = NxAppearanceMode.dark,
+]) => _buildTheme(
+      appearance == NxAppearanceMode.light
+          ? (style == NxVisualTheme.gold
+              ? NxThemeColors.goldLight
+              : NxThemeColors.neonLight)
+          : (style == NxVisualTheme.gold ? NxThemeColors.gold : NxThemeColors.neon),
+      appearance,
+    );
 
 /// Preserve the original Finger Soccer field, ball and player-disc palette.
-ThemeData buildNxGameplayTheme() => _buildTheme(NxThemeColors.gameplay);
+ThemeData buildNxGameplayTheme() =>
+    _buildTheme(NxThemeColors.gameplay, NxAppearanceMode.dark);
 
-ThemeData _buildTheme(NxThemeColors visual) {
-  final scheme = ColorScheme.dark(
+ThemeData _buildTheme(NxThemeColors visual, NxAppearanceMode appearance) {
+  final scheme = (appearance == NxAppearanceMode.light
+          ? ColorScheme.light
+          : ColorScheme.dark)(
     primary: visual.accent,
     secondary: visual.accentSecondary,
     tertiary:
         visual.premiumPanels ? visual.accentSecondary : NxColors.turquoise,
     surface: visual.surfaceRaised,
     error: NxColors.danger,
-    onPrimary: const Color(0xFF08101A),
+    onPrimary: appearance == NxAppearanceMode.light ? Colors.white : const Color(0xFF08101A),
     onSurface: visual.text,
   );
   final base = ThemeData(
-      useMaterial3: true, colorScheme: scheme, brightness: Brightness.dark);
+      useMaterial3: true, colorScheme: scheme, brightness: appearance == NxAppearanceMode.light ? Brightness.light : Brightness.dark);
   return base.copyWith(
     extensions: <ThemeExtension<dynamic>>[visual],
     pageTransitionsTheme: const PageTransitionsTheme(builders: <TargetPlatform, PageTransitionsBuilder>{
