@@ -1,4 +1,4 @@
-// BERMUDA NXG disc football inside the NEXORA hub: pre-match setup (team / formation / field / ball),
+// BERMUDA NXG disc football inside the ANIX hub: pre-match setup (team / formation / field / ball),
 // the match (engine + painter + HUD) and the online wiring over the hub's NetLink (Supabase move log).
 import 'dart:async';
 import 'dart:math' as math;
@@ -642,8 +642,9 @@ class _BermudaViewState extends State<BermudaView>
     _visible = state == AppLifecycleState.resumed;
     if (!_visible) unawaited(audio.music(false));
     _crowdSync();
-    if (_visible && stage != 'match' && launch.soundOn && !_paused)
+    if (_visible && stage != 'match' && launch.soundOn && !_paused) {
       unawaited(audio.music(true));
+    }
   }
 
   @override
@@ -1159,7 +1160,7 @@ class _BermudaViewState extends State<BermudaView>
                           Icon(Icons.sports_soccer_rounded,
                               size: 15, color: visual.accent),
                           const SizedBox(width: 6),
-                          Text('NEXORA  /  MATCH LOBBY',
+                          Text('ANIX  /  MATCH LOBBY',
                               style: TextStyle(
                                   color: visual.accent,
                                   fontSize: 9,
@@ -1418,60 +1419,29 @@ class _BermudaViewState extends State<BermudaView>
                         const SizedBox(height: 13),
                         sectionTitle(
                             launch.tx('توپ', 'BALL'),
-                            launch.tx('طرح مسابقه', 'Match ball design'),
+                            launch.tx('توپ چرخان انیکس', 'ANIX spinning match ball'),
                             Icons.sports_soccer_outlined),
-                        SizedBox(
-                          height: 98,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            // NB includes the two animated balls b36/b37.
-                            itemCount: kBmBallN.length,
-                            itemBuilder: (BuildContext c, int i) {
-                              final bool on = my.ball == i;
-                              return GestureDetector(
-                                onTap: () => setState(() {
-                                  my.ball = i;
-                                  audio.sfx('ui');
-                                  unawaited(_savePrefs());
-                                }),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 160),
-                                  width: 78,
-                                  margin: const EdgeInsets.only(right: 8),
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(14),
-                                    color: on
-                                        ? visual.accent.withValues(alpha: .12)
-                                        : visual.background
-                                            .withValues(alpha: .48),
-                                    border: Border.all(
-                                        color: on
-                                            ? visual.accent
-                                            : visual.border
-                                                .withValues(alpha: .42),
-                                        width: on ? 1.6 : 1),
-                                  ),
-                                  child: Column(
-                                    children: <Widget>[
-                                      Expanded(
-                                          child: Image.asset(
-                                              '${_a}balls/b$i.webp',
-                                              cacheWidth: 112)),
-                                      Text(kBmBallN[i],
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                              color: on
-                                                  ? visual.text
-                                                  : visual.muted,
-                                              fontSize: 9.5,
-                                              fontWeight: FontWeight.w800)),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
+                        // ANIX ships one match ball: the owner's 16-frame full-rotation sprite.
+                        Container(
+                          height: 74,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            color: visual.accent.withValues(alpha: .10),
+                            border: Border.all(color: visual.accent.withValues(alpha: .7), width: 1.2),
+                          ),
+                          child: Row(
+                            children: <Widget>[
+                              Image.asset('${_a}balls/b0.webp', width: 60, height: 60, cacheWidth: 120),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(kBmBallN[0],
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(color: visual.text, fontSize: 13, fontWeight: FontWeight.w800)),
+                              ),
+                              Icon(Icons.check_circle_rounded, color: visual.accent, size: 20),
+                            ],
                           ),
                         ),
                       ],

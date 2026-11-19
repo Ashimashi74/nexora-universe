@@ -11,7 +11,7 @@ class BmField {
 const List<BmField> kBmFieldsRaw = <BmField>[
   // Owner-provided default pitch (697x1280). Bounds match its red inner
   // frame; kickoff matches the visible centre spot.
-  BmField('nexora_green', 'NEXORA Green', 697, 1280, 25, 672, 81, 1197, 640, 115, 'white'),
+  BmField('nexora_green', 'ANIX Green', 697, 1280, 25, 672, 81, 1197, 640, 115, 'white'),
   BmField('forest', 'Forest', 1086, 1448, 195, 890, 127, 1311, 702, 130, 'wood'),
   BmField('ice', 'Ice', 1086, 1448, 190, 895, 134, 1308, 700, 132, 'ice'),
   BmField('ocean', 'Ocean', 1086, 1448, 191, 897, 108, 1313, 701, 132, 'blue'),
@@ -110,9 +110,10 @@ const List<BmTrail> kBmTR = <BmTrail>[
 
 const List<String> kBmTRN = <String>["Bolt", "Prism", "Wave", "Starlight", "Smoke", "Rainbow", "Neon", "Yin", "Fire", "Blade", "Ghost", "Ember", "Plasma", "Copper Ghost", "Stardust", "Twilight", "Gold Flame", "Thunder", "Cobalt Neon", "Aurora", "Crimson Blade", "Teal Storm", "Royal Ember", "Gold Yin", "Red Smoke", "Gilded Star", "Noir Chrome", "Violet Strike", "Emerald Edge", "Royal Blue Gold", "Crimson Noir", "Blaze Orange", "Aqua Wave", "Sunset Pro", "Elite Cobalt", "Crown Luxury"];
 
-const List<String> kBmBallN = <String>["Bolt", "Prism", "Wave", "Starlight", "Classic", "Rainbow", "Neon", "Yin", "Fire", "Blade", "Ghost", "Ember", "Plasma", "Noir Copper", "Space Modern", "Purple Sky", "Black Lux", "Electron", "Cobalt Gold", "Aurora", "Crimson", "Teal Storm", "Royal Gold", "Gold Rush", "Classic Red", "Luxury", "Noir Chrome", "Violet Strike", "Emerald Edge", "Royal Blue Gold", "Crimson Noir", "Blaze Orange", "Aqua Wave", "Sunset Pro", "Elite Cobalt", "Crown Luxury", "NX Spin", "NX Final"];
+/// ANIX keeps a single match ball: the owner's 16-frame full-rotation sprite (all older static balls removed).
+const List<String> kBmBallN = <String>["ANIX Spin"];
 
-/// Animated sprite-sheet balls (owner GIFs, frames side by side, 256 px each). Collision radius is unchanged:
+/// Animated sprite-sheet balls (owner sprites, frames side by side; frame width = sheet width / frames). Collision radius is unchanged:
 /// they are drawn at the same BR as every other ball.
 class BmAnimBall {
   const BmAnimBall(this.sheet, this.frames, this.frameMs);
@@ -122,8 +123,7 @@ class BmAnimBall {
 }
 
 const Map<int, BmAnimBall> kBmAnimBalls = <int, BmAnimBall>{
-  36: BmAnimBall('assets/games/finger_soccer/nx_ball_a.webp', 12, 130),
-  37: BmAnimBall('assets/games/finger_soccer/nx_ball_b.webp', 9, 120),
+  0: BmAnimBall('assets/games/finger_soccer/nx_ball_test_16.webp', 16, 100),
 };
 
 class BmFa {

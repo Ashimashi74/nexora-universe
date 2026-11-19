@@ -8,8 +8,8 @@ import 'bm_data.dart';
 
 // ---------------------------------------------------------------- constants (game.js line 4-6)
 const double K = 1.27, PR = 63.8, BR = 28.8, STEP = 1 / 240, RC = 70, LMAX = 320;
-// Includes the two animated owner-provided balls (indices 36 and 37).
-const int NB = 38;
+// ANIX: a single match ball (index 0, the 16-frame full-rotation sprite). Visual only; physics unchanged.
+const int NB = 1;
 /// Mini-soccer tuning (redesign-v1.1, owner request): ball mass 1.9 -> 1.805 (x0.95) and a kick factor on the
 /// ball's share of a disc->ball impulse so a disc striking the ball launches it exactly 5% faster than before
 /// (the lighter mass alone gives +1.40%, BKICK supplies the rest). Nothing else changed.
@@ -50,7 +50,7 @@ class BmTeam {
   final String id, cat, name, asset;
 }
 
-/// TEAMS (game.js line 32): id = cat + index, image = assets/teams/<cat><nn>.webp
+/// TEAMS (game.js line 32): id = cat + index, image = `assets/teams/<cat><nn>.webp`
 final List<BmTeam> kBmTeams = () {
   final List<BmTeam> o = <BmTeam>[];
   for (final List<Object> c in kBmCats) {

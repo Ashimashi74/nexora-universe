@@ -8,6 +8,7 @@ import 'package:nexora/games/finger_soccer/ui/bm_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nexora/games/finger_soccer/core/bm_data.dart';
 import 'package:nexora/games/finger_soccer/core/bm_engine.dart';
 
 class _Hooks implements BmHooks {
@@ -46,7 +47,10 @@ void main() {
     expect(BR, 28.8);
     expect(STEP, 1 / 240);
     expect(kBmFields.length, 30);
-    expect(NB, 38);
+    expect(NB, 1);
+    expect(kBmBallN.length, NB);
+    expect(kBmAnimBalls.keys, <int>[0]);
+    expect(kBmAnimBalls[0]!.frames, 16);
     final BmFieldS f = kBmFields.firstWhere((BmFieldS x) => x.id == 'forest');
     expect(f.W, (1086 * FS).roundToDouble());
     expect(f.L, (195 * FS).roundToDouble());
