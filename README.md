@@ -1,125 +1,193 @@
 <p align="center">
-  <img src="docs/media/banner.png" alt="ANIX" width="100%"/>
+  <img src="docs/media/banner.png" alt="ANIX — your universe, your identity, your experience" width="100%"/>
 </p>
+
+<h1 align="center">ANIX</h1>
 
 <p align="center">
   <b>YOUR UNIVERSE. YOUR IDENTITY. YOUR EXPERIENCE.</b><br/>
-  A cosmic gaming + social universe for Android — 9 online games, chat & calls, posts & stories, tournaments, and ORACLE, a robot buddy with a (very) big personality.
+  A cosmic gaming + social universe for Android: <b>16 games</b> online and vs. bots, <b>voice rooms</b> where friends talk and then play together,
+  chat & calls, posts & stories, ranked ladders, tournaments — and ORACLE, a robot buddy with a (very) big personality.
 </p>
 
 <p align="center">
-  <a href="https://github.com/Ashimashi74/nexora-universe/releases"><img alt="Download APK" src="https://img.shields.io/badge/Download-APK-ff3cac?style=for-the-badge&logo=android&logoColor=white"/></a>
+  <a href="https://github.com/Ashimashi74/nexora-universe/releases/latest"><img alt="Download APK" src="https://img.shields.io/badge/Download-APK-ff3cac?style=for-the-badge&logo=android&logoColor=white"/></a>
+  <a href="https://github.com/Ashimashi74/nexora-universe/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Ashimashi74/nexora-universe?style=for-the-badge&label=latest&color=8b3dff"/></a>
+</p>
+<p align="center">
   <a href="https://github.com/Ashimashi74/nexora-universe/actions/workflows/android.yml"><img alt="Android build" src="https://github.com/Ashimashi74/nexora-universe/actions/workflows/android.yml/badge.svg?branch=main"/></a>
   <img alt="Flutter" src="https://img.shields.io/badge/Flutter-3.50-02569B?logo=flutter&logoColor=white"/>
   <img alt="Supabase" src="https://img.shields.io/badge/Supabase-Postgres%20%7C%20Realtime%20%7C%20Edge-3ECF8E?logo=supabase&logoColor=white"/>
-  <img alt="LiveKit" src="https://img.shields.io/badge/LiveKit-voice%20%26%20video-7B61FF"/>
-  <img alt="Platform" src="https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white"/>
-  <img alt="Language" src="https://img.shields.io/badge/UI-فارسی%20%7C%20English-orange"/>
+  <img alt="LiveKit" src="https://img.shields.io/badge/LiveKit-voice%20rooms%20%26%20calls-7B61FF"/>
+  <img alt="Android" src="https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white"/>
+  <img alt="Languages" src="https://img.shields.io/badge/UI-فارسی%20%7C%20English-orange"/>
+</p>
+
+<p align="center">
+  <a href="#-download">Download</a> ·
+  <a href="#-whats-inside">Features</a> ·
+  <a href="#-rooms--talk-first-then-play">Rooms</a> ·
+  <a href="#-finger-soccer--club-national-luxury">Finger Soccer</a> ·
+  <a href="#-accounts">Accounts</a> ·
+  <a href="#-tech">Tech</a> ·
+  <a href="#-فارسی">فارسی</a>
 </p>
 
 ---
 
 ## 📥 Download
 
-Grab the newest **`ANIX-universal.apk`** from **[Releases](https://github.com/Ashimashi74/nexora-universe/releases)** (look for the `anix-*` tags; `ANIX-arm64-v8a.apk` is smaller and fits most phones).
+**➡️ [Latest release — ANIX-universal.apk](https://github.com/Ashimashi74/nexora-universe/releases/latest)**
 
-1. Download the APK on your phone.
-2. Allow *Install unknown apps* for your browser / file manager when Android asks.
-3. Install and open. Later builds update in place, and the app tells you when a new `anix-*` build is out.
+| File | For |
+|---|---|
+| `ANIX-universal.apk` | every Android phone (7.0+) |
+| `ANIX-arm64-v8a.apk` | smaller download for most modern phones |
 
-<div dir="rtl">
+1. Open the [Releases page](https://github.com/Ashimashi74/nexora-universe/releases/latest) on your phone and download the APK.
+2. Allow *Install unknown apps* for your browser or file manager when Android asks.
+3. Install and open. Every new build is signed with the same key, so it **updates in place** — and the app tells you when a new version is out.
 
-**فارسی:** آخرین فایل `ANIX-universal.apk` را از بخش [Releases](https://github.com/Ashimashi74/nexora-universe/releases) دانلود و نصب کن. اپ خودش نسخه‌های جدید را خبر می‌دهد.
+Every push to `main` is analysed, tested and built by CI; release builds are tagged `anix-v1.0.<build>` and marked **Latest**.
 
-</div>
+## ✨ What's inside
 
----
+| | |
+|---|---|
+| 🎙️ **Rooms** | Voice stage + text chat + members. Unlimited speakers and listeners. The room manager picks a game, ticks the players, and everyone comes back to the room after the match. |
+| 🎮 **16 games** | 9 classics and 7 arcade games — offline vs. smart bots or online against real people, with reconnect & resync. |
+| ⚡ **Quick match** | One tap to find an opponent: fair first-come pairing, no ghost seats, safe re-queue and reconnect. |
+| 🏆 **Ranked & tournaments** | Per-game ELO ladders and global XP ranks, trophies, brackets up to 64 players with check-in, auto rounds and server-side prizes. |
+| 👤 **Accounts** | Username + password (email optional), stay signed in, profile photo from your gallery, follow / unfollow with follower counts. |
+| 💬 **Social** | 1:1 chats, groups and channels, voice & video calls, posts, 24 h stories, likes, comments. |
+| 🤖 **ORACLE** | A cheeky robot guide: tours, tutorials, reactions to your real wins and losses — famous for its «جاااااان!». |
+| 🔊 **Sound** | Music, in-game sounds and UI effects with separate switches and volume sliders. |
+| 🌐 **Bilingual** | Full Persian (RTL) and English UI. |
 
-## 🎮 Games
+## 🎙️ Rooms — talk first, then play
 
-Every game runs offline against a bot and **online** against real players (one shared deterministic core per game, moves sequenced by Postgres, reconnect & resync by replay).
+Rooms are built around conversation:
 
-| | Game | Highlights |
-|---|---|---|
-| ⚽ | **Finger Soccer (گل‌کوچیک)** | Flick-to-shoot discs, 6 formations, team & ball picks, golden goal, 15 s online turns, animated GIF balls |
-| 🎯 | **Carrom** | Striker on the baseline, queen + cover rule, fouls, deterministic physics replay online |
-| 🎱 | **8-Ball Billiards** | Groups, ball-in-hand fouls, cue skins, server-checked results |
-| 🎲 | **Backgammon (تخته‌نرد)** | Bar, bearing off, gammons & backgammons, NX2 boards |
-| 🟡 | **Ludo** | Safe stars, captures, extra turns on 6, 2–4 players |
-| 🐍 | **Snakes & Ladders** | Light ladders, exact 100, 2–4 players |
-| 🃏 | **NX Cards** (UNO-style) | Skip / reverse / +2 / wild, the **NX!** call |
-| ❓ | **Quiz** | 10 timed questions, speed bonus, Persian question banks |
-| 🕵️ | **Mafia** | 6–10 players online, narrator mode for parties, smart bots |
+- **Voice stage** (LiveKit): managers and speakers talk, listeners listen; speaking rings light up live. Mute or promote anyone from the member list.
+- **Chat** with a scrolling history, realtime delivery and the input pinned to the bottom; **members** shown with small round avatars — tap anyone to see their card and follow them.
+- **Games tab**: the manager picks any online game and ticks who plays — up to **12** for Mafia and party games, up to **6** for team games like Finger Soccer.
+- **Pre-game line-up**: each picked player chooses a team and formation; the manager picks the pitch and the ball. Then the match starts for everyone at once, and when it ends **everyone is back in the room**.
+- No caps on the audience: speakers and listeners are unlimited.
 
-## 🤖 ORACLE — the robot with attitude
+## ⚽ Finger Soccer — Club, National, Luxury
 
-<img align="right" src="docs/media/oracle.png" width="150" alt="ORACLE"/>
+The flagship game: flick discs, bend shots, score.
 
-- Cute, funny, playful, a bit sarcastic — and famous for its stretched **«جاااااااااان!»**
-- Knows **39 players** by name (typos, Latin spellings, ZWNJ & Arabic-letter variants handled) with their verbatim personalised lines.
-- Random login greetings, spontaneous lines with cooldowns and no repeats, reactions to **real** wins and losses.
-- Funny-but-accurate tutorials for each game mechanic, and a **first-run guided tour** with spotlight coach marks for every section.
-- Offline Persian/English intent brain (navigation, rules, stats, settings) + the `nx-oracle` Edge Function for open conversation (provider keys in Supabase Vault, never in the app).
-- **Admin-editable**: players, aliases, lines, greetings, tutorials, tour texts, frequencies and cooldowns live in Supabase (`nx_oracle_persona`).
+- **126 teams in three categories** — **Club** (40), **National** (31) and **Luxury** (55; every Luxury set is rated 10/10). Each team carries real **power** and **accuracy** stats that change how hard and how straight it shoots.
+- **36 pitches**, several balls, 6 formations; colliders match the artwork exactly.
+- **1v1, 2v2 and 3v3** online: seats alternate sides and turns **rotate between teammates** each time your side gets the ball.
+- Golden goal, timed or first-to-N matches, 15 s online turns, goal announcer and crowd.
 
-## 🌌 The universe
+## 🎮 All games
 
-- **Hub & dock** — cosmic neon menus, big centre GAME button, sliding pages.
-- **Rooms & matchmaking** — quick match, private/public rooms by code, invites, presence, forfeits.
-- **Tournaments** — up to 64 players, approvals & invite codes, check-in reminders, automatic draws and rounds, server-side results and prize payouts.
-- **Orbit Network** — 1:1, groups and channels, read receipts, voice & video calls (LiveKit).
-- **Nova Gallery** — posts, 24 h stories, likes, comments, hashtags, follows.
-- **Personal Orbit** — avatar & wardrobe, personal space, missions, achievements, stats.
-- **Exchange** — transparent coin shop (no gambling), rarity tiers, server-validated prices.
+| | Game | Online | Highlights |
+|---|---|---|---|
+| ⚽ | **Finger Soccer** | 2–6 | Club / National / Luxury teams, 3v3 rotation, 36 pitches |
+| 🎯 | **Carrom** | 2–6 | Queen + cover rule, fouls, deterministic replay |
+| 🎱 | **Billiards** | 2 | Groups, ball-in-hand, cue skins |
+| 🎲 | **Backgammon (تخته‌نرد)** | 2 | Bar, bearing off, gammons & backgammons |
+| 🟡 | **Ludo** | 2–4 | Safe stars, captures, extra turn on 6 |
+| 🐍 | **Snakes & Ladders** | 2–4 | Exact 100 to win |
+| 🃏 | **NX Cards** (UNO-style) | 2–4 | Skip / reverse / +2 / wild, the **NX!** call |
+| ❓ | **Quiz** | 2–21 | Timed questions, speed bonus, Persian banks |
+| 🕵️ | **Mafia** | 6–12 | Godfather, doctor, detective, sniper; narrator mode; smart bots |
+| 🏎️ | **Kart Racing** | 2–4 | Arcade racing |
+| 🏃 | **Obstacle Race** | 2–4 | Party run |
+| 💣 | **Bomb Arena** | 2–4 | Last one standing |
+| 🎱 | **Pool 8** | 2 | Quick 8-ball |
+| ⛳ | **Mini Golf** | 2–4 | Trick holes |
+| 🏀 | **Basketball Battle** | 2 | Shoot-out |
+| 🕶️ | **Spy Mafia** | 3–12 | Find the spy before they find the location |
 
-## 🧰 Tech stack
+## 👤 Accounts
+
+- **Sign up** with a **username and password**; email is optional (only for recovery and never shown to anyone).
+- **Log in** with your **username or email** + password. No codes, no waiting for emails.
+- You **stay signed in** until you log out; after logging out the app remembers your last username, and password managers can save and fill your login.
+- Usernames are looked up server-side by the `nx-login` Edge Function, so no one's email ever reaches another phone.
+- **Profile photo** from your gallery (stored in your own folder, protected by storage policies) and **follow / unfollow** with live follower and following counts — private profiles get a follow request instead.
+
+## 🧰 Tech
 
 | Layer | What |
 |---|---|
-| App | **Flutter 3.50** (Dart 3.14), Riverpod, go_router, CustomPainter/Ticker game loops (Flame available) |
-| Backend | **Supabase only** — Auth, Postgres (RLS on every table, SECURITY DEFINER RPCs), Realtime, Storage, pg_cron, Vault, Edge Functions (Deno) |
-| Real-time voice/video | **LiveKit** (short-lived tokens from the `nx-call-token` Edge Function) |
-| CI/CD | GitHub Actions: analyze → tests → split-per-ABI + universal APKs → install checks → GitHub release |
+| App | **Flutter 3.50** (Dart), Riverpod, go_router, CustomPainter/Ticker game loops, audioplayers |
+| Backend | **Supabase** — Auth, Postgres with RLS on every table and SECURITY DEFINER RPCs, Realtime, Storage, pg_cron, Vault, Edge Functions (Deno) |
+| Games backend | a second Supabase project for rooms, matches, matchmaking, ratings and tournaments, accepting the main project's tokens |
+| Voice | **LiveKit** — short-lived tokens from the `nx-call-token` Edge Function (calls and room stages) |
+| CI/CD | GitHub Actions: analyze → tests → signed per-ABI + universal APKs → GitHub Release (`[release]` in the commit message) |
 
-No other servers — game state, tournaments and economy are server-authoritative inside Postgres.
+Game state, matchmaking, ratings and the economy are server-authoritative inside Postgres; there are no other servers.
 
-## 🛠️ Build from source
+<details>
+<summary><b>Build from source</b></summary>
 
 ```bash
-git clone -b main https://github.com/Ashimashi74/nexora-universe.git
+git clone https://github.com/Ashimashi74/nexora-universe.git
 cd nexora-universe
 flutter create --platforms=android --org com.nexora --project-name nexora .   # generates android/ (CI does the same)
 flutter pub get
 flutter analyze && flutter test
 flutter build apk --release \
-  --dart-define=SUPABASE_URL=https://<your-project>.supabase.co \
+  --dart-define=SUPABASE_URL=https://<project>.supabase.co \
   --dart-define=SUPABASE_ANON_KEY=<anon key> \
-  --dart-define=LIVEKIT_URL=wss://<your-livekit-host>
+  --dart-define=GAMES_SUPABASE_URL=https://<games-project>.supabase.co \
+  --dart-define=GAMES_SUPABASE_ANON_KEY=<games anon key> \
+  --dart-define=LIVEKIT_URL=wss://<livekit-host>
 ```
 
-Without the `--dart-define`s the app runs fully offline (bots, local profile). Server setup: [`docs/ONLINE_SETUP.md`](docs/ONLINE_SETUP.md); SQL in [`supabase/migrations`](supabase/migrations), Edge Functions in [`supabase/functions`](supabase/functions).
-
-## 🗂️ Project structure
+Without the `--dart-define`s the app runs fully offline (bots, local profile). SQL lives in [`supabase/migrations`](supabase/migrations) (accounts & social) and [`supabase/games/migrations`](supabase/games/migrations) (rooms & games); Edge Functions in [`supabase/functions`](supabase/functions).
 
 ```
 lib/
-  app/                 app shell, router, global overlays (ORACLE buddy, update banner)
-  core/                backend gateway, online services, profile & economy, settings, theme, NX2 UI kit, updater
-  features/tournaments tournament domain (bracket mirror), data, pages, organiser tools
-  games/               one folder per game: pure-Dart core + UI + bots (+ online link)
-  worlds/              hub, arcade, rooms, social hub, orbit network, nova gallery, personal orbit,
-                       exchange, settings, oracle_core (brain + persona + guided tour)
-supabase/
-  migrations/          social/auth project schema (nx_*), tournaments engine, owner tools, ORACLE persona
-  games/migrations/    games project (rooms, matches, matchmaking, tournaments) — backend split in progress
-  functions/           nx-oracle (AI), nx-call-token (LiveKit)
-test/                  unit + widget tests (games, worlds, ORACLE persona, updater, tournaments)
-docs/                  progress, decisions, online setup, release notes
+  app/        shell, router, overlays        core/     backend, online, profile, settings, audio, UI kit
+  games/      one folder per game            worlds/   hub, rooms, arcade, social, orbit, nova, settings, ORACLE
+  features/   tournaments
+supabase/     migrations · games/migrations · functions (nx-login, nx-call-token, nx-oracle)
+test/         unit + widget tests (games, rooms, auth rules, assets, ORACLE, tournaments)
 ```
+</details>
 
-## 📜 Notes
+---
 
-- ANIX is built from the `anix-release` branch; CI publishes `anix-<build>` prereleases (never "latest"). The Android package id stays `com.nexora.nexora` so new builds install over existing ones signed with the same key.
-- Licensed national pucks/logos are never used — only original skins. "NX Cards" is an UNO-style game, not affiliated with UNO.
+<div dir="rtl">
 
-<p align="center"><sub>Made with 💜 for the گل‌کوچیک crew · جاااااااااان!</sub></p>
+## 🇮🇷 فارسی
+
+<p align="center"><b>جهان تو. هویت تو. تجربه‌ی تو.</b></p>
+
+**ANIX** یک جهان کیهانی بازی و شبکه‌ی اجتماعی برای اندروید است: **۱۶ بازی** آنلاین و با ربات، **اتاق‌های صوتی** که دوستان اول در آن گپ می‌زنند و بعد با هم بازی می‌کنند، چت و تماس، پست و استوری، رده‌بندی و تورنمنت — و «اوراکل»، ربات شیطون و بامزه‌ای که همه‌جا همراهت است.
+
+### 📥 دانلود
+
+**➡️ [آخرین نسخه — فایل ANIX-universal.apk](https://github.com/Ashimashi74/nexora-universe/releases/latest)**
+
+۱. صفحه‌ی [Releases](https://github.com/Ashimashi74/nexora-universe/releases/latest) را روی گوشی باز کن و فایل APK را بگیر (`ANIX-arm64-v8a.apk` کم‌حجم‌تر است و روی بیشتر گوشی‌ها کار می‌کند).
+۲. وقتی اندروید پرسید، اجازه‌ی «نصب برنامه‌های ناشناس» را بده.
+۳. نصب کن. نسخه‌های بعدی روی همین نصب می‌شوند و اپ خودش خبر می‌دهد.
+
+### ✨ امکانات
+
+- **🎙️ اتاق‌ها:** صحنه‌ی صدا، گفتگوی متنی با پیام‌های زنده و کادر نوشتن پایین صفحه، فهرست اعضا با آواتار گرد. سخنران و شنونده **بی‌محدودیت**. مدیر اتاق بازی را انتخاب می‌کند، بازیکن‌ها را تیک می‌زند؛ هر بازیکن تیم و چیدمانش را می‌چیند و مدیر زمین و توپ را؛ بعد از بازی همه به اتاق برمی‌گردند. مافیا و بازی‌های گروهی تا **۱۲ نفر**، بازی‌های تیمی مثل فوتبال انگشتی تا **۶ نفر**.
+- **⚽ فوتبال انگشتی (گل‌کوچیک):** ۱۲۶ تیم در سه دسته‌ی **باشگاهی** (۴۰)، **ملی** (۳۱) و **لوکس** (۵۵؛ همه با امتیاز ۱۰ از ۱۰) با آمار واقعی قدرت و دقت شوت؛ ۳۶ زمین، چند توپ و ۶ چیدمان؛ بازی **۱ به ۱، ۲ به ۲ و ۳ به ۳** با چرخش نوبت بین هم‌تیمی‌ها.
+- **🎮 ۱۶ بازی:** تخته‌نرد، کرم، بیلیارد، لودو، مار و پله، NX Cards، مسابقه‌ی اطلاعات عمومی، مافیا، و هفت بازی آرکید — آفلاین با ربات یا آنلاین با آدم‌های واقعی.
+- **⚡ بازی سریع:** پیدا کردن حریف با یک لمس؛ جفت‌شدن منصفانه، بدون صندلی‌های «روح»، اتصال دوباره‌ی امن.
+- **🏆 رده‌بندی و تورنمنت:** امتیاز ELO برای هر بازی، رتبه‌ی کلی، جام‌ها، تورنمنت تا ۶۴ نفر با جایزه‌ی سمت سرور.
+- **👤 حساب کاربری:** ثبت‌نام با **نام کاربری و رمز** (ایمیل اختیاری)، ورود با نام کاربری یا ایمیل — **بدون کد**؛ ورود ماندگار، به‌خاطر سپردن آخرین نام کاربری و پر شدن خودکار رمز. عکس پروفایل از گالری و **دنبال کردن / لغو دنبال** با شمار دنبال‌کننده‌ها.
+- **💬 شبکه‌ی اجتماعی:** چت، گروه و کانال، تماس صوتی و تصویری، پست و استوری.
+- **🔊 صدا:** موسیقی، صداهای بازی و جلوه‌های صوتی با کلید و ولوم جداگانه.
+
+### 🧰 فناوری
+
+Flutter برای اپ، Supabase (Postgres با RLS، Realtime، Storage و Edge Functions) برای بک‌اند، LiveKit برای صدا، و GitHub Actions برای ساخت و انتشار خودکار.
+
+</div>
+
+---
+
+<p align="center"><sub>Made with 💜 for the گل‌کوچیک crew · جاااااااااان! · Original art only — no licensed logos; “NX Cards” is an UNO-style game, not affiliated with UNO.</sub></p>
