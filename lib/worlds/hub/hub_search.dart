@@ -46,6 +46,12 @@ class HubSearchDelegate extends SearchDelegate<void> {
           Icons.emoji_events_rounded,
           NxColors.gold,
           '/world/personal_orbit'),
+      _Hit(
+          isFa ? 'صندوق مسابقات' : 'Tournament inbox',
+          isFa ? 'دعوت‌ها و اعلان‌های مسابقات' : 'Invites and tournament alerts',
+          Icons.inbox_rounded,
+          NxColors.electricBlue,
+          '/tournaments/inbox'),
     ];
     return hits;
   }
