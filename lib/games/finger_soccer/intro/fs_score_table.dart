@@ -2,7 +2,10 @@
 // final whistle over the dusk stadium: the title, one bevelled row per side (winner first: lime row with a trophy
 // tab, the other side yellow), each with its crest, name and a grey score pill, and "N ثانیه تا بازگشت به جمع"
 // counting down (20 s in the recordings) before the host's own result screen takes over.
+// v6.1: one row per player (team games: every seat, with its side's goals) showing the player's avatar like the
+// reference; the crest is the fallback when an avatar is unknown.
 import 'package:flutter/material.dart';
+import 'package:nexora/core/widgets/user_avatar.dart';
 
 import 'fs_intro_data.dart';
 import 'fs_intro_ui.dart';
@@ -11,9 +14,15 @@ import 'fs_intro_ui.dart';
 const int kFsScoreTableSeconds = 20;
 
 class FsScoreRow {
-  const FsScoreRow({required this.name, required this.score, required this.crest, this.winner = false});
+  const FsScoreRow(
+      {required this.name, required this.score, required this.crest, this.winner = false, this.avatar});
   final String name;
+
+  /// Match points shown in the grey pill (the side's goals).
   final int score;
+
+  /// Player avatar: an ANIX avatar id or a photo url (null: the crest is drawn instead).
+  final String? avatar;
 
   /// Asset of the side's crest (drawn in the round avatar slot).
   final String crest;
@@ -47,7 +56,7 @@ class FsScoreTable extends StatelessWidget {
                 ])),
           ),
         ),
-        for (int i = 0; i < rows.length; i++) ..._row(rows[i], 98.0 + i * 84),
+        for (int i = 0; i < rows.length; i++) ..._row(rows[i], 98.0 + i * (rows.length > 4 ? 72 : 84)),
         Positioned(
           left: 0,
           right: 0,
@@ -55,6 +64,7 @@ class FsScoreTable extends StatelessWidget {
           child: Center(
             child: Text(
               fa ? '${fsFa(seconds)} ثانیه تا بازگشت به جمع' : '$seconds s until back to the room',
+              textDirection: fa ? TextDirection.rtl : TextDirection.ltr,
               style: fsText(19, weight: FontWeight.w700, shadows: const <Shadow>[
                 Shadow(color: Color(0xAA000000), blurRadius: 4, offset: Offset(0, 1)),
               ]),
@@ -110,10 +120,12 @@ class FsScoreTable extends StatelessWidget {
                 height: 40,
                 padding: const EdgeInsets.all(2),
                 decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF1C2038)),
-                child: ClipOval(
-                  child: Image.asset(r.crest, fit: BoxFit.contain, cacheWidth: 96,
-                      errorBuilder: (_, __, ___) => const SizedBox()),
-                ),
+                child: r.avatar != null
+                    ? NxUserAvatar(avatar: r.avatar, name: r.name, size: 36)
+                    : ClipOval(
+                        child: Image.asset(r.crest, fit: BoxFit.contain, cacheWidth: 96,
+                            errorBuilder: (_, __, ___) => const SizedBox()),
+                      ),
               ),
               const SizedBox(width: 8),
               Expanded(

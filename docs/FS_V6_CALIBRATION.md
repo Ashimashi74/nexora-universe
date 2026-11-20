@@ -38,3 +38,20 @@ decay 0.98 /s (matches), disc felt unchanged since v4.
 
 Tests: `test/games/finger_soccer_v6_test.dart` (power-10 ball speed 4.57 +- 0.12 w/s, power scale, classic ball,
 goal hold + glide, mirrored-phone sync, score table).
+
+## v6.1: HUD, one-minute toast, score table (from recording B frames 0-66 s)
+
+| Reference | ANIX |
+|---|---|
+| Score banner: white score plates either side of a yellow hexagonal clock on a dark strip, names beside it | `BmScoreBanner` (bm_view.dart) in the existing scoreboard; team chips keep name + orange turn bar (crest dropped on narrow chips, it is on every disc) |
+| Last minute: banner pulses yellow -> red (01:00 yellow, 00:58 red, 00:56 yellow) | `bmClockRed`: 4 s pulse over the last 60 s, solid red once the time is up and in golden goal |
+| Clock counts down 01:00 -> 00:00 | kept the ANIX count-up clock (owner decision v3), now `mm:ss` with Persian digits in Farsi |
+| "یک دقیقه تا پایان بازی": dark rounded pill beside the bar handle, ~3 s | `BmMinuteToast`, `kBmMinuteToastSeconds = 3`, fired once when the clock enters the last minute (not on a rejoin inside it, not in golden goal) |
+| Score table rows: player avatar, name, grey points pill (room points, e.g. 175 / 0) | one row per player (team games: every seat) with the player's avatar (ANIX portrait or photo; online avatars sent on the live channel `fs_av`), and the match points = the side's goals (ANIX has no room points) |
+
+Fixed on the way: the score table never appeared in a running match (it was a `build()` child changed only from the
+ticker); the formation button no longer sits over the table; English countdown line keeps LTR order; the classic ball
+keeps its patches readable while rolling (one light blur tap instead of up to three).
+Tests: `test/games/finger_soccer_v61_test.dart` (clock colour, banner, bot match toast + table rows with avatars, local
+match, online 1v1 and 3v3 rows + avatar exchange). Render shots: `final/finger_soccer_last_minute.png`,
+`final/finger_soccer_score_table.png`, `intro/score_table.png`.

@@ -115,7 +115,21 @@ void main() {
     await shoot(tester, 'final/finger_soccer_motion.png');
     await _run(tester, kMatchMs);
     await shoot(tester, 'final/finger_soccer_midmatch.png');
+    // v6.1: the last minute (score banner pulsing red + "one minute left" toast), then the end-of-match table.
+    final dynamic st = tester.state(find.byType(BermudaView));
+    final BmEngine me = st.matchEngine as BmEngine;
+    me.mleft = 60.4;
+    await _run(tester, 2400);
+    await shoot(tester, 'final/finger_soccer_last_minute.png');
+    me.score = <int>[2, 1];
+    me.end();
+    await _run(tester, 2200);
+    await settle(tester, frames: 6);
+    await shoot(tester, 'final/finger_soccer_score_table.png');
     expect(tester.takeException(), isNull);
+    // the host's result overlay follows the 20 s table (GameResult.holdMs)
+    await tester.pump(const Duration(seconds: 21));
+    await tester.pump(const Duration(milliseconds: 100));
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 1));
   });

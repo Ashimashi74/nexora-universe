@@ -107,6 +107,7 @@ void main() {
     await tester.pumpWidget(_app(_team()));
     await settle(tester, frames: 6);
     final BuildContext ctx = tester.element(find.byType(FsTeamSelect));
+    // ignore: use_build_context_synchronously
     showFsExitConfirm(ctx, online: true);
     await settle(tester, frames: 20);
     await shoot(tester, 'intro/exit_confirm.png');
@@ -118,8 +119,8 @@ void main() {
     await shot(
         tester,
         const FsScoreTable(seconds: 16, topLane: 50, rows: <FsScoreRow>[
-          FsScoreRow(name: 'HIIS', score: 3, crest: 'assets/games/bermuda/discs/germany.webp', winner: true),
-          FsScoreRow(name: 'ربات', score: 1, crest: 'assets/games/bermuda/discs/germany.webp'),
+          FsScoreRow(name: 'HIIS', score: 3, crest: 'assets/games/bermuda/discs/germany.webp', winner: true, avatar: '07-star-fox'),
+          FsScoreRow(name: 'ربات', score: 1, crest: 'assets/games/bermuda/discs/germany.webp', avatar: '04-iron-warden'),
         ]),
         'score_table');
     expect(find.text('جدول امتیازات'), findsOneWidget);

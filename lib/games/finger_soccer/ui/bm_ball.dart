@@ -172,7 +172,9 @@ class BmBallRenderer {
     for (int i = 0; i < 9; i++) {
       dm += (r[i] - rp[i]).abs();
     }
-    final int taps = dm > .16 ? 3 : dm > .035 ? 2 : 1;
+    // v6.1: the classic ball keeps its black / white patches readable while it rolls (the reference ball is crisp):
+    // at most one light blur tap instead of up to three heavy ones.
+    final int taps = flat ? (dm > .06 ? 2 : 1) : (dm > .16 ? 3 : dm > .035 ? 2 : 1);
     for (int i = 0; i < 9; i++) {
       _rm[i] = (r[i] + rp[i]) * .5;
     }
@@ -195,7 +197,7 @@ class BmBallRenderer {
         double rr = _sm[0], gg = _sm[1], bb = _sm[2];
         if (taps > 1) {
           _samp(t, _rm, px, py, pz, k);
-          final double w = taps == 3 ? .34 : .45;
+          final double w = flat ? .22 : (taps == 3 ? .34 : .45);
           rr = rr * (1 - w) + _sm[0] * w;
           gg = gg * (1 - w) + _sm[1] * w;
           bb = bb * (1 - w) + _sm[2] * w;
