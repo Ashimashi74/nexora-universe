@@ -134,3 +134,22 @@ No extra server: everything runs in the existing Supabase project (Postgres RPCs
 - Remaining for the split: port rooms/matches/matchmaking + the tournaments engine (~100 SQL functions) to the games project with
   shims (`nx_perm` instead of nx_staff/is_admin), then switch the app's rooms/matches/tournaments calls to a second Supabase client
   (`accessToken` = auth session) in one release.
+
+## Finger soccer — reference physics v2, intro merge, in-match formation change (2026-11-20, branch `work/fs-ref-physics`)
+- Merged `work/fs-intro` (splash, team select, formation select, shop, game bar) into `work/fs-ref-physics`. Conflict in
+  `ui/bm_view.dart` (offline config) resolved to the intro's pick; `intro/fs_intro_data.dart` adapted to the
+  `BmFormation` list (9 shapes, slots [x, depth of half] -> the intro's [x, 0..0.5]). The match render test now drives
+  the intro (team -> formation Nish -> match) and also opens the in-match picker; the intro render test is unchanged.
+- Physics calibration v2 (`core/bm_engine.dart`, constants commented in place; test: `test/games/finger_soccer_test.dart`):
+  frame-by-frame template tracking of the reference recordings (15 fps, 1 px = 2.88 world) — 3 clean shot glides
+  (Japan, power 2) and 4 discs struck by another body, positions fitted with the engine's own friction law.
+  Before -> after: PF1 280 -> 45 (123 -> 20 px/s^2), PF2 5.0 -> 3.5 /s, launch glide .22 s -> 0, kBmLaunch 1.87 -> 2.04
+  (distance-matched so a shot disc still stops where the reference shots stop), kBmDiscVMax 4200 -> 4400 (above the
+  strongest launch), ball striking a disc: disc impulse 1/HV -> full (kBmBallHitDiscK = 1) and no PCAP cap on a disc
+  the ball hits, disc<->disc struck-disc impulse .85 -> 1 (kBmStruckDiscK). Ball rolling friction unchanged
+  (kBmBallF0 23, kBmBallDrag 1.08: the ball could not be tracked reliably next to the white Japan discs).
+  Team power: measured speeds are divided by each side's reference power (`kBmRefPower`, `BmEngine.refStrikeOf`);
+  ANIX team stats unchanged. Contract row: `supabase/games/migrations/20261120030000_physics_reference_v4.sql`
+  (not applied live).
+- In-match "تغییر ترکیب" button (bottom left, above the game bar handle) opens the 3 x 3 picker (`BmFormationPicker`);
+  rule in DECISIONS D11; engine API `canReformNow(side)` / `changeForm(side, fi)`; online move `'form'` (live + replay).

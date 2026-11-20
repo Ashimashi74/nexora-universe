@@ -573,6 +573,9 @@ class _BermudaViewState extends State<BermudaView>
       case 'timeout':
         e.remoteTimeout(d);
         break;
+      case 'form':
+        applyFormationChange((d['side'] as num).toInt(), (d['form'] as num).toInt(), quiet: true);
+        break;
     }
   }
 
@@ -609,6 +612,9 @@ class _BermudaViewState extends State<BermudaView>
         if (!ng) e.score[t]++;
         e.reset(ng ? e.turn : 1 - t);
         break;
+      case 'form':
+        e.changeForm((d['side'] as num).toInt(), (d['form'] as num).toInt());
+        break;
       case 'timeout':
         final num? s = d['seat'] as num?;
         if (s == null || e.ct(e.turn) == s.toInt()) {
@@ -628,6 +634,51 @@ class _BermudaViewState extends State<BermudaView>
     stage = 'waiting';
     _maybeStartOnline();
     setState(() {});
+  }
+
+  // ------------------------------------------------------------------ in-match formation change
+  /// Global side whose formation the button changes: online this phone's side, vs bot the player's side (0),
+  /// pass-and-play the side whose turn it is.
+  int get _reformSide => online ? _mySide : (launch.vsBot ? 0 : e.ct(e.turn));
+
+  /// Opens the 3 x 3 formation picker during the match. Rule (docs/DECISIONS.md D11): the new shape applies at once
+  /// when it is that side's kickoff shot (its turn, nothing shot since the kickoff), otherwise from the next kickoff.
+  /// Online the pick is a logged 'form' move, so the other phone applies the same change in the same order.
+  Future<void> _changeFormation() async {
+    if (stage != 'match' || e.phase == 'over' || _reported) return;
+    final int side = _reformSide;
+    audio.sfx('ui');
+    final int? fi = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: const Color(0xF0101418),
+      isScrollControlled: true,
+      builder: (BuildContext ctx) => BmFormationPicker(
+        title: launch.tx('تغییر ترکیب', 'Change formation'),
+        hint: e.canReformNow(side)
+            ? launch.tx('همین الان اعمال می‌شود', 'Applies now')
+            : launch.tx('از شروع بعدی اعمال می‌شود', 'Applies from the next kickoff'),
+        current: e.form[side],
+        selectLabel: launch.tx('انتخاب', 'Select'),
+        selectedLabel: launch.tx('انتخاب شده', 'Selected'),
+      ),
+    );
+    if (fi == null || !mounted || stage != 'match' || e.phase == 'over') return;
+    // Never during a goal pause: the receiving phone applies logged moves only once play resumes (after the kickoff
+    // reset), so the sender waits for the same point and both phones see the same kickoff state.
+    await _waitPlayable();
+    if (_disposed || stage != 'match' || e.phase == 'over') return;
+    applyFormationChange(side, fi, send: true);
+  }
+
+  /// Applies a formation change (local pick or a logged 'form' move) and, for a local pick online, logs it.
+  void applyFormationChange(int side, int fi, {bool send = false, bool quiet = false}) {
+    final bool now = e.changeForm(side, fi);
+    if (send) launch.net?.send(<String, dynamic>{'a': 'form', 'side': side, 'form': fi});
+    if (!quiet) {
+      toast(now ? launch.tx('ترکیب عوض شد', 'Formation changed') : launch.tx('ترکیب از شروع بعدی', 'New formation at next kickoff'),
+          false);
+    }
+    if (mounted) setState(() {});
   }
 
   // ------------------------------------------------------------------ pause (flow.js pause())
@@ -791,6 +842,12 @@ class _BermudaViewState extends State<BermudaView>
             left: 0,
             bottom: 12 + MediaQuery.paddingOf(context).bottom,
             child: FsBarHandle(players: cfg?.names.length ?? 2, onTap: _pause),
+          ),
+          // Reference in-match "تغییر ترکیب" button (above the game bar handle, bottom left).
+          Positioned(
+            left: 6,
+            bottom: 12 + MediaQuery.paddingOf(context).bottom + 48,
+            child: BmChangeFormButton(label: launch.tx('تغییر ترکیب', 'Formation'), onTap: _changeFormation),
           ),
         ]),
       ),
@@ -1749,6 +1806,93 @@ class _BermudaViewState extends State<BermudaView>
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The reference's in-match "تغییر ترکیب" button: a dark pill with the label and a small green pitch icon.
+class BmChangeFormButton extends StatelessWidget {
+  const BmChangeFormButton({super.key, required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xE61C1E22),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.white24),
+            boxShadow: const <BoxShadow>[BoxShadow(color: Color(0x66000000), blurRadius: 6, offset: Offset(0, 2))],
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+            Text(label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+            const SizedBox(width: 6),
+            Container(
+              width: 30,
+              height: 22,
+              decoration: BoxDecoration(
+                color: const Color(0xFF2E9B32),
+                borderRadius: BorderRadius.circular(3),
+                border: Border.all(color: const Color(0xFF9CFF7A)),
+              ),
+              child: const Icon(Icons.grid_view_rounded, size: 14, color: Colors.white),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// In-match 3 x 3 formation picker (same cards as the setup board); pops the picked index.
+class BmFormationPicker extends StatelessWidget {
+  const BmFormationPicker({
+    super.key,
+    required this.title,
+    required this.hint,
+    required this.current,
+    this.selectLabel = 'Select',
+    this.selectedLabel = 'Selected',
+  });
+  final String title, hint, selectLabel, selectedLabel;
+  final int current;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+        child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+          Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 2),
+          Text(hint, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          const SizedBox(height: 10),
+          LayoutBuilder(builder: (BuildContext context, BoxConstraints c) {
+            final double w = (c.maxWidth - 2 * 8) / 3;
+            return Wrap(spacing: 8, runSpacing: 10, children: <Widget>[
+              for (int i = 0; i < kBmForms.length; i++)
+                SizedBox(
+                  width: w,
+                  child: BmFormationCard(
+                    form: kBmForms[i],
+                    on: current == i,
+                    selectLabel: selectLabel,
+                    selectedLabel: selectedLabel,
+                    onTap: () => Navigator.of(context).pop(i),
+                  ),
+                ),
+            ]);
+          }),
+        ]),
       ),
     );
   }

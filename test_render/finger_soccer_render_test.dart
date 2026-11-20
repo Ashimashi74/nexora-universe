@@ -54,23 +54,14 @@ void main() {
     }
     await settle(tester, frames: 30);
     await shoot(tester, 'final/finger_soccer_setup.png');
-    // The reference formation board (3 x 3 mini pitches).
-    final Finder board = find.byType(BmFormationCard);
-    await tester.scrollUntilVisible(board.at(7), 160,
-        scrollable: find.descendant(of: find.byType(ListView).first, matching: find.byType(Scrollable)).first);
-    await tester.pump();
-    expect(board, findsWidgets);
-    // pick Nish (the formation the reference player used) so the match frames compare with the reference kickoff
-    await tester.tap(board.at(6));
-    await tester.pump();
-    await shoot(tester, 'final/finger_soccer_formations.png');
-
     final Finder ready = find.text('آماده');
     expect(ready, findsOneWidget);
     await tester.tap(ready);
     await settle(tester, frames: 30);
     await shoot(tester, 'final/finger_soccer_formation.png');
-    await tester.tap(find.text('انتخاب').first);
+    // pick Nish (7th card; the formation the reference player used) so the match frames compare with the reference
+    final Finder pickF = find.text('انتخاب');
+    await tester.tap(pickF.evaluate().length > 6 ? pickF.at(6) : pickF.first);
     for (int i = 0; i < 90; i++) {
       await tester.pump(const Duration(milliseconds: 16));
     }
@@ -86,6 +77,19 @@ void main() {
     }
     expect(p.e.phase, 'aim');
     await shoot(tester, 'final/finger_soccer_kickoff.png');
+    // In-match "تغییر ترکیب": open the 3 x 3 picker on our kickoff and keep Nish (applies at once).
+    expect(find.byType(BmChangeFormButton), findsOneWidget);
+    await tester.tap(find.byType(BmChangeFormButton));
+    await settle(tester, frames: 20);
+    expect(find.byType(BmFormationCard), findsNWidgets(kBmForms.length));
+    await shoot(tester, 'final/finger_soccer_change_formation.png');
+    await tester.tap(find.byType(BmFormationCard).at(6));
+    await settle(tester, frames: 20);
+    expect(find.byType(BmFormationCard), findsNothing);
+    expect(p.e.form[0], 6);
+    for (int i = 0; i < 300 && !(p.e.phase == 'aim' && p.e.turn == 0); i++) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
     final BmBody ball = p.e.ball!;
     final List<BmBody> mine = p.e.bodies.where((BmBody b) => b.team == 0 && !identical(b, ball)).toList()
       ..sort((BmBody a, BmBody b) =>
