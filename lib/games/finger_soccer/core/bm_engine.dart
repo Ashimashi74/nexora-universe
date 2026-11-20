@@ -41,7 +41,20 @@ const double BKICK = 1.05;
 /// the recording shows ~0.2 s at almost constant speed) a disc slows by 123 px/s^2 + 5.1/s * v (joint fit of 5 shots;
 /// a power-2 shot glides ~200 px and stops in ~0.8 s, simulated 202 px / 0.79 s). PF1 = 123 px/s^2 * 2.88 / K,
 /// PV0 = the 80 px/s ramp.
-const double HV = 4, PF1 = 280, PF2 = 5.0, PV0 = 181, EPP = .22, PCAP = 190;
+/// Reference calibration v2 (2026-11-20, three recordings, frame-by-frame template tracking of 3 clean shot glides
+/// and 4 discs struck by another body, positions fitted with the engine's own friction law): shot discs and struck
+/// discs follow ONE law, a weak constant part (~20 px/s^2) + 3.5/s speed drag, with no launch glide (struck discs
+/// never get the glide and still fit; with it the shot fits got worse). The old law (123 px/s^2 + 5.0/s, 0.22 s
+/// glide) stopped struck discs ~40% short. PF1 = 20 px/s^2 * 2.88 / K. Old values: PF1 280, PF2 5.0, glide .22.
+const double HV = 4, PF1 = 45, PF2 = 3.5, PV0 = 181, EPP = .22, PCAP = 190;
+/// Launch glide (s at .35 x friction) given to a shot disc. 0 since calibration v2 (was .22).
+const double kBmLaunchGlide = 0;
+/// Ball striking a disc (ball faster than the disc): the disc takes the full mass-ratio impulse (1) instead of the
+/// 1/HV quarter, so a hard ball shoves a resting disc visibly like the reference. A disc striking the ball keeps HV.
+const double kBmBallHitDiscK = 1.0;
+/// Impulse factor of the slower (struck) disc in a disc<->disc hit: 1 since calibration v2 (was .85, which capped
+/// how far a struck disc could travel).
+const double kBmStruckDiscK = 1.0;
 /// Wall / post restitution of a disc (a heavy wooden puck loses most of its speed into the rail).
 const double kBmDiscWallE = .48; // reference: .45 - .5 normal restitution off the rail
 /// Below this speed (world units/s, times K) a sliding disc stops dead instead of creeping.
@@ -50,12 +63,25 @@ const double kBmDiscStop = 30; // reference discs stop dead below ~13 px/s
 /// Largest aim error (radians, one side) at accuracy 1; accuracy 10 shoots exactly where the player aims.
 const double kBmMaxAimError = 0.11;
 
-/// Launch scale: a full pull at power 10 leaves at ~1720 px/s on the reference (= 4950 world/s).
-const double kBmLaunch = 1.87;
+/// Launch scale. v2: 1.87 -> 2.04 (x1.09) so that, with the lighter v2 friction, a shot disc still stops where the
+/// reference shots stop (distance-matched over 700..5000 world/s launches: x1.06..1.10). A full pull at power 10 now
+/// leaves at ~1875 px/s (5400 world/s), i.e. ~1670 px/s averaged over the first 1/15 s frame, as measured for the
+/// reference's power-10 sides (PSG, Adidas). Team power scales it through strikeOf (see there).
+const double kBmLaunch = 2.04;
 /// Ball rolling friction: constant part (world/s^2 / K) and linear drag (1/s), see sim().
 const double kBmBallF0 = 23, kBmBallDrag = 1.08;
 /// Speed caps (world/s / K): the reference ball leaves a hard strike at up to ~1725 px/s (4970 world/s).
-const double kBmBallVMax = 4000, kBmDiscVMax = 4200;
+/// v2: the disc cap is above the strongest launch (power 10 full pull ~4250 world/s / K), so it never limits a
+/// shot or a disc that is struck by another body (was 4200, just under the v2 launch).
+const double kBmBallVMax = 4000, kBmDiscVMax = 4400;
+
+/// Team powers shown in the reference game's team-select UI (قدرت bar) for the sides in the owner's recordings.
+/// Reference speeds are divided by the side's strike (BmEngine.refStrikeOf) before calibrating kBmLaunch, so a
+/// slow Japan (2) shot and a fast PSG (10) shot measure the same base launch. ANIX's own team stats (kBmTeamDefs)
+/// are NOT these numbers and stay as they are (the "Japan 2 / PSG 10" table edit was reverted on purpose).
+const Map<String, int> kBmRefPower = <String, int>{
+  'Japan': 2, 'Starbucks': 15, 'Paris Saint-Germain': 10, 'Adidas': 10, 'Australia': 5, 'Kakero': 10, 'Oreo': 15,
+};
 
 /// Field size factor (game.js line 12).
 const double FS = 1.12 * 1.215;
@@ -610,12 +636,22 @@ class BmEngine {
     final double nx = dx / d, ny = dy / d, sm = a.im + b.im;
     final bool isB = a == bl || b == bl;
     double ka = isB && a != bl ? 1 / HV : 1, kb = isB && b != bl ? 1 / HV : 1;
+    // Calibration v2: when the ball is the faster body it is the ball that strikes the disc -> full push.
+    final bool ballHits = isB &&
+        (bl.vx * bl.vx + bl.vy * bl.vy) > (a == bl ? b.vx * b.vx + b.vy * b.vy : a.vx * a.vx + a.vy * a.vy);
+    if (ballHits) {
+      if (a == bl) {
+        kb = kBmBallHitDiscK;
+      } else {
+        ka = kBmBallHitDiscK;
+      }
+    }
     if (!isB) {
       final double sa = math.sqrt(a.vx * a.vx + a.vy * a.vy), sb = math.sqrt(b.vx * b.vx + b.vy * b.vy);
       if (sa > sb) {
-        kb = .85;
+        kb = kBmStruckDiscK;
       } else {
-        ka = .85;
+        ka = kBmStruckDiscK;
       }
     }
     double wa = a.im / sm * ka, wb = b.im / sm * kb;
@@ -652,7 +688,8 @@ class BmEngine {
     a.vy -= j * ny * a.im * ka;
     b.vx += j * nx * b.im * kb;
     b.vy += j * ny * b.im * kb;
-    if (pa != null && pre < 260 * K) {
+    // PCAP only limits a slow disc that pushes the ball, never a disc the ball struck (calibration v2).
+    if (pa != null && pre < 260 * K && !ballHits) {
       final double ps = math.sqrt(pa.vx * pa.vx + pa.vy * pa.vy), cp = PCAP * K;
       if (ps > cp) {
         pa.vx *= cp / ps;
@@ -857,7 +894,7 @@ class BmEngine {
   void launch(BmBody b, double vx, double vy, bool fromRemote) {
     b.vx = vx;
     b.vy = vy;
-    b.boost = .22;
+    b.boost = kBmLaunchGlide;
     if (b.team != turn) turn = b.team;
     phase = 'move';
     idle = 0;
@@ -872,6 +909,10 @@ class BmEngine {
   /// Shot multiplier of a power rating (unchanged ANIX tuning): 1 => 0.65x, 5 => 1.05x, 7 => 1.25x, 10 => 1.55x.
   /// Reference calibration: a power-2 side launches at ~0.40x the speed of a power-10 side (700 vs 1720 px/s).
   static double strikeOf(int power) => .39 + power.clamp(1, 10) * .116;
+
+  /// Strike multiplier of a REFERENCE-game power (its scale goes past 10: Starbucks / Oreo show 15). Same linear law,
+  /// unclamped; used only to normalise speeds measured on the reference recordings (see kBmRefPower).
+  static double refStrikeOf(int power) => .39 + power * .116;
 
   /// Aim error (radians) of an accuracy rating for a uniform sample u in [-1, 1].
   static double aimErrorOf(int accuracy, double u) => (10 - accuracy.clamp(1, 10)) / 9 * kBmMaxAimError * u;
@@ -888,6 +929,46 @@ class BmEngine {
     launch(b, vx, vy, false);
     final int sg = mirror ? -1 : 1;
     hooks.emit('shot', <String, dynamic>{'cid': b.cid, 'vx': vx * sg, 'vy': vy * sg, 'team': ct(b.team), 'power': b.power});
+  }
+
+  // ---------------------------------------------------------------- in-match formation change ("تغییر ترکیب")
+  /// True when [side] (global side index) may re-form its discs right now: it is that side's turn, the aim phase,
+  /// and no shot has been taken since the last kickoff (every disc still stands on its kickoff slot). Only the side to
+  /// play can change immediately, so online the change and that side's first shot come from the same phone in order
+  /// and can never race the opponent's shot.
+  bool canReformNow(int side) => inMatch && phase == 'aim' && shots == 0 && ct(turn) == side;
+
+  /// Changes [side]'s formation (global side index) to [fi] during a match. Applied at once when
+  /// [canReformNow], otherwise stored for the next kickoff (reset() lays every side out from [form]).
+  /// Deterministic: online both phones apply the same logged 'form' move to the same state. Returns true when the
+  /// discs were moved now.
+  bool changeForm(int side, int fi) {
+    if (side < 0 || side > 1) return false;
+    form[side] = fi.clamp(0, kBmForms.length - 1).toInt();
+    if (!canReformNow(side)) return false;
+    final List<List<double>> sl = bmSlots(form[side]);
+    for (final BmBody b in bodies) {
+      if (b == ball || b.cid ~/ 20 != side) continue;
+      final int i = b.cid % 20;
+      if (i >= sl.length) continue;
+      // same layout as reset(): the side's own frame, top side turned half a circle, mirrored phones flipped
+      double x = _mx(Fl + PR + 6, _mn(Fr - PR - 6, Fl + sl[i][0] * Fw)), y = Fb - sl[i][1] * Fh / 2;
+      if (side != 0) {
+        x = 2 * CX - x;
+        y = 2 * CY - y;
+      }
+      if (mirror) {
+        x = 2 * CX - x;
+        y = 2 * CY - y;
+      }
+      b.x = x;
+      b.y = y;
+      b.vx = 0;
+      b.vy = 0;
+      b.tr.clear();
+    }
+    drag = null;
+    return true;
   }
 
   void finishTurn(bool emitSnap) {

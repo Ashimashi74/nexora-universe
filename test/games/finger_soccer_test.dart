@@ -46,9 +46,11 @@ void main() {
     expect(K, 1.27);
     expect(PR, 53.0); // reference proportions: disc diameter ~0.12 of the playing width
     expect(BR / PR, closeTo(.47, .01)); // reference: ball ~0.47 of the disc diameter
-    // reference-calibrated felt friction: small constant part, strong speed drag, short launch glide
-    expect(PF2, closeTo(5.0, 1e-9));
-    expect(PF1 * K / 2.88, closeTo(123, 1));
+    // reference calibration v2: one felt law for shot and struck discs (~20 px/s^2 + 3.5/s), no launch glide
+    expect(PF2, closeTo(3.5, 1e-9));
+    expect(PF1 * K / 2.88, closeTo(20, 1));
+    expect(kBmLaunchGlide, 0);
+    expect(kBmLaunch, closeTo(2.04, 1e-9));
     expect(BmEngine.strikeOf(2) / BmEngine.strikeOf(10), closeTo(.40, .01));
     expect(STEP, 1 / 240);
     expect(kBmFields.length, 36);
@@ -375,6 +377,130 @@ void main() {
     // snapshots are global and keyed by piece id: identical at kickoff means both phones agree on every disc
     expect(g.snapshot()['b'], h.snapshot()['b']);
     expect((h.snapshot()['b'] as List<dynamic>).length, 11);
+  });
+
+  test('calibration v2: reference speeds agree once each side\'s reference power is divided out', () {
+    // Full pull at power 10, in reference px/s (1 px = 2.88 world units on the 325 px reference pitch).
+    final double full10 = (260 + 1085) * K * kBmLaunch * BmEngine.strikeOf(10) / 2.88;
+    expect(full10, inInclusiveRange(1800, 1950));
+    // Launch speeds fitted on the reference (px/s) with the side's reference power (Japan 2, PSG 10).
+    const List<(String, double)> shots = <(String, double)>[
+      ('Japan', 480), ('Japan', 690), ('Japan', 830), // fitted launches (no glide, v2 friction)
+      ('Paris Saint-Germain', 1688 / .89), // first-frame mean speed / 1-frame drag loss
+    ];
+    for (final (String, double) s in shots) {
+      final int p = kBmRefPower[s.$1]!;
+      final double base = s.$2 * BmEngine.refStrikeOf(10) / BmEngine.refStrikeOf(p);
+      // every shot, normalised to power 10, is at most a full pull (+10% fit error)
+      expect(base, lessThan(full10 * 1.12), reason: '${s.$1} ${s.$2}');
+    }
+    // ANIX keeps its own team stats (the reference numbers are only used to normalise measurements)
+    expect(bmTeam('nat18').power, isNot(2));
+  });
+
+  test('calibration v2: a disc slides the same law whether shot or struck, and the shot still stops short', () {
+    final BmEngine e = BmEngine(_Hooks(), rng: math.Random(2))..startMatch(_cfg(mode: 'local'));
+    final BmBody d = e.bodies.firstWhere((BmBody x) => x.team == 0 && x != e.ball);
+    for (final BmBody o in e.bodies) {
+      if (o != d) o.x = -9999; // nothing to hit
+    }
+    d.x = e.CX;
+    d.y = e.Fb - 60;
+    final double y0 = d.y;
+    e.launch(d, 0, -700 * 2.88, false); // a 700 px/s (Japan-like) shot
+    expect(d.boost, 0);
+    for (int i = 0; i < 240 * 3; i++) {
+      e.sim(STEP);
+    }
+    // reference: such a shot glides ~190 px (= ~550 world) and stops
+    expect((y0 - d.y) / 2.88, inInclusiveRange(150, 230));
+    expect(d.vx == 0 && d.vy == 0, isTrue);
+  });
+
+  test('calibration v2: the ball shoves a resting disc harder, struck discs are not capped', () {
+    double struckSpeed() {
+      final BmEngine e = BmEngine(_Hooks(), rng: math.Random(2))..startMatch(_cfg(mode: 'local'));
+      final BmBody d = e.bodies.firstWhere((BmBody x) => x.team == 0 && x != e.ball);
+      final BmBody b = e.ball!;
+      for (final BmBody o in e.bodies) {
+        if (o != d && o != b) o.x = -9999;
+      }
+      d
+        ..x = e.CX
+        ..y = e.CY
+        ..vx = 0
+        ..vy = 0;
+      b
+        ..x = e.CX
+        ..y = e.CY + PR + BR + 1
+        ..vx = 0
+        ..vy = -3000;
+      e.phase = 'move';
+      e.remote = true;
+      e.sim(STEP);
+      e.sim(STEP);
+      return math.sqrt(d.vx * d.vx + d.vy * d.vy);
+    }
+
+    final double v = struckSpeed();
+    // old tuning: 1/HV impulse then capped at PCAP (190 * K ~ 241 world/s); v2: full mass-ratio push
+    expect(v, greaterThan(PCAP * K * 2));
+    expect(v, lessThan(3000));
+  });
+
+  test('in-match formation change: now on the own kickoff, else at the next kickoff', () {
+    BmEngine fresh(int f0, int f1) => BmEngine(_Hooks(), rng: math.Random(1))
+      ..startMatch(BmConfig(
+          mode: 'local', teams: const <String>['club0', 'club1'], form: <int>[f0, f1], names: const <String>['A', 'B'],
+          field: 0, ball: 0));
+    final BmEngine e = fresh(0, 0);
+    expect(e.turn, 0);
+    expect(e.canReformNow(0), isTrue);
+    expect(e.canReformNow(1), isFalse);
+    // side 0 to kick: applies at once, discs exactly where a match started with that shape puts them
+    expect(e.changeForm(0, 6), isTrue);
+    expect(e.snapshot()['b'], fresh(6, 0).snapshot()['b']);
+    // side 1 is not to play: stored, discs untouched until the next kickoff
+    final Object before = e.snapshot()['b'] as Object;
+    expect(e.changeForm(1, 4), isFalse);
+    expect(e.snapshot()['b'], before);
+    expect(e.form, <int>[6, 4]);
+    e.reset(0);
+    expect(e.snapshot()['b'], fresh(6, 4).snapshot()['b']);
+    // after a shot the own side also waits for the next kickoff
+    final BmBody d = e.bodies.firstWhere((BmBody x) => x.team == 0 && x != e.ball);
+    e.fire(d, 0, -100, 100);
+    expect(e.changeForm(0, 2), isFalse);
+    expect(e.form[0], 2);
+    expect(e.changeForm(0, 99), isFalse); // clamped
+    expect(e.form[0], kBmForms.length - 1);
+  });
+
+  test('in-match formation change online: both phones apply the logged move identically (mirror)', () {
+    BmEngine mk(bool mirror) => BmEngine(_Hooks(), rng: math.Random(1))
+      ..startMatch(BmConfig(
+          mode: 'online', teams: const <String>['club0', 'club1'], form: const <int>[0, 0], names: const <String>['A', 'B'],
+          field: 0, ball: 0, mirror: mirror));
+    final BmEngine h = mk(false), g = mk(true);
+    // the move as sent over the net: global side + formation index, applied by both phones in log order
+    final List<Map<String, int>> log = <Map<String, int>>[
+      <String, int>{'side': 0, 'form': 8}, // host kicks off: now
+      <String, int>{'side': 1, 'form': 5}, // guest, not its turn: next kickoff
+    ];
+    for (final Map<String, int> m in log) {
+      expect(h.changeForm(m['side']!, m['form']!), g.changeForm(m['side']!, m['form']!));
+    }
+    expect(g.snapshot()['b'], h.snapshot()['b']);
+    expect(h.form, g.form);
+    h.reset(1);
+    g.reset(g.ct(1));
+    expect(g.snapshot()['b'], h.snapshot()['b']);
+    // on the guest phone (mirrored) its own side is 1 globally: its kickoff now accepts its own change at once
+    expect(g.canReformNow(1), isTrue);
+    expect(h.canReformNow(1), isTrue);
+    g.changeForm(1, 2);
+    h.changeForm(1, 2);
+    expect(g.snapshot()['b'], h.snapshot()['b']);
   });
 
   test('reference aim: arrow, pull circle and dots scale with the pull', () {
