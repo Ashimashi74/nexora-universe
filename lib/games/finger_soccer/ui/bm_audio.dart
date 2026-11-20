@@ -237,7 +237,12 @@ class BmAudio {
   }
 
   /// Menu music (game.js musicSync: plays while the menu is open, volume .4).
+  /// v4 (owner request 2026-11-20): never during a match. The last call wins: a music(true) still creating its
+  /// player when music(false) arrives (the setup frame right before an auto-started match) checks [_musicWant]
+  /// after every await and stops instead of starting the soundtrack under the match.
+  bool _musicWant = false;
   Future<void> music(bool on) async {
+    _musicWant = on;
     if (!enabled || _disposed) return;
     try {
       if (on && !muted) {
@@ -248,11 +253,15 @@ class BmAudio {
           await m.setAudioContext(_mixCtx());
           await m.setReleaseMode(ReleaseMode.loop);
         }
+        if (!_musicWant || _disposed) return;
         if (m.state == PlayerState.playing) return;
         await m.setVolume(.4);
+        if (!_musicWant || _disposed) return;
         await m.play(AssetSource('$kBmSfxDir$kBmMusic'));
+        if (!_musicWant || _disposed) await m.pause();
       } else {
-        if (_music?.state == PlayerState.playing) await _music?.pause();
+        final AudioPlayer? m = _music;
+        if (m != null && m.state != PlayerState.paused && m.state != PlayerState.stopped) await m.pause();
       }
     } catch (e) {
       debugPrint('bermuda music: $e');

@@ -863,7 +863,9 @@ class _BermudaViewState extends State<BermudaView>
   @override
   Widget build(BuildContext context) {
     if (stage != 'match') {
-      if (launch.soundOn && !_paused && _visible) unawaited(audio.music(true));
+      // v4: no menu soundtrack on the screen that only hands over to an auto-started match (offline intro), and
+      // none during a match; it comes back on the setup screen after leaving a match.
+      if (launch.soundOn && !_paused && _visible && !widget.autoStart) unawaited(audio.music(true));
       if (_onlinePicking) return _onlinePick();
       return _setupScreen(context);
     }

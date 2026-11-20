@@ -194,3 +194,9 @@ No extra server: everything runs in the existing Supabase project (Postgres RPCs
   — all wired in the running paths; unchanged.
 - Tests: `test/games/finger_soccer_online_pick_test.dart` (pick -> setup -> match, idle timeouts + absent-side
   fallback, replay restart, legacy room prefs, room pick as start); constants test updated to v4.
+- Match soundtrack off (owner request 2026-11-20): the finger soccer menu music never plays during a match. Fixed a
+  race in `BmAudio.music`: a music(true) still creating its player when the match's music(false) arrived (the one
+  setup frame before an auto-started offline match) started the soundtrack under the match; now the last call
+  wins (checked after every await). The auto-start setup frame no longer requests music; the app soundtrack is
+  already faded out by `MusicService.enterGame` while a game page is open and fades back on leaving. Crowd
+  ambience and every sound effect (hits, goals, whistle) unchanged.
