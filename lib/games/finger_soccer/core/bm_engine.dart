@@ -14,13 +14,20 @@ import 'bm_data.dart';
 // tiny. Disc diameter is now 150 world units, about 1/6 of the playing width (880-945 on every pitch) like a real
 // table set; the ball is half the disc diameter. The goal sprite grows with them (kBmGoalArtScale) so the mouth stays
 // about 2.7 discs wide, and the view fits the whole world to any phone (BmView.layout).
-const double K = 1.27, PR = 75.0, BR = 37.5, STEP = 1 / 240, LMAX = 320;
+// Reference proportions (owner request 2026-11-20, measured on his reference screenshot, pitch 620 px wide): disc
+// ~75 px = 0.12 of the playing width, ball ~35 px = 0.056, goal mouth ~213 px = 0.34. On the 880-unit default pitch
+// that is a 106-unit disc, a 50-unit ball and a 300-unit mouth.
+const double K = 1.27, PR = 53.0, BR = 25.0, STEP = 1 / 240, LMAX = 320;
 /// Ball spin / curve keeps the original tuning radius so the bigger collider does not change curl after bounces.
 const double SPIN_R = 28.8;
 /// Visual scale of the goal sprite (assets/games/bermuda/goals/white.webp, the only goal art): drawn at full size so
 /// the mouth (inner width between the two side tubes) is about three discs wide. Posts, side nets and back net are
 /// built from the drawn sprite.
-const double kBmGoalArtScale = 1.2;
+const double kBmGoalArtScale = 0.92; // mouth = 0.34 of the playing width (reference)
+/// v5 (owner request 2026-11-20): goal mouth 3.5% narrower. The goal sprite is drawn 3.5% narrower (its height and
+/// net depth unchanged), and the posts / mouth / side nets are still built from the drawn sprite, so the colliders
+/// keep matching the art. Before: 1.
+const double kBmGoalMouthScale = 0.965;
 const int NB = 4;
 /// Weighty pieces (owner request 2026-11): discs are heavy (mass 8) and the ball lighter (2.6) but not a ping-pong
 /// ball. BKICK keeps a disc striking the ball launching it 5% harder than plain elastic transfer.
@@ -38,21 +45,74 @@ const double BKICK = 1.05;
 /// the recording shows ~0.2 s at almost constant speed) a disc slows by 123 px/s^2 + 5.1/s * v (joint fit of 5 shots;
 /// a power-2 shot glides ~200 px and stops in ~0.8 s, simulated 202 px / 0.79 s). PF1 = 123 px/s^2 * 2.88 / K,
 /// PV0 = the 80 px/s ramp.
-const double HV = 4, PF1 = 280, PF2 = 5.0, PV0 = 181, EPP = .22, PCAP = 190;
+/// Reference calibration v2 (2026-11-20, three recordings, frame-by-frame template tracking of 3 clean shot glides
+/// and 4 discs struck by another body, positions fitted with the engine's own friction law): shot discs and struck
+/// discs follow ONE law, a weak constant part (~20 px/s^2) + 3.5/s speed drag, with no launch glide (struck discs
+/// never get the glide and still fit; with it the shot fits got worse). The old law (123 px/s^2 + 5.0/s, 0.22 s
+/// glide) stopped struck discs ~40% short. PF1 = 20 px/s^2 * 2.88 / K. Old values: PF1 280, PF2 5.0, glide .22.
+/// Reference calibration v4 (2026-11-20, owner: "disc friction exactly like the video"): the v2 set (3 shots + 4
+/// struck discs) plus 3 fast glides (PSG 580, 1779, Adidas 1460; up to ~1700 px/s), every track fitted jointly with
+/// the engine law (free launch speed per track, no glide). Best: NO constant part, 3.25/s drag (rms 6.05 px per
+/// position over 10 tracks) vs v2's 20 px/s^2 + 3.5/s (rms 6.41 px) and v1's 123 + 5.1 (rms 10.3 px). A slide is
+/// pure speed drag down to kBmDiscStop (~13 px/s), so a disc glides ~9% further and ~10% longer at the same launch;
+/// kBmLaunch is unchanged (shot power untouched). Old values: PF1 45, PF2 3.5.
+const double HV = 4, PF1 = 0, PF2 = 3.25, PV0 = 181, EPP = .22, PCAP = 190;
+/// Launch glide (s at .35 x friction) given to a shot disc. 0 since calibration v2 (was .22).
+const double kBmLaunchGlide = 0;
+/// Ball striking a disc (ball faster than the disc): the disc takes the full mass-ratio impulse (1) instead of the
+/// 1/HV quarter, so a hard ball shoves a resting disc visibly like the reference. A disc striking the ball keeps HV.
+const double kBmBallHitDiscK = 1.0;
+/// Impulse factor of the slower (struck) disc in a disc<->disc hit: 1 since calibration v2 (was .85, which capped
+/// how far a struck disc could travel).
+const double kBmStruckDiscK = 1.0;
 /// Wall / post restitution of a disc (a heavy wooden puck loses most of its speed into the rail).
 const double kBmDiscWallE = .48; // reference: .45 - .5 normal restitution off the rail
+/// Rail restitution (owner request 2026-11-20, v3): a bank shot keeps its power. Every body (ball and discs) comes
+/// off the side rails, the end lines beside the goals and the round corners with this normal restitution and no
+/// tangential loss. Before: ball .62-.72 (speed dependent), disc .48 (kBmDiscWallE). Goal posts and the inside of the
+/// goal keep their old values.
+const double kBmRailE = .9;
+/// Ball curl per unit of spin (rad/s). v3: 0, the ball travels in straight lines (owner request 2026-11-20: no sudden
+/// bends after a wall or a glancing hit). Spin is still kept and drawn (the ball still turns round in the corners).
+/// Before: .034.
+const double kBmBallCurve = 0;
+/// Mass of a disc when the BALL strikes it (ball faster than the disc). v3: lighter pieces (owner request
+/// 2026-11-20) so a hard ball knocks a disc back further. A disc striking the ball, and disc<->disc hits, keep
+/// DISC_M, so shot power and the ball's speed off a strike are unchanged. Before: DISC_M (8).
+const double kBmDiscLightM = 5.5;
+/// Global playback rate of the simulation (owner request 2026-11-20, v3): the whole scene runs 5% slower. Only the
+/// rate real time feeds the fixed-step accumulator changes; every step is the same STEP, so paths, distances and
+/// outcomes are identical (and online phones still run the same steps), just 5% slower to watch. Before: 1.
+/// v5 (owner request 2026-11-20): 85% speed (15% slower). Before: .95.
+const double kBmSimRate = .85;
+/// v5: spin a disc picks up from a glancing contact (rad/s per unit of tangential speed / radius) and its cap.
+/// Render only: a disc's spin turns its sprite (bm_painter) and never feeds its motion, so paths are unchanged.
+const double kBmDiscSpinK = .16, kBmDiscSpinMax = 22;
 /// Below this speed (world units/s, times K) a sliding disc stops dead instead of creeping.
 const double kBmDiscStop = 30; // reference discs stop dead below ~13 px/s
 
 /// Largest aim error (radians, one side) at accuracy 1; accuracy 10 shoots exactly where the player aims.
 const double kBmMaxAimError = 0.11;
 
-/// Launch scale: a full pull at power 10 leaves at ~1720 px/s on the reference (= 4950 world/s).
-const double kBmLaunch = 1.87;
+/// Launch scale. v2: 1.87 -> 2.04 (x1.09) so that, with the lighter v2 friction, a shot disc still stops where the
+/// reference shots stop (distance-matched over 700..5000 world/s launches: x1.06..1.10). A full pull at power 10 now
+/// leaves at ~1875 px/s (5400 world/s), i.e. ~1670 px/s averaged over the first 1/15 s frame, as measured for the
+/// reference's power-10 sides (PSG, Adidas). Team power scales it through strikeOf (see there).
+const double kBmLaunch = 2.04;
 /// Ball rolling friction: constant part (world/s^2 / K) and linear drag (1/s), see sim().
 const double kBmBallF0 = 23, kBmBallDrag = 1.08;
 /// Speed caps (world/s / K): the reference ball leaves a hard strike at up to ~1725 px/s (4970 world/s).
-const double kBmBallVMax = 4000, kBmDiscVMax = 4200;
+/// v2: the disc cap is above the strongest launch (power 10 full pull ~4250 world/s / K), so it never limits a
+/// shot or a disc that is struck by another body (was 4200, just under the v2 launch).
+const double kBmBallVMax = 4000, kBmDiscVMax = 4400;
+
+/// Team powers shown in the reference game's team-select UI (قدرت bar) for the sides in the owner's recordings.
+/// Reference speeds are divided by the side's strike (BmEngine.refStrikeOf) before calibrating kBmLaunch, so a
+/// slow Japan (2) shot and a fast PSG (10) shot measure the same base launch. ANIX's own team stats (kBmTeamDefs)
+/// are NOT these numbers and stay as they are (the "Japan 2 / PSG 10" table edit was reverted on purpose).
+const Map<String, int> kBmRefPower = <String, int>{
+  'Japan': 2, 'Starbucks': 15, 'Paris Saint-Germain': 10, 'Adidas': 10, 'Australia': 5, 'Kakero': 10, 'Oreo': 15,
+};
 
 /// Field size factor (game.js line 12).
 const double FS = 1.12 * 1.215;
@@ -102,27 +162,42 @@ final List<BmTeam> kBmTeams = kBmTeamDefs
 
 BmTeam bmTeam(String id) => kBmTeams.firstWhere((BmTeam t) => t.id == id, orElse: () => kBmTeams.first);
 
-/// FORMS (game.js line 37): [name, label, rows [ny, count]].
-const List<List<Object>> kBmForms = <List<Object>>[
-  <Object>['1-2-2', 'Balanced', <List<double>>[<double>[.09, 1], <double>[.22, 2], <double>[.36, 2]]],
-  <Object>['2-2-1', 'Cautious', <List<double>>[<double>[.10, 2], <double>[.24, 2], <double>[.37, 1]]],
-  <Object>['3-1-1', 'Wall', <List<double>>[<double>[.10, 3], <double>[.25, 1], <double>[.37, 1]]],
-  <Object>['2-1-2', 'Diamond', <List<double>>[<double>[.10, 2], <double>[.24, 1], <double>[.37, 2]]],
-  <Object>['1-3-1', 'Midfield', <List<double>>[<double>[.09, 1], <double>[.23, 3], <double>[.37, 1]]],
-  <Object>['1-1-3', 'Attack', <List<double>>[<double>[.09, 1], <double>[.22, 1], <double>[.36, 3]]],
+/// A team shape: five discs (the keeper first) as [x, d] in the team's own frame. x is the fraction of the playing
+/// width, left to right as the team sees it from its own goal; d is the depth from its own goal line as a fraction of
+/// the half pitch (0 = goal line, 1 = halfway line).
+class BmFormation {
+  const BmFormation(this.fa, this.en, this.slots);
+  final String fa, en;
+  final List<List<double>> slots;
+  String get label => '$fa · $en';
+}
+
+/// The nine formations of the owner's reference game (formation-select screen of the 2026-11-20 recording, same
+/// order and names). Read from its mini pitches (depth as drawn; the width is drawn ~1.3x stretched there, mapped
+/// back with 0.77) and, for Nish and Oghab, measured directly on the reference kickoff frames.
+const List<BmFormation> kBmForms = <BmFormation>[
+  BmFormation('الماس', 'Almas · Diamond', <List<double>>[
+    <double>[.500, .133], <double>[.270, .386], <double>[.730, .386], <double>[.418, .762], <double>[.582, .762]]),
+  BmFormation('عقاب', 'Oghab · Eagle', <List<double>>[
+    <double>[.500, .230], <double>[.210, .423], <double>[.790, .423], <double>[.500, .610], <double>[.500, .780]]),
+  BmFormation('موج', 'Mowj · Wave', <List<double>>[
+    <double>[.307, .299], <double>[.693, .299], <double>[.168, .595], <double>[.500, .595], <double>[.832, .595]]),
+  BmFormation('ماه', 'Mah · Moon', <List<double>>[
+    <double>[.500, .207], <double>[.270, .347], <double>[.730, .347], <double>[.170, .598], <double>[.830, .598]]),
+  BmFormation('دیوانه', 'Divaneh · Crazy', <List<double>>[
+    <double>[.500, .662], <double>[.190, .833], <double>[.336, .820], <double>[.632, .821], <double>[.792, .817]]),
+  BmFormation('لبه', 'Labeh · Edge', <List<double>>[
+    <double>[.500, .128], <double>[.500, .368], <double>[.500, .595], <double>[.257, .841], <double>[.743, .841]]),
+  BmFormation('نیش', 'Nish · Sting', <List<double>>[
+    <double>[.500, .126], <double>[.275, .516], <double>[.725, .516], <double>[.275, .898], <double>[.725, .898]]),
+  BmFormation('بازو', 'Bazoo · Arm', <List<double>>[
+    <double>[.500, .128], <double>[.250, .568], <double>[.500, .573], <double>[.760, .569], <double>[.760, .886]]),
+  BmFormation('حمله همه جانبه', 'All-out attack', <List<double>>[
+    <double>[.500, .128], <double>[.410, .785], <double>[.590, .785], <double>[.275, .890], <double>[.725, .890]]),
 ];
 
-List<List<double>> bmSlots(int fi) {
-  final List<List<double>> o = <List<double>>[];
-  for (final List<double> row in kBmForms[fi][2] as List<List<double>>) {
-    final double ny = row[0];
-    final int c = row[1].toInt();
-    for (int i = 0; i < c; i++) {
-      o.add(<double>[c == 1 ? .5 : c == 2 ? .27 + .46 * i : .17 + .33 * i, ny]);
-    }
-  }
-  return o;
-}
+/// The slots of formation [fi] (clamped to the list, so an old saved index still loads).
+List<List<double>> bmSlots(int fi) => kBmForms[fi.clamp(0, kBmForms.length - 1)].slots;
 
 String bmBallName(int i) => '${kBmBallN[i]} Ball';
 
@@ -321,8 +396,8 @@ class BmEngine {
     // Separate goal sprite: [w, h, left post, right post, post half-width, back-bar inner edge, post bottom].
     final List<double> gi = kBmGS[f.gs]!;
     final double fullW = 2 * f.g / (gi[3] - gi[2]);
-    GGw = fullW * kBmGoalArtScale;
-    GGh = GGw * gi[1] / gi[0] * 1.02; // goal depth +2% (owner request)
+    GGw = fullW * kBmGoalArtScale * kBmGoalMouthScale;
+    GGh = fullW * kBmGoalArtScale * gi[1] / gi[0] * 1.02; // goal depth +2% (owner request); v5: not narrowed
     GGleg = gi[6];
     GGx = CX - GGw * (gi[2] + gi[3]) / 2; // post centres symmetric about the centre line
     final double pl = GGx + gi[2] * GGw, pr = GGx + gi[3] * GGw, prad = gi[4] * GGw;
@@ -346,10 +421,17 @@ class BmEngine {
     slow = 0;
     cam = 0;
     for (int cm = 0; cm < 2; cm++) {
+      // Each side's formation laid out in that side's own frame: the top side is the bottom layout turned half a
+      // circle, so its left is the screen's right. Indexed by cm like the piece ids (cid), so a mirrored phone lays
+      // out every cid exactly where the host does (snapshots and remote shots are keyed by cid).
       final List<List<double>> sl = bmSlots(form[cm]);
       for (int i = 0; i < sl.length; i++) {
-        final double nx = sl[i][0], ny = sl[i][1];
-        double x = Fl + PR + 10 + nx * (Fw - 2 * (PR + 10)), y = cm != 0 ? Ft + ny * Fh : Fb - ny * Fh;
+        final double nx = sl[i][0], nd = sl[i][1];
+        double x = _mx(Fl + PR + 6, _mn(Fr - PR - 6, Fl + nx * Fw)), y = Fb - nd * Fh / 2;
+        if (cm != 0) {
+          x = 2 * CX - x;
+          y = 2 * CY - y;
+        }
         if (mirror) {
           x = 2 * CX - x;
           y = 2 * CY - y;
@@ -475,7 +557,7 @@ class BmEngine {
           hooks.sfx('wall', vs / 1800);
           wallFx(Fl, b.y, vs);
         }
-        b.vx *= -_eN(bl, -b.vx);
+        b.vx *= -kBmRailE;
         b.spin += b.vy / (bl ? SPIN_R : r) * .05;
       }
     }
@@ -486,7 +568,7 @@ class BmEngine {
           hooks.sfx('wall', vs / 1800);
           wallFx(Fr, b.y, vs);
         }
-        b.vx *= -_eN(bl, b.vx);
+        b.vx *= -kBmRailE;
         b.spin -= b.vy / (bl ? SPIN_R : r) * .05;
       }
     }
@@ -521,7 +603,7 @@ class BmEngine {
           wallFx(b.x, g.y, vs);
         }
         b.y = g.y - g.d * r;
-        if (g.d * b.vy > 0) b.vy = -g.d * b.vy.abs() * _eN(bl, b.vy.abs());
+        if (g.d * b.vy > 0) b.vy = -g.d * b.vy.abs() * kBmRailE;
         b.spin += g.d * b.vx / (bl ? SPIN_R : r) * .05;
       }
     }
@@ -540,7 +622,7 @@ class BmEngine {
           b.x = cx + nx * lim;
           b.y = cy + ny * lim;
           if (vn > 0) {
-            final double ec = _eN(bl, vn);
+            const double ec = kBmRailE;
             b.vx -= (1 + ec) * vn * nx;
             b.vy -= (1 + ec) * vn * ny;
           }
@@ -582,18 +664,31 @@ class BmEngine {
       d = 1;
     }
     final BmBody bl = ball!;
-    final double nx = dx / d, ny = dy / d, sm = a.im + b.im;
+    final double nx = dx / d, ny = dy / d;
     final bool isB = a == bl || b == bl;
     double ka = isB && a != bl ? 1 / HV : 1, kb = isB && b != bl ? 1 / HV : 1;
+    // Calibration v2: when the ball is the faster body it is the ball that strikes the disc -> full push.
+    final bool ballHits = isB &&
+        (bl.vx * bl.vx + bl.vy * bl.vy) > (a == bl ? b.vx * b.vx + b.vy * b.vy : a.vx * a.vx + a.vy * a.vy);
+    // v3: a disc the ball strikes reacts as a lighter piece (kBmDiscLightM); every other contact uses the body masses.
+    final double ima = ballHits && a != bl ? 1 / kBmDiscLightM : a.im, imb = ballHits && b != bl ? 1 / kBmDiscLightM : b.im;
+    final double sm = ima + imb;
+    if (ballHits) {
+      if (a == bl) {
+        kb = kBmBallHitDiscK;
+      } else {
+        ka = kBmBallHitDiscK;
+      }
+    }
     if (!isB) {
       final double sa = math.sqrt(a.vx * a.vx + a.vy * a.vy), sb = math.sqrt(b.vx * b.vx + b.vy * b.vy);
       if (sa > sb) {
-        kb = .85;
+        kb = kBmStruckDiscK;
       } else {
-        ka = .85;
+        ka = kBmStruckDiscK;
       }
     }
-    double wa = a.im / sm * ka, wb = b.im / sm * kb;
+    double wa = ima / sm * ka, wb = imb / sm * kb;
     if (isB) {
       if (a == bl) {
         wa = 1 - wb;
@@ -608,6 +703,10 @@ class BmEngine {
     b.y += ny * pen * wb;
     final double vn = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
     if (vn >= 0) return;
+    // v5: discs pick up spin from the tangential part of the contact (same sign convention as the ball below).
+    final double vt = -ny * (b.vx - a.vx) + nx * (b.vy - a.vy);
+    if (a != bl) a.spin = _mx(-kBmDiscSpinMax, _mn(kBmDiscSpinMax, a.spin - vt / a.r * kBmDiscSpinK));
+    if (b != bl) b.spin = _mx(-kBmDiscSpinMax, _mn(kBmDiscSpinMax, b.spin + vt / b.r * kBmDiscSpinK));
     final double e = vn < -40 * K ? (isB ? .55 - .12 * _mn(1, _mx(0, (-vn - 500 * K) / (1200 * K))) : EPP) : 0,
         j = -(1 + e) * vn / sm;
     final BmBody? pa = isB ? (a == bl ? b : a) : null;
@@ -623,11 +722,12 @@ class BmEngine {
         }
       }
     }
-    a.vx -= j * nx * a.im * ka;
-    a.vy -= j * ny * a.im * ka;
-    b.vx += j * nx * b.im * kb;
-    b.vy += j * ny * b.im * kb;
-    if (pa != null && pre < 260 * K) {
+    a.vx -= j * nx * ima * ka;
+    a.vy -= j * ny * ima * ka;
+    b.vx += j * nx * imb * kb;
+    b.vy += j * ny * imb * kb;
+    // PCAP only limits a slow disc that pushes the ball, never a disc the ball struck (calibration v2).
+    if (pa != null && pre < 260 * K && !ballHits) {
       final double ps = math.sqrt(pa.vx * pa.vx + pa.vy * pa.vy), cp = PCAP * K;
       if (ps > cp) {
         pa.vx *= cp / ps;
@@ -706,7 +806,7 @@ class BmEngine {
             b.vx = 0;
             b.vy = 0;
           } else {
-            final double m = _mx(-34, _mn(34, b.spin)) * .034 * dt, cs = math.cos(m), sn = math.sin(m);
+            final double m = _mx(-34, _mn(34, b.spin)) * kBmBallCurve * dt, cs = math.cos(m), sn = math.sin(m);
             final double vx = b.vx * cs - b.vy * sn, vy = b.vx * sn + b.vy * cs, k = _mn(ns, kBmBallVMax * K) / sp;
             b.vx = vx * k;
             b.vy = vy * k;
@@ -799,7 +899,7 @@ class BmEngine {
       !remote &&
       turn != ai &&
       !(mode == 'online' && turn != 0) &&
-      !(mode == 'online' && perSide > 1 && localSeat != null && shooterSeat(ct(turn)) != localSeat);
+      !(mode == 'online' && perSide > 1 && localSeat != null && controllerSeat(ct(turn)) != localSeat);
 
   // ---------------------------------------------------------------- team rotation (2v2 / 3v3)
   /// Players per side (from the config) and this phone's seat (online team games).
@@ -817,6 +917,23 @@ class BmEngine {
   /// Global seat of the side's current shooter (sides alternate seats: 0,2,4 / 1,3,5).
   int shooterSeat(int side) => side + 2 * shooterIndex(side);
 
+  /// v5 (team games): seats that left the match (online forfeits). Their turns are played by the next teammate still
+  /// in the match; the rotation counters (and so every phone's replay) are unchanged, only who may shoot moves.
+  bool Function(int seat)? seatGone;
+
+  /// Seat that shoots the side's current turn: the shooter, or when they left, the next teammate still playing.
+  int controllerSeat(int side) {
+    final int s = shooterSeat(side);
+    final bool Function(int seat)? gone = seatGone;
+    if (perSide <= 1 || gone == null || !gone(s)) return s;
+    final int i0 = shooterIndex(side);
+    for (int k = 1; k < perSide; k++) {
+      final int c = side + 2 * ((i0 + k) % perSide);
+      if (!gone(c)) return c;
+    }
+    return s;
+  }
+
   /// Replay only: adopt the rotation counters carried in a settled snapshot.
   void applyRotation(Map<String, dynamic>? snap) {
     final List<dynamic>? r = snap?['rt'] as List<dynamic>?;
@@ -832,7 +949,7 @@ class BmEngine {
   void launch(BmBody b, double vx, double vy, bool fromRemote) {
     b.vx = vx;
     b.vy = vy;
-    b.boost = .22;
+    b.boost = kBmLaunchGlide;
     if (b.team != turn) turn = b.team;
     phase = 'move';
     idle = 0;
@@ -847,6 +964,10 @@ class BmEngine {
   /// Shot multiplier of a power rating (unchanged ANIX tuning): 1 => 0.65x, 5 => 1.05x, 7 => 1.25x, 10 => 1.55x.
   /// Reference calibration: a power-2 side launches at ~0.40x the speed of a power-10 side (700 vs 1720 px/s).
   static double strikeOf(int power) => .39 + power.clamp(1, 10) * .116;
+
+  /// Strike multiplier of a REFERENCE-game power (its scale goes past 10: Starbucks / Oreo show 15). Same linear law,
+  /// unclamped; used only to normalise speeds measured on the reference recordings (see kBmRefPower).
+  static double refStrikeOf(int power) => .39 + power * .116;
 
   /// Aim error (radians) of an accuracy rating for a uniform sample u in [-1, 1].
   static double aimErrorOf(int accuracy, double u) => (10 - accuracy.clamp(1, 10)) / 9 * kBmMaxAimError * u;
@@ -863,6 +984,46 @@ class BmEngine {
     launch(b, vx, vy, false);
     final int sg = mirror ? -1 : 1;
     hooks.emit('shot', <String, dynamic>{'cid': b.cid, 'vx': vx * sg, 'vy': vy * sg, 'team': ct(b.team), 'power': b.power});
+  }
+
+  // ---------------------------------------------------------------- in-match formation change ("تغییر ترکیب")
+  /// True when [side] (global side index) may re-form its discs right now: it is that side's turn, the aim phase,
+  /// and no shot has been taken since the last kickoff (every disc still stands on its kickoff slot). Only the side to
+  /// play can change immediately, so online the change and that side's first shot come from the same phone in order
+  /// and can never race the opponent's shot.
+  bool canReformNow(int side) => inMatch && phase == 'aim' && shots == 0 && ct(turn) == side;
+
+  /// Changes [side]'s formation (global side index) to [fi] during a match. Applied at once when
+  /// [canReformNow], otherwise stored for the next kickoff (reset() lays every side out from [form]).
+  /// Deterministic: online both phones apply the same logged 'form' move to the same state. Returns true when the
+  /// discs were moved now.
+  bool changeForm(int side, int fi) {
+    if (side < 0 || side > 1) return false;
+    form[side] = fi.clamp(0, kBmForms.length - 1).toInt();
+    if (!canReformNow(side)) return false;
+    final List<List<double>> sl = bmSlots(form[side]);
+    for (final BmBody b in bodies) {
+      if (b == ball || b.cid ~/ 20 != side) continue;
+      final int i = b.cid % 20;
+      if (i >= sl.length) continue;
+      // same layout as reset(): the side's own frame, top side turned half a circle, mirrored phones flipped
+      double x = _mx(Fl + PR + 6, _mn(Fr - PR - 6, Fl + sl[i][0] * Fw)), y = Fb - sl[i][1] * Fh / 2;
+      if (side != 0) {
+        x = 2 * CX - x;
+        y = 2 * CY - y;
+      }
+      if (mirror) {
+        x = 2 * CX - x;
+        y = 2 * CY - y;
+      }
+      b.x = x;
+      b.y = y;
+      b.vx = 0;
+      b.vy = 0;
+      b.tr.clear();
+    }
+    drag = null;
+    return true;
   }
 
   void finishTurn(bool emitSnap) {
@@ -1198,7 +1359,10 @@ class BmEngine {
       }
     }
     if (!menuOpen && bodies.isNotEmpty) {
-      if (mt > 0 && !sd && phase != 'over' && mleft > 0) mleft = _mx(0, mleft - dt);
+      // v3 match clock: runs on real elapsed time (not the 50 ms physics clamp, which made it lag on slow frames);
+      // a frame gap over 1 s (app resumed) counts as 1 s.
+      final double clk = rawDt <= 0 ? .016 : _mn(rawDt, 1.0);
+      if (mt > 0 && !sd && phase != 'over' && mleft > 0) mleft = _mx(0, mleft - clk);
       double ts = 1;
       if (freeze > 0) {
         freeze -= dt;
@@ -1207,7 +1371,7 @@ class BmEngine {
         slow -= dt;
         ts = .32 + .68 * math.pow(1 - _mx(0, slow) / 1.1, 2).toDouble();
       }
-      acc += dt * ts;
+      acc += dt * ts * kBmSimRate;
       int n = 0;
       if (phase != 'over') {
         while (acc >= STEP && n++ < 14) {

@@ -53,7 +53,7 @@ class BmView {
   /// as one unit instead of moving only the goal artwork.
   static const double topHudClearance = 20;
   static const double matchWidthFraction = 0.94;
-  static const double matchHeightFraction = 0.88;
+  static const double matchHeightFraction = 0.98; // pitch fills the phone width like the reference
   double s = 1, ox = 0, oy = 0;
   Size size = Size.zero;
 
@@ -69,7 +69,7 @@ class BmView {
     final double H = fullH - top - insetBottom;
     if (W < 50 || H < 50) return;
     final double worldWidth = f.R - f.L + 56 * FS;
-    final double worldHeight = (f.B - f.T) + 2 * e.goalVisualDepth + 48;
+    final double worldHeight = (f.B - f.T) + 2 * e.goalVisualDepth + 20;
     s = math.min(W * matchWidthFraction / worldWidth, H * matchHeightFraction / worldHeight);
     ox = W / 2 - e.CX * s;
     // Keep the scoreboard clear of the top goal while preserving the same
@@ -81,6 +81,48 @@ class BmView {
 }
 
 Color _rgba(int r, int g, int b, double a) => Color.fromRGBO(r, g, b, a.clamp(0.0, 1.0).toDouble());
+
+// ---------------------------------------------------------------- reference aim + turn ring (measured 2026-11-20)
+// Measured on the owner's reference recording in disc radii (disc r ~18.5 px there): pull circle up to ~4.8 r, arrow
+// from the ring edge (1.3 r) to ~3.1 r at a light pull and ~4.0 r at full pull, head 0.8 r long and 0.9 r wide,
+// white dots 13 / 11 / 10 px (0.70 / 0.60 / 0.54 r) at 2.55 r + 1.85 r steps toward the finger.
+
+/// Pull fraction 0..1 of a drag of [l] world units (the engine's own power: [LMAX] is a full shot).
+double bmAimPower(double l) => math.min(l, LMAX) / LMAX;
+double bmAimCircleRadius(double r, double p) => r * (1.3 + 3.5 * p);
+double bmAimArrowTip(double r, double p) => r * (2.4 + 1.6 * p);
+/// Disc water ribbon length in disc radii (reference ~3.4 diameters).
+const double kBmDiscTrailLen = 6.8;
+const List<double> kBmAimDotR = <double>[.70, .60, .54, .50, .47];
+/// Dots shown for a drag of [l]: one per 1.85 r of finger travel past the first, 1..5.
+int bmAimDots(double l, double r) => ((l / r + 1.2 - 2.55) / 1.85).floor().clamp(0, 4).toInt() + 1;
+
+/// Rings show on the side whose turn it is, while it aims and while its shot rolls.
+bool bmRingVisible(BmEngine e) => !e.menuOpen && e.bodies.isNotEmpty && (e.phase == 'aim' || e.phase == 'move');
+/// Green on the local player's discs, gold on the opponent's (reference: the recorder's side is green whether it
+/// plays from the top or the bottom).
+bool bmRingMine(BmEngine e) => e.turn == 0;
+const Color kBmRingGreen = Color(0xFF2FD13C), kBmRingGold = Color(0xFFF4B81E);
+
+/// A turn ring: a 0.22 r band just outside the disc rim with a dark rim line and a light inner edge, no pulse.
+void bmPaintTurnRing(Canvas c, Offset o, double r, bool mine) {
+  final Color main = mine ? kBmRingGreen : kBmRingGold;
+  final Color edge = mine ? const Color(0xFF0B5E14) : const Color(0xFF7A4A00);
+  final Color hi = mine ? const Color(0xFFA6FF9C) : const Color(0xFFFFE58A);
+  final double rc = r * 1.11, w = r * .22;
+  c.drawCircle(o, rc, Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = w + r * .08
+    ..color = edge.withValues(alpha: .85));
+  c.drawCircle(o, rc, Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = w
+    ..color = main);
+  c.drawCircle(o, rc - w * .3, Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = w * .28
+    ..color = hi.withValues(alpha: .7));
+}
 
 class BmPainter extends CustomPainter {
   BmPainter(this.e, this.im, this.view, this.now, this.dpr, this.fancy, {required Listenable repaint, this.debugColliders = false})
@@ -109,28 +151,10 @@ class BmPainter extends CustomPainter {
     canvas.save();
     canvas.translate(view.ox + cx * s, view.oy + cy * s);
     canvas.scale(s);
-    // Keep only the restrained ground/wind trace; no neon projectile effects.
+    // Reference motion marks: a grey tapered streak behind the rolling ball, a blue water ribbon behind each
+    // sliding disc (both under the pieces).
     _drawTrail(canvas, t);
-    if (e.phase == 'aim' && !e.menuOpen) {
-      final double k = .5 + .5 * math.sin(t / 260);
-      final List<int> c = e.turn != 0 ? <int>[255, 110, 110] : <int>[80, 170, 255];
-      for (final BmBody b in e.bodies) {
-        if (b.team == e.turn) {
-          final double visualRadius = b.r;
-          canvas.drawCircle(Offset(b.x, b.y), visualRadius + 11,
-              Paint()
-                ..style = PaintingStyle.stroke
-                ..strokeWidth = 13
-                ..color = _rgba(c[0], c[1], c[2], .12 + .14 * k));
-          canvas.drawCircle(Offset(b.x, b.y), visualRadius + 11,
-              Paint()
-                ..style = PaintingStyle.stroke
-                ..strokeWidth = 4
-                ..color = _rgba(c[0], c[1], c[2], .5 + .5 * k));
-        }
-      }
-    }
-    // Player-piece trails are intentionally disabled; only the ball leaves a trace.
+    _discTrails(canvas, t);
     // soft shadows (SPR.shadow)
     for (final BmBody b in e.bodies) {
       final double visualRadius = b.r;
@@ -142,6 +166,14 @@ class BmPainter extends CustomPainter {
           Paint()
             ..shader = ui.Gradient.radial(c, w / 2, <Color>[_rgba(0, 0, 0, .6), _rgba(0, 0, 0, .6), _rgba(0, 0, 0, 0)],
                 <double>[0, .18, 1]));
+    }
+    // Pull circle of the aim (translucent, under the pieces like the reference).
+    _aimUnder(canvas);
+    // Turn rings: every disc of the side whose turn it is, for the whole turn (aim and while the shot rolls).
+    if (bmRingVisible(e)) {
+      for (final BmBody b in e.bodies) {
+        if (b != e.ball && b.team == e.turn) bmPaintTurnRing(canvas, Offset(b.x, b.y), b.r, bmRingMine(e));
+      }
     }
     for (final BmBody b in e.bodies) {
       if (b != e.ball) _sprite(canvas, b, t);
@@ -170,7 +202,7 @@ class BmPainter extends CustomPainter {
     }
     if (debugColliders) _colliders(canvas);
     // Impact sparks, rings and the full-screen flash are removed by design.
-    _aim(canvas, t);
+    _aimOver(canvas);
     canvas.restore();
   }
 
@@ -251,13 +283,8 @@ class BmPainter extends CustomPainter {
       final double so = b.r * (.55 + .25 * fast);
       canvas.drawOval(Rect.fromCenter(center: Offset(b.x + so * .35, b.y + so), width: b.r * .86 * 2, height: b.r * .34 * 2),
           Paint()..color = _rgba(8, 14, 24, .42 * .8));
+      // The reference ball stays round while it rolls: no speed stretch, only the 3D roll below.
       canvas.translate(b.x, b.y);
-      if (sv > 40) {
-        final double a = math.atan2(b.vy, b.vx), st = math.min(.16, fast * .12) + b.sq * .12, sq = b.sq * .1;
-        canvas.rotate(a);
-        canvas.scale(1 + st - sq, 1 - st * .55 + sq);
-        canvas.rotate(-a);
-      }
       final ui.Image? sheet = im.ballSheet;
       final ui.Image? rendered = br?.image;
       if (sheet != null && im.ballFrames > 0) {
@@ -272,7 +299,8 @@ class BmPainter extends CustomPainter {
         im.animT = t;
         final int fi = im.animPhase.floor() % im.ballFrames;
         final double fw = sheet.width / im.ballFrames;
-        if (sv > 40) canvas.rotate(math.atan2(b.vy, b.vx) + math.pi / 2);
+        // v5: the ball's own spin (b.ang, from glancing hits / walls) turns the sprite on top of the roll direction.
+        canvas.rotate((sv > 40 ? math.atan2(b.vy, b.vx) + math.pi / 2 : 0) + b.ang);
         canvas.drawImageRect(sheet, Rect.fromLTWH(fi * fw, 0, fw, sheet.height.toDouble()), dst,
             Paint()..filterQuality = FilterQuality.medium);
       } else if (rendered != null) {
@@ -286,22 +314,32 @@ class BmPainter extends CustomPainter {
       return;
     }
     // No idle bobbing: the sprite stays exactly on its collider.
+    // v5 (owner request 2026-11-20): the disc turns with its spin (b.ang, picked up from glancing hits and rails), so
+    // a struck disc visibly rotates; a small rim notch keeps the turn visible on a crest that looks the same rotated.
     canvas.translate(b.x, drawY);
-    final double sv = math.sqrt(b.vx * b.vx + b.vy * b.vy);
-    if (sv > 60 || b.sq > .02) {
-      final double a = math.atan2(b.vy, b.vx), st = math.min(.1, sv / (1800 * K) * .1) + b.sq * .1, sq = b.sq * .14;
-      canvas.rotate(a);
-      canvas.scale(1 + st - sq, 1 - st * .6 + sq);
-      canvas.rotate(-a);
-    }
     final Paint dark = Paint()
       ..filterQuality = FilterQuality.medium
       ..colorFilter = const ColorFilter.mode(Color.fromRGBO(6, 8, 24, .66), BlendMode.srcATop);
     // Thin coin edge (3 px-ish) so the top face - the collider - stays where it is drawn.
     for (int k = 3; k >= 1; k--) {
-      canvas.drawImageRect(sp, src, dst.shift(Offset(0, renderRadius * .03 * k)), dark);
+      canvas.save();
+      canvas.translate(0, renderRadius * .03 * k);
+      canvas.rotate(b.ang);
+      canvas.drawImageRect(sp, src, dst, dark);
+      canvas.restore();
     }
+    canvas.rotate(b.ang);
     canvas.drawImageRect(sp, src, dst, Paint()..filterQuality = FilterQuality.medium);
+    canvas.drawArc(
+        Rect.fromCircle(center: Offset.zero, radius: renderRadius * .86),
+        -math.pi / 2 - .2,
+        .4,
+        false,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = renderRadius * .1
+          ..color = const Color(0xD9FFFFFF));
     canvas.restore();
   }
 
@@ -358,282 +396,213 @@ class BmPainter extends CustomPainter {
     }
   }
 
-  // ------------------------------------------------------------ drawTrail()
-  void _drawTrail(Canvas canvas, double now) {
-    final List<BmTrailPt> trail = e.trail;
-    final int n = trail.length;
-    if (n < 2) return;
-    const double bw = BR;
-    List<double> nrm(int i) {
-      final BmTrailPt p = trail[math.max(0, i - 1)], q = trail[math.min(n - 1, i)];
-      final double dx = q.x - p.x, dy = q.y - p.y;
-      double l = math.sqrt(dx * dx + dy * dy);
-      if (l == 0) l = 1;
-      return <double>[-dy / l, dx / l];
+  // ------------------------------------------------------------ motion marks (reference)
+  /// Tapered ribbon through [pts] (oldest first) with half widths [hw].
+  static Path _ribbon(List<Offset> pts, List<double> hw) {
+    final int n = pts.length;
+    final List<Offset> l = <Offset>[], r = <Offset>[];
+    for (int i = 0; i < n; i++) {
+      Offset d = pts[math.min(n - 1, i + 1)] - pts[math.max(0, i - 1)];
+      final double len = d.distance;
+      d = len < 1e-6 ? const Offset(1, 0) : d / len;
+      final Offset nn = Offset(-d.dy, d.dx);
+      l.add(pts[i] + nn * hw[i]);
+      r.add(pts[i] - nn * hw[i]);
     }
-
-    // A low-contrast ground mark sits below the neon trail. It follows the
-    // ball's actual path, fades with the stored trail alpha, and reads like a
-    // speed/skid trace on the pitch instead of a floating laser effect.
+    final Path p = Path()..moveTo(l[0].dx, l[0].dy);
     for (int i = 1; i < n; i++) {
-      final BmTrailPt p = trail[i - 1], q = trail[i];
-      final double f = q.a.clamp(0.0, 1.0).toDouble();
-      final List<double> nn = nrm(i);
-      final double offset = bw * 0.42;
-      final Paint mark = Paint()
-        ..blendMode = BlendMode.multiply
-        ..strokeCap = StrokeCap.round
-        ..strokeWidth = bw * (0.70 + f * 0.85)
-        ..color = _rgba(16, 28, 12, 0.10 + f * 0.16);
-      canvas.drawLine(Offset(p.x + nn[0] * offset, p.y + nn[1] * offset),
-          Offset(q.x + nn[0] * offset, q.y + nn[1] * offset), mark);
-      canvas.drawLine(Offset(p.x - nn[0] * offset, p.y - nn[1] * offset),
-          Offset(q.x - nn[0] * offset, q.y - nn[1] * offset), mark);
+      p.lineTo(l[i].dx, l[i].dy);
     }
-
-    // Only the low-alpha multiply trace is drawn; the neon/fire/sparkle trail variants were removed.
+    for (int i = n - 1; i >= 0; i--) {
+      p.lineTo(r[i].dx, r[i].dy);
+    }
+    return p..close();
   }
 
-  // ------------------------------------------------------------ aim()
-  void _aim(Canvas canvas, double now) {
-    final BmDrag? d = e.drag;
-    if (d == null) return;
-    final BmBody b = d.b;
-    final double dx = d.sx - d.cx, dy = d.sy - d.cy, l = math.sqrt(dx * dx + dy * dy);
-    if (l < 18) return;
-    final double p = math.min(l, LMAX) / LMAX, ux = dx / l, uy = dy / l;
-    double t = 1200;
-    for (final BmBody o in e.bodies) {
-      if (o == b) continue;
-      final double R = b.r + o.r, qx = o.x - b.x, qy = o.y - b.y, u = qx * ux + qy * uy;
-      if (u <= 0) continue;
-      final double D = u * u - (qx * qx + qy * qy - R * R);
-      if (D >= 0) {
-        final double h = u - math.sqrt(D);
-        if (h > 0 && h < t) t = h;
+  /// Ball: a light-grey streak, as wide as ~60% of the ball at the ball and tapering to a point over the last
+  /// ~0.3 s of its path (the engine's trail points fade at 3/s).
+  void _drawTrail(Canvas canvas, double now) {
+    final BmBody? bl = e.ball;
+    if (bl == null) return;
+    final List<Offset> pts = <Offset>[];
+    final List<double> al = <double>[];
+    for (final BmTrailPt q in e.trail) {
+      final Offset o = Offset(q.x, q.y);
+      if (pts.isNotEmpty && (o - pts.last).distance < 2) continue;
+      pts.add(o);
+      al.add(q.a.clamp(0.0, 1.0).toDouble());
+    }
+    if (pts.isEmpty) return;
+    final Offset head = Offset(bl.x, bl.y);
+    if ((head - pts.last).distance < bl.r * 3) {
+      pts.add(head);
+      al.add(al.last);
+    }
+    if (pts.length < 2) return;
+    final List<double> hw = <double>[for (final double a in al) BR * .62 * math.pow(a, .7).toDouble()];
+    hw[0] = 0;
+    canvas.drawPath(
+        _ribbon(pts, hw),
+        Paint()
+          ..shader = ui.Gradient.linear(pts.first, pts.last == pts.first ? pts.first + const Offset(0, 1) : pts.last,
+              <Color>[_rgba(205, 205, 205, 0), _rgba(205, 205, 205, .55), _rgba(214, 214, 214, .82)], <double>[0, .45, 1]));
+  }
+
+  /// Discs: the reference's blue water ribbon (cyan head, royal-blue body, violet edge, white glints) with
+  /// droplets flung off its sides. It keeps its width for most of its length and tapers sharply at the tail, and
+  /// covers the last ~3.4 disc diameters of the slide (BmBody.tr, trimmed by path length).
+  void _discTrails(Canvas canvas, double now) {
+    for (final BmBody b in e.bodies) {
+      if (b == e.ball || b.tr.isEmpty) continue;
+      final List<Offset> raw = <Offset>[];
+      for (final BmTrailPt q in b.tr) {
+        final Offset o = Offset(q.x, q.y);
+        if (raw.isEmpty || (o - raw.last).distance >= 2) raw.add(o);
+      }
+      final Offset head = Offset(b.x, b.y);
+      if ((head - raw.last).distance >= 2) raw.add(head);
+      // keep the newest kBmDiscTrailLen * r of path
+      final double maxLen = b.r * kBmDiscTrailLen;
+      final List<Offset> pts = <Offset>[raw.last];
+      double acc = 0;
+      for (int i = raw.length - 2; i >= 0 && acc < maxLen; i--) {
+        final double sl = (raw[i] - raw[i + 1]).distance;
+        if (acc + sl > maxLen) {
+          pts.insert(0, raw[i + 1] + (raw[i] - raw[i + 1]) * ((maxLen - acc) / sl));
+          acc = maxLen;
+        } else {
+          pts.insert(0, raw[i]);
+          acc += sl;
+        }
+      }
+      final int n = pts.length;
+      if (n < 3 || acc < b.r * .8) continue;
+      // fraction of the path from the tail (0) to the disc (1)
+      final List<double> ft = <double>[0];
+      double run = 0;
+      for (int i = 1; i < n; i++) {
+        run += (pts[i] - pts[i - 1]).distance;
+        ft.add(run / acc);
+      }
+      final double grow = math.min(1, acc / maxLen); // a fresh slide fans out as it lengthens
+      final List<double> hw = <double>[
+        for (final double f in ft) b.r * .82 * grow * (f < .4 ? math.sin(f / .4 * math.pi / 2) : 1)
+      ];
+      final Offset a = pts.first, z = pts.last;
+      List<Offset> shifted(double k) {
+        final List<Offset> o = <Offset>[];
+        for (int i = 0; i < n; i++) {
+          Offset d = pts[math.min(n - 1, i + 1)] - pts[math.max(0, i - 1)];
+          final double len = d.distance;
+          d = len < 1e-6 ? const Offset(1, 0) : d / len;
+          o.add(pts[i] + Offset(-d.dy, d.dx) * hw[i] * k);
+        }
+        return o;
+      }
+
+      canvas.drawPath(
+          _ribbon(pts, hw),
+          Paint()
+            ..shader = ui.Gradient.linear(a, z, <Color>[
+              _rgba(110, 70, 255, .15),
+              _rgba(70, 72, 240, .78),
+              _rgba(38, 110, 255, .9),
+              _rgba(70, 205, 255, .95)
+            ], <double>[0, .3, .7, 1]));
+      // violet swirl along one edge, cyan-white glint along the other
+      canvas.drawPath(
+          _ribbon(shifted(.5), <double>[for (final double w in hw) w * .3]),
+          Paint()
+            ..shader = ui.Gradient.linear(a, z, <Color>[_rgba(170, 90, 255, 0), _rgba(165, 95, 255, .75), _rgba(120, 150, 255, .6)],
+                <double>[0, .5, 1]));
+      canvas.drawPath(
+          _ribbon(shifted(-.3), <double>[for (final double w in hw) w * .28]),
+          Paint()
+            ..shader = ui.Gradient.linear(a, z, <Color>[_rgba(255, 255, 255, 0), _rgba(190, 245, 255, .7), _rgba(255, 255, 255, .9)],
+                <double>[0, .55, 1]));
+      // droplets: fixed per trail point (hashed), fading toward the tail
+      for (int i = 1; i < n - 1; i++) {
+        final Offset d = pts[i + 1] - pts[i - 1];
+        final double len = d.distance;
+        if (len < 1e-6) continue;
+        final Offset nn = Offset(-d.dy / len, d.dx / len), tg = d / len;
+        for (int k = 0; k < 3; k++) {
+          final int h = ((pts[i].dx * 7.3).round() * 73856093) ^ ((pts[i].dy * 5.1).round() * 19349663) ^ (k * 83492791) ^ b.cid;
+          final double u1 = (h & 1023) / 1023, u2 = ((h >> 10) & 1023) / 1023, u3 = ((h >> 20) & 1023) / 1023;
+          final double side = u1 < .5 ? -1 : 1, off = b.r * .82 * grow * (.75 + .75 * u2) * side;
+          final Offset c = pts[i] + nn * off - tg * b.r * .3 * u3;
+          final double al = .9 * ft[i];
+          final Color col = u3 < .4 ? _rgba(255, 255, 255, al) : (u3 < .75 ? _rgba(110, 185, 255, al) : _rgba(70, 90, 255, al));
+          canvas.drawCircle(c, b.r * (.05 + .09 * u3), Paint()..color = col);
+        }
       }
     }
-    if (ux < 0) t = math.min(t, (e.Fl + b.r - b.x) / ux);
-    if (ux > 0) t = math.min(t, (e.Fr - b.r - b.x) / ux);
-    if (uy < 0) t = math.min(t, (e.Ft + b.r - b.y) / uy);
-    if (uy > 0) t = math.min(t, (e.Fb - b.r - b.y) / uy);
-    t = math.max(t, 0);
-    final double hue = 135 - 135 * p;
-    final Color col = Color(bmHslColor(hue, .95, .58)), col2 = Color(bmHslColor((hue + 35) % 360, 1, .76));
-    final double sx = b.x + ux * b.r, sy = b.y + uy * b.r, ex = b.x + ux * t, ey = b.y + uy * t;
-    final List<int> tm = b.team != 0 ? <int>[255, 110, 110] : <int>[90, 175, 255];
-    // drag band (dashed)
-    final Offset p0 = Offset(d.sx, d.sy), pc = Offset(d.cx, d.cy);
-    _dashed(canvas, p0, pc, 2, 9,
+  }
+
+  // ------------------------------------------------------------ aim (reference)
+  /// The live pull: the disc, the pull length (world) and the shot direction (unit).
+  ({BmBody b, double l, double p, double ux, double uy})? _pull() {
+    final BmDrag? d = e.drag;
+    if (d == null) return null;
+    final double dx = d.sx - d.cx, dy = d.sy - d.cy, l = math.sqrt(dx * dx + dy * dy);
+    if (l < 18) return null;
+    return (b: d.b, l: l, p: bmAimPower(l), ux: dx / l, uy: dy / l);
+  }
+
+  /// Translucent dark pull circle around the disc; it opens with the pull (1.3 -> 4.8 disc radii).
+  void _aimUnder(Canvas canvas) {
+    final ({BmBody b, double l, double p, double ux, double uy})? a = _pull();
+    if (a == null) return;
+    canvas.drawCircle(Offset(a.b.x, a.b.y), bmAimCircleRadius(a.b.r, a.p), Paint()..color = _rgba(0, 0, 0, .17));
+  }
+
+  /// Red-to-yellow arrow in the shot direction (grows with the pull) and the chain of white dots toward the finger.
+  void _aimOver(Canvas canvas) {
+    final ({BmBody b, double l, double p, double ux, double uy})? a = _pull();
+    if (a == null) return;
+    final BmBody b = a.b;
+    final double r = b.r, ux = a.ux, uy = a.uy, nx = -uy, ny = ux;
+    // dots on the pull side
+    final int nd = bmAimDots(a.l, r);
+    for (int i = 0; i < nd; i++) {
+      final double dd = r * (2.55 + 1.85 * i), rad = r * kBmAimDotR[i];
+      final Offset c = Offset(b.x - ux * dd, b.y - uy * dd);
+      canvas.drawCircle(c, rad, Paint()..color = const Color(0xE61C1C1C));
+      canvas.drawCircle(
+          c,
+          rad - r * .09,
+          Paint()
+            ..shader = ui.Gradient.radial(c + Offset(-rad * .25, -rad * .3), rad, const <Color>[Color(0xFFFFFFFF), Color(0xFFD6D6D6)]));
+    }
+    // arrow
+    final double base = r * 1.3, tip = bmAimArrowTip(r, a.p), neck = tip - r * .82;
+    final double sw0 = r * .10, sw1 = r * .17, hw = r * .46;
+    Offset at(double d, double w) => Offset(b.x + ux * d + nx * w, b.y + uy * d + ny * w);
+    final Path arrow = Path()
+      ..moveTo(at(base, sw0).dx, at(base, sw0).dy)
+      ..lineTo(at(neck, sw1).dx, at(neck, sw1).dy)
+      ..lineTo(at(neck, hw).dx, at(neck, hw).dy)
+      ..lineTo(at(tip, 0).dx, at(tip, 0).dy)
+      ..lineTo(at(neck, -hw).dx, at(neck, -hw).dy)
+      ..lineTo(at(neck, -sw1).dx, at(neck, -sw1).dy)
+      ..lineTo(at(base, -sw0).dx, at(base, -sw0).dy)
+      ..close();
+    canvas.drawPath(
+        arrow,
         Paint()
-          ..strokeWidth = 3
-          ..strokeCap = StrokeCap.round
-          ..color = _rgba(tm[0], tm[1], tm[2], .35));
-    canvas.drawCircle(pc, 9 + p * 4, Paint()..color = _rgba(tm[0], tm[1], tm[2], .55));
-    canvas.drawCircle(
-        pc,
-        9 + p * 4,
+          ..shader = ui.Gradient.linear(at(base, 0), at(tip, 0), const <Color>[
+            Color(0xFFFFEE55),
+            Color(0xFFFFB020),
+            Color(0xFFF04A1E),
+            Color(0xFFD82A1A),
+          ], <double>[0, .42, .74, 1]));
+    canvas.drawPath(
+        arrow,
         Paint()
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2
-          ..color = Colors.white);
-    // prediction line
-    final Offset s0 = Offset(sx, sy), e0 = Offset(ex, ey);
-    final ui.Gradient g = ui.Gradient.linear(s0, e0 == s0 ? s0 + const Offset(0, 1) : e0, <Color>[col, _rgba(255, 255, 255, .2)]);
-    _gline(canvas, s0, e0, g, 16, .16);
-    _gline(canvas, s0, e0, g, 3, .85);
-    // moving chevrons
-    const double step = 44;
-    final double off = (now / 12) % step;
-    for (double dd = b.r + 14 + off; dd < t - b.r * .5; dd += step) {
-      final double x = b.x + ux * dd, y = b.y + uy * dd, a = math.max(0, 1 - dd / t * .75);
-      final Path ch = Path()
-        ..moveTo(x - uy * 9 - ux * 8, y + ux * 9 - uy * 8)
-        ..lineTo(x + ux * 5, y + uy * 5)
-        ..lineTo(x + uy * 9 - ux * 8, y - ux * 9 - uy * 8);
-      canvas.drawPath(
-          ch,
-          Paint()
-            ..blendMode = BlendMode.plus
-            ..style = PaintingStyle.stroke
-            ..strokeCap = StrokeCap.round
-            ..strokeJoin = StrokeJoin.round
-            ..strokeWidth = 4
-            ..color = col2.withValues(alpha: a.clamp(0.0, 1.0).toDouble()));
-    }
-    // wall bounce preview
-    {
-      double rx = ux, ry = uy;
-      bool hit = false;
-      const double eps = 2;
-      if (ex <= e.Fl + b.r + eps && ux < 0) {
-        rx = -ux;
-        hit = true;
-      } else if (ex >= e.Fr - b.r - eps && ux > 0) {
-        rx = -ux;
-        hit = true;
-      } else if (ey <= e.Ft + b.r + eps && uy < 0) {
-        ry = -uy;
-        hit = true;
-      } else if (ey >= e.Fb - b.r - eps && uy > 0) {
-        ry = -uy;
-        hit = true;
-      }
-      if (hit) {
-        final Offset a = Offset(ex, ey), z = Offset(ex + rx * 170, ey + ry * 170);
-        _dashed(
-            canvas,
-            a,
-            z,
-            8,
-            10,
-            Paint()
-              ..blendMode = BlendMode.plus
-              ..strokeWidth = 3
-              ..strokeCap = StrokeCap.round
-              ..shader = ui.Gradient.linear(a, z, <Color>[_rgba(255, 255, 255, .55), _rgba(255, 255, 255, 0)]),
-            phase: (now / 30) % 18);
-      }
-    }
-    // impact point: pulsing ring + sight ticks
-    {
-      final double pu = .5 + .5 * math.sin(now / 140), R = b.r * (1 + .12 * pu);
-      canvas.drawCircle(
-          e0,
-          R,
-          Paint()
-            ..blendMode = BlendMode.plus
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 3.5
-            ..color = col2.withValues(alpha: .9));
-      for (int k = 0; k < 4; k++) {
-        final double a = k * 1.5708 + now / 700, ca = math.cos(a), sa = math.sin(a);
-        canvas.drawLine(
-            Offset(ex + ca * (R + 4), ey + sa * (R + 4)),
-            Offset(ex + ca * (R + 13), ey + sa * (R + 13)),
-            Paint()
-              ..blendMode = BlendMode.plus
-              ..strokeWidth = 2.5
-              ..strokeCap = StrokeCap.round
-              ..color = col2.withValues(alpha: (.5 + .4 * pu).clamp(0.0, 1.0).toDouble()));
-      }
-      canvas.drawCircle(
-          e0,
-          R * .55,
-          Paint()
-            ..blendMode = BlendMode.plus
-            ..color = col.withValues(alpha: .25));
-    }
-    // power ring: 30 segments
-    {
-      const int N = 30;
-      final double r1 = b.r + 20;
-      for (int k = 0; k < N; k++) {
-        final double a0 = -1.5708 + k / N * 6.2832 + .03;
-        final bool lit = k / N < p;
-        canvas.drawArc(
-            Rect.fromCircle(center: Offset(b.x, b.y), radius: r1),
-            a0,
-            6.2832 / N - .07,
-            false,
-            Paint()
-              ..blendMode = BlendMode.plus
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 4
-              ..color = lit ? Color(bmHslColor(135 - 135 * (k / N), .95, .58)) : _rgba(255, 255, 255, .18));
-      }
-    }
-    // main neon arrow
-    {
-      final double base = b.r + 30, Lh = 34 + p * 92, hl = 24 + p * 16, sw = 3.5 + p * 5, hw = 14 + p * 9;
-      final double tipx = b.x + ux * (base + Lh), tipy = b.y + uy * (base + Lh), nx = -uy, ny = ux;
-      final double bx = b.x + ux * base, by = b.y + uy * base, jx = b.x + ux * (base + Lh - hl), jy = b.y + uy * (base + Lh - hl);
-      final Path arrow = Path()
-        ..moveTo(bx + nx * sw * .3, by + ny * sw * .3)
-        ..lineTo(jx + nx * sw, jy + ny * sw)
-        ..lineTo(jx + nx * hw, jy + ny * hw)
-        ..lineTo(tipx, tipy)
-        ..lineTo(jx - nx * hw, jy - ny * hw)
-        ..lineTo(jx - nx * sw, jy - ny * sw)
-        ..lineTo(bx - nx * sw * .3, by - ny * sw * .3)
-        ..close();
-      final ui.Gradient fg = ui.Gradient.linear(Offset(bx, by), Offset(tipx, tipy), <Color>[_rgba(255, 255, 255, .15), col, Colors.white], <double>[0, .55, 1]);
-      canvas.drawPath(
-          arrow,
-          Paint()
-            ..blendMode = BlendMode.plus
-            ..color = col
-            ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 11));
-      canvas.drawPath(
-          arrow,
-          Paint()
-            ..blendMode = BlendMode.plus
-            ..shader = fg);
-      canvas.drawPath(
-          arrow,
-          Paint()
-            ..blendMode = BlendMode.plus
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.8
-            ..color = _rgba(255, 255, 255, .9));
-      final int nCh = 1 + (p > .35 ? 1 : 0) + (p > .7 ? 1 : 0);
-      for (int k = 1; k <= nCh; k++) {
-        final double dd = base - k * 13, x = b.x + ux * dd, y = b.y + uy * dd;
-        final Path ch = Path()
-          ..moveTo(x - uy * (10 + p * 5) - ux * 7, y + ux * (10 + p * 5) - uy * 7)
-          ..lineTo(x + ux * 2, y + uy * 2)
-          ..lineTo(x + uy * (10 + p * 5) - ux * 7, y - ux * (10 + p * 5) - uy * 7);
-        canvas.drawPath(
-            ch,
-            Paint()
-              ..blendMode = BlendMode.plus
-              ..style = PaintingStyle.stroke
-              ..strokeWidth = 3.5
-              ..strokeCap = StrokeCap.round
-              ..strokeJoin = StrokeJoin.round
-              ..color = col2.withValues(alpha: .75 / k));
-      }
-      // power percent
-      final TextPainter tp = TextPainter(
-        text: TextSpan(
-          text: '${(p * 100).round()}%',
-          style: TextStyle(
-              color: Colors.white,
-              fontSize: 17,
-              fontWeight: FontWeight.w900,
-              shadows: <Shadow>[Shadow(color: col, blurRadius: 10)]),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      final double tx = b.x - ux * (b.r + 44), ty = b.y - uy * (b.r + 44) - (uy > .5 ? -4 : 0);
-      tp.paint(canvas, Offset(tx - tp.width / 2, ty - tp.height / 2));
-    }
-  }
-
-  void _gline(Canvas canvas, Offset a, Offset b, ui.Gradient g, double w, double alpha) {
-    canvas.saveLayer(null, Paint()..color = Color.fromRGBO(0, 0, 0, alpha));
-    canvas.drawLine(
-        a,
-        b,
-        Paint()
-          ..blendMode = BlendMode.plus
-          ..shader = g
-          ..strokeCap = StrokeCap.round
-          ..strokeWidth = w);
-    canvas.restore();
-  }
-
-  void _dashed(Canvas canvas, Offset a, Offset b, double on, double off, Paint p, {double phase = 0}) {
-    final Offset d = b - a;
-    final double len = d.distance;
-    if (len <= 0) return;
-    final Offset u = d / len;
-    double pos = -phase;
-    while (pos < len) {
-      final double s0 = math.max(0, pos), s1 = math.min(len, pos + on);
-      if (s1 > s0) canvas.drawLine(a + u * s0, a + u * s1, p);
-      pos += on + off;
-    }
+          ..strokeJoin = StrokeJoin.round
+          ..strokeWidth = r * .045
+          ..color = const Color(0x8C5A140A));
   }
 
   @override

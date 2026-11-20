@@ -19,6 +19,11 @@ import '../core/bm_engine.dart';
 import 'bm_audio.dart';
 import 'bm_ball.dart';
 import 'bm_painter.dart';
+import '../intro/fs_game_bar.dart';
+import '../intro/fs_intro_data.dart';
+import '../intro/fs_intro_ui.dart' show FsBarHandle;
+import '../intro/fs_online_pick.dart';
+import '../intro/fs_team_select.dart' show FsSidePlayer;
 
 const String _a = 'assets/games/bermuda/';
 
@@ -33,8 +38,12 @@ const double kBmScoreboardHeight = 64;
 const double kBmOnlineTurnSeconds = 10;
 
 class BermudaView extends StatefulWidget {
-  const BermudaView({super.key, required this.launch, this.autoStart = false});
+  const BermudaView({super.key, required this.launch, this.autoStart = false, this.pick});
   final GameLaunch launch;
+
+  /// Offline: teams and formations chosen in the pre-match intro (intro/fs_intro_flow.dart); with [autoStart] the
+  /// match starts with them once the saved field / ball are loaded.
+  final FsMatchPick? pick;
 
   /// Offline only: skip the setup screen with the saved/default picks (used by tests).
   final bool autoStart;
@@ -96,6 +105,7 @@ class _BermudaViewState extends State<BermudaView>
   bool _reported = false;
   bool _disposed = false;
   bool _paused = false;
+  final FsBarSettings _barSettings = FsBarSettings();
 
   // online
   NetInbox? _inbox;
@@ -105,10 +115,28 @@ class _BermudaViewState extends State<BermudaView>
   int _pendingShotSeat = -1;
   final List<Completer<void>> _waiters = <Completer<void>>[];
 
+  /// v4 online picks: a play move was replayed before any match started (a match logged before the online
+  /// pre-match picks existed); such a room match starts from its room prefs exactly as before.
+  bool _sawPlay = false;
+
+  /// v4: started when this phone's setup is sent; if the other side's setup has not arrived when it fires, this
+  /// phone logs a default setup FOR that side (first setup per side in the log wins on both phones).
+  Timer? _setupFallback;
+
+  /// v5 shared picks: team picks logged so far ({'a': 'tpick'}, or a side's 'setup'), by side.
+  final Map<int, String> _teamPicks = <int, String>{};
+
+  /// v5: the online pick screens were opened on this phone; they stay up (waiting) until the match starts.
+  bool _pickShown = false;
+
   GameLaunch get launch => widget.launch;
   bool get online => launch.online;
   int get mySeat => launch.mySeat;
   bool get isHostSeat => mySeat == 0;
+
+  /// Tests: the running match's engine (null before the match starts).
+  @visibleForTesting
+  BmEngine? get matchEngine => stage == 'match' ? e : null;
 
   @override
   void initState() {
@@ -116,7 +144,7 @@ class _BermudaViewState extends State<BermudaView>
     _ticker = createTicker(_onTick)..start();
     WidgetsBinding.instance.addObserver(this);
     unawaited(audio.init());
-    unawaited(_loadPrefs());
+    final Future<void> prefs = _loadPrefs();
     final NetLink? net = launch.net;
     if (net != null) {
       _netReady = false;
@@ -128,6 +156,10 @@ class _BermudaViewState extends State<BermudaView>
               seat: -1,
               kind: 'replayDone',
               data: <String, dynamic>{})));
+    } else if (widget.autoStart && widget.pick != null) {
+      prefs.then((_) {
+        if (mounted && stage == 'setup') _startOffline();
+      });
     } else if (widget.autoStart) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && stage == 'setup') _startOffline();
@@ -185,6 +217,7 @@ class _BermudaViewState extends State<BermudaView>
         _finishIn -= dt;
         if (_finishIn <= 0) _report();
       }
+      _checkSideLeft();
     }
     if (_disposed) return;
     _frame.value++;
@@ -271,7 +304,7 @@ class _BermudaViewState extends State<BermudaView>
       case 'turn':
         if (net != null) {
           final int side = data['turn'] as int;
-          final int seat = e.shooterSeat(side);
+          final int seat = e.controllerSeat(side);
           net.turnSeat = seat;
           if (e.perSide > 1 && seat < net.names.length) {
             toast(seat == mySeat ? launch.tx('نوبت توست!', 'Your shot!') : net.names[seat], false);
@@ -292,7 +325,9 @@ class _BermudaViewState extends State<BermudaView>
     final List<BmTeam> clubs = kBmTeams
         .where((BmTeam t) => t.id != my.team && (t.cat != 'lux' || r.nextInt(4) == 0))
         .toList();
-    final String opp = clubs[r.nextInt(clubs.length)].id;
+    final FsMatchPick? pk = widget.pick;
+    final String opp = pk != null ? pk.teams[1] : clubs[r.nextInt(clubs.length)].id;
+    final String mine = pk != null ? pk.teams[0] : my.team;
     final bool bot = launch.vsBot;
     final int lvl = switch (launch.difficulty) {
       BotDifficulty.easy => 0,
@@ -303,8 +338,10 @@ class _BermudaViewState extends State<BermudaView>
         launch.playerName.isEmpty ? 'Player 1' : launch.playerName;
     _begin(BmConfig(
       mode: bot ? 'bot' : 'local',
-      teams: <String>[my.team, opp],
-      form: <int>[my.form, r.nextInt(6)],
+      teams: <String>[mine, opp],
+      form: pk != null
+          ? <int>[pk.forms[0].clamp(0, kBmForms.length - 1).toInt(), pk.forms[1].clamp(0, kBmForms.length - 1).toInt()]
+          : <int>[my.form, r.nextInt(kBmForms.length)],
       names: bot
           ? <String>[
               me,
@@ -353,13 +390,15 @@ class _BermudaViewState extends State<BermudaView>
   void _maybeStartOnline({bool quiet = false}) {
     if (stage == 'match') return;
     _Setup? h = _setups[0], g = _setups[1];
-    if (_roomPrefs != null) {
+    if (_roomPrefs != null && _sawPlay) {
       h ??= _prefSetup(0);
       g ??= _prefSetup(1);
     }
     if (h == null || g == null) return;
     final NetLink net = launch.net!;
     e.localSeat = mySeat;
+    // v5: a teammate takes the turns of a seat that left (team games), so the match plays on without dead turns.
+    e.seatGone = (int s) => launch.net?.forfeitedSeats.contains(s) ?? false;
     _begin(
         BmConfig(
           mode: 'online',
@@ -460,15 +499,39 @@ class _BermudaViewState extends State<BermudaView>
     unawaited(audio.crowd(false));
   }
 
-  void _report({bool forfeit = false}) {
+  /// v5 team games: every seat of one side has left (forfeited) while the match runs -> the other side wins now
+  /// instead of playing on against nobody.
+  void _checkSideLeft() {
+    final NetLink? net = launch.net;
+    if (net == null || _reported || _finishIn > 0 || e.perSide < 2) return;
+    final Set<int> gone = net.forfeitedSeats;
+    if (gone.isEmpty) return;
+    for (int side = 0; side < 2; side++) {
+      bool all = true;
+      for (int s = side; s < net.seatCount; s += 2) {
+        if (!gone.contains(s)) all = false;
+      }
+      if (all) {
+        _report(sideLeft: side);
+        return;
+      }
+    }
+  }
+
+  void _report({bool forfeit = false, int? sideLeft, bool leftTeam = false}) {
     if (_reported) return;
     _reported = true;
     final List<int> sc = e.score; // local: [me, opponent]
-    final bool won = !forfeit && sc[0] > sc[1];
-    final bool draw = !forfeit && sc[0] == sc[1];
+    // v5: a whole side left (team games): the side still playing wins whatever the score.
+    final bool won = sideLeft != null ? sideLeft != _mySide : (!forfeit && sc[0] > sc[1]);
+    final bool draw = sideLeft == null && !forfeit && sc[0] == sc[1];
     final int winSide = won ? _mySide : 1 - _mySide;
     final int seats = launch.net?.seatCount ?? 2;
     final List<int> global = <int>[sc[e.ct(0)], sc[e.ct(1)]];
+    // v5 team games (owner bug: players 3+ got the wrong result): the server books seat i's score from scores[i],
+    // so every seat gets its own side's goals (seats 0,2,4 = side 0; 1,3,5 = side 1), not only seats 0 and 1.
+    // A seat that left (forfeited) is never among the winners: it books a loss while its side keeps its result.
+    final Set<int> gone = launch.net?.forfeitedSeats ?? const <int>{};
     launch.onFinish(GameResult(
       outcome:
           draw ? GameOutcome.draw : (won ? GameOutcome.win : GameOutcome.loss),
@@ -477,10 +540,12 @@ class _BermudaViewState extends State<BermudaView>
       winnerSeats: draw
           ? <int>[]
           : <int>[
-              for (int s = winSide; s < math.max(2, seats); s += 2) s
+              for (int s = winSide; s < math.max(2, seats); s += 2)
+                if (!gone.contains(s)) s
             ],
-      scores: global,
+      scores: <int>[for (int s = 0; s < math.max(2, seats); s++) global[s % 2]],
       tournamentMatchId: launch.tournamentMatchId,
+      endsMatch: !leftTeam,
       summaryFa:
           'نتیجه‌ی فوتبال: ${sc[0]} - ${sc[1]}${forfeit ? ' (انصراف)' : ''}',
       summaryEn:
@@ -519,10 +584,22 @@ class _BermudaViewState extends State<BermudaView>
             e.remoteShot(ps);
           }
         }
-      } else if (_roomPrefs != null) {
+      } else {
         _maybeStartOnline();
-      } else if (_setups.containsKey(mySeat)) {
-        stage = 'waiting';
+        if (stage != 'match') {
+          if (_roomPrefs != null && !_setups.containsKey(mySeat)) {
+            // v4: the room's pre-game choice is the starting pick on the online team / formation screens.
+            final _Setup? rp = _prefSetup(mySeat);
+            if (rp != null) my = _Setup(GemShop.instance.usableTeam(rp.team), rp.form, rp.field, rp.ball);
+          }
+          if (_setups.containsKey(mySeat)) {
+            stage = 'waiting';
+            _armSetupFallback();
+          } else if (mySeat > 1) {
+            // team games: seats 0 and 1 pick their side's team / formation; the others wait for them.
+            stage = 'waiting';
+          }
+        }
       }
       if (mounted) setState(() {});
       return;
@@ -530,14 +607,27 @@ class _BermudaViewState extends State<BermudaView>
     if (m.kind != 'move' && m.kind != 'timeout') return;
     final Map<String, dynamic> d = m.data;
     final String a = '${d['a']}';
+    if (a == 'tpick') {
+      // v5: a side's team pick (before its formation). Never a play move, so it does not mark a legacy room match.
+      final int seat = ((d['for'] as num?)?.toInt() ?? m.seat);
+      final dynamic t = d['team'];
+      if (t is String && seat >= 0 && !_teamPicks.containsKey(seat)) _teamPicks[seat] = t;
+      if (mounted) setState(() {});
+      return;
+    }
     if (a == 'setup') {
       final _Setup? s = _Setup.fromJson(d);
-      if (s != null && !_setups.containsKey(m.seat)) _setups[m.seat] = s;
+      // v4: a setup may be logged FOR an absent side ('for', see _armSetupFallback); the first per side wins.
+      final int seat = ((d['for'] as num?)?.toInt() ?? m.seat);
+      if (s != null && seat >= 0 && !_setups.containsKey(seat)) _setups[seat] = s;
       _maybeStartOnline(quiet: m.replay);
       if (mounted) setState(() {});
       return;
     }
-    if (stage != 'match') return;
+    if (stage != 'match') {
+      if (m.replay) _sawPlay = true;
+      return;
+    }
     if (m.replay) {
       _replayMove(m.seat, a, d);
       return;
@@ -556,6 +646,9 @@ class _BermudaViewState extends State<BermudaView>
         break;
       case 'timeout':
         e.remoteTimeout(d);
+        break;
+      case 'form':
+        applyFormationChange((d['side'] as num).toInt(), (d['form'] as num).toInt(), quiet: true);
         break;
     }
   }
@@ -593,6 +686,9 @@ class _BermudaViewState extends State<BermudaView>
         if (!ng) e.score[t]++;
         e.reset(ng ? e.turn : 1 - t);
         break;
+      case 'form':
+        e.changeForm((d['side'] as num).toInt(), (d['form'] as num).toInt());
+        break;
       case 'timeout':
         final num? s = d['seat'] as num?;
         if (s == null || e.ct(e.turn) == s.toInt()) {
@@ -611,7 +707,116 @@ class _BermudaViewState extends State<BermudaView>
     net.send(_setups[mySeat]!.toJson());
     stage = 'waiting';
     _maybeStartOnline();
+    _armSetupFallback();
     setState(() {});
+  }
+
+  /// Seconds this phone waits, after sending its own setup, for the other side's (v5: both phones open the formation
+  /// screen on the same logged team pick and it times out after 15 s; this covers a phone that left or never opened
+  /// the picks). Was 75 with the v4 45 s team screen.
+  static const int kOnlineSetupWaitSeconds = 25;
+
+  void _armSetupFallback() {
+    if (_setupFallback != null || mySeat > 1 || stage == 'match') return;
+    _setupFallback = Timer(const Duration(seconds: kOnlineSetupWaitSeconds), () {
+      final NetLink? net = launch.net;
+      final int opp = 1 - mySeat;
+      if (_disposed || net == null || stage == 'match' || _setups.containsKey(opp)) return;
+      final _Setup d = (_roomPrefs != null ? _prefSetup(opp) : null) ??
+          _Setup(opp == 0 ? 'club0' : 'club1', 0, my.field, my.ball);
+      net.send(<String, dynamic>{...d.toJson(), 'for': opp});
+    });
+  }
+
+  /// v4: the online team / formation screens (seats 0 and 1, before their setup is logged).
+  bool get _onlinePicking =>
+      online &&
+      _netReady &&
+      mySeat <= 1 &&
+      ((stage == 'setup' && !_setups.containsKey(mySeat)) || (stage == 'waiting' && _pickShown));
+
+  Widget _onlinePick() {
+    _pickShown = true;
+    final NetLink net = launch.net!;
+    final int opp = 1 - mySeat;
+    String nm(int s) => s < net.names.length && net.names[s].isNotEmpty ? net.names[s] : (s == mySeat ? 'من' : 'حریف');
+    final ProfileService? pr = ProfileService.current;
+    return FsOnlinePick(
+      key: const ValueKey<String>('online-pick'),
+      team: my.team,
+      form: my.form,
+      opponentTeam: _setups[opp]?.team ?? _teamPicks[opp] ?? (opp == 0 ? 'club0' : 'club1'),
+      opponentTeamIn: _teamPicks.containsKey(opp) || _setups.containsKey(opp),
+      onTeam: (String t) {
+        final NetLink? n = launch.net;
+        if (_disposed || n == null || _teamPicks.containsKey(mySeat) || _setups.containsKey(mySeat)) return;
+        final String team = GemShop.instance.usableTeam(t);
+        _teamPicks[mySeat] = team;
+        n.send(<String, dynamic>{'a': 'tpick', 'team': team});
+        if (mounted) setState(() {});
+      },
+      players: <FsSidePlayer>[
+        FsSidePlayer(
+            name: nm(mySeat),
+            portrait: 'assets/ui/anix/avatars/${pr?.portrait ?? '01-vanguard'}.webp',
+            badge: 'سطح ${fsFa(pr?.level ?? 1)}'),
+        FsSidePlayer(name: nm(opp), portrait: 'assets/ui/anix/avatars/02-cyber-scout.webp', badge: 'حریف'),
+      ],
+      topLane: 50,
+      onBar: () {},
+      onDone: (String t, int f) {
+        if (_disposed || stage != 'setup' || _setups.containsKey(mySeat)) return;
+        my.team = GemShop.instance.usableTeam(t);
+        my.form = f;
+        unawaited(_savePrefs());
+        _sendSetup();
+      },
+    );
+  }
+
+  // ------------------------------------------------------------------ in-match formation change
+  /// Global side whose formation the button changes: online this phone's side, vs bot the player's side (0),
+  /// pass-and-play the side whose turn it is.
+  int get _reformSide => online ? _mySide : (launch.vsBot ? 0 : e.ct(e.turn));
+
+  /// Opens the 3 x 3 formation picker during the match. Rule (docs/DECISIONS.md D11): the new shape applies at once
+  /// when it is that side's kickoff shot (its turn, nothing shot since the kickoff), otherwise from the next kickoff.
+  /// Online the pick is a logged 'form' move, so the other phone applies the same change in the same order.
+  Future<void> _changeFormation() async {
+    if (stage != 'match' || e.phase == 'over' || _reported) return;
+    final int side = _reformSide;
+    audio.sfx('ui');
+    final int? fi = await showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: const Color(0xF0101418),
+      isScrollControlled: true,
+      builder: (BuildContext ctx) => BmFormationPicker(
+        title: launch.tx('تغییر ترکیب', 'Change formation'),
+        hint: e.canReformNow(side)
+            ? launch.tx('همین الان اعمال می‌شود', 'Applies now')
+            : launch.tx('از شروع بعدی اعمال می‌شود', 'Applies from the next kickoff'),
+        current: e.form[side],
+        selectLabel: launch.tx('انتخاب', 'Select'),
+        selectedLabel: launch.tx('انتخاب شده', 'Selected'),
+      ),
+    );
+    if (fi == null || !mounted || stage != 'match' || e.phase == 'over') return;
+    // Never during a goal pause: the receiving phone applies logged moves only once play resumes (after the kickoff
+    // reset), so the sender waits for the same point and both phones see the same kickoff state.
+    await _waitPlayable();
+    if (_disposed || stage != 'match' || e.phase == 'over') return;
+    applyFormationChange(side, fi, send: true);
+  }
+
+  /// Applies a formation change (local pick or a logged 'form' move) and, for a local pick online, logs it.
+  void applyFormationChange(int side, int fi, {bool send = false, bool quiet = false}) {
+    final bool now = e.changeForm(side, fi);
+    if (send) launch.net?.send(<String, dynamic>{'a': 'form', 'side': side, 'form': fi});
+    if (!quiet) {
+      toast(now ? launch.tx('ترکیب عوض شد', 'Formation changed') : launch.tx('ترکیب از شروع بعدی', 'New formation at next kickoff'),
+          false);
+    }
+    if (mounted) setState(() {});
   }
 
   // ------------------------------------------------------------------ pause (flow.js pause())
@@ -622,38 +827,32 @@ class _BermudaViewState extends State<BermudaView>
     _paused = true;
     unawaited(audio
         .crowd(false)); // game.js crowdSync: no crowd while the menu is open
-    final String? act = await showDialog<String>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext ctx) => _BmDialog(
-        title: launch.tx('توقف', 'Paused'),
-        actions: <(String, String, IconData)>[
-          (
-            'continue',
-            launch.tx('ادامه', 'Continue'),
-            Icons.play_arrow_rounded
-          ),
-          if (!isOnline && !bot)
-            (
-              'restart',
-              launch.tx('شروع دوباره', 'Restart'),
-              Icons.refresh_rounded
-            ),
-          (
-            'sound',
-            launch.tx('صدا روشن/خاموش', 'Sound on/off'),
-            Icons.volume_up_rounded
-          ),
-          (
-            'ann',
-            audio.announcer
-                ? launch.tx('گزارشگر گل: روشن', 'Goal announcer: on')
-                : launch.tx('گزارشگر گل: خاموش', 'Goal announcer: off'),
-            Icons.record_voice_over_rounded
-          ),
-          ('leave', launch.tx('خروج', 'Leave'), Icons.logout_rounded),
-        ],
-      ),
+    // Reference game bar ("نوار بازی", intro/fs_game_bar.dart) instead of the old pause dialog: exit, mute all and the
+    // game volume act on this match; restart (pass-and-play) and the goal announcer keep their old actions.
+    String? act;
+    _barSettings.mutedAll = audio.muted;
+    _barSettings.gameVolume = audio.master;
+    await FsGameBar.show(
+      context,
+      settings: _barSettings,
+      players: cfg?.names ?? <String>[launch.playerName],
+      me: online ? _mySide : 0,
+      online: isOnline,
+      connected: _netReady,
+      onRestart: (!isOnline && !bot) ? () => act = 'restart' : null,
+      extra: <FsBarToggle>[
+        FsBarToggle(launch.tx('گزارشگر گل', 'Goal announcer'), audio.announcer, (bool v) {
+          audio.announcer = v;
+          unawaited(SharedPreferences.getInstance()
+              .then((SharedPreferences p) => p.setBool('bm.ann', audio.announcer))
+              .then((_) {}, onError: (Object _) {}));
+        }),
+      ],
+      onChanged: (FsBarSettings s) {
+        if (audio.muted != s.mutedAll) audio.setMuted(s.mutedAll);
+        audio.master = s.gameVolume;
+      },
+      onExit: () => act = 'leave',
     );
     _paused = false;
     if (!mounted) return;
@@ -662,21 +861,19 @@ class _BermudaViewState extends State<BermudaView>
       case 'restart':
         e.restart(0);
         break;
-      case 'sound':
-        audio.setMuted(!audio.muted);
-        break;
-      case 'ann':
-        audio.announcer = !audio.announcer;
-        unawaited(SharedPreferences.getInstance()
-            .then((SharedPreferences p) => p.setBool('bm.ann', audio.announcer))
-            .then((_) {}, onError: (Object _) {}));
-        break;
       case 'leave':
-        if (isOnline || bot) {
+        if (isOnline && e.perSide > 1 && launch.net != null) {
+          // v5 team games: only this seat forfeits (logged, so every phone hands its turns to a teammate); the match
+          // goes on for the others and this player books a loss. When a whole side has left, the other side wins.
+          unawaited(launch.net!.send(<String, dynamic>{'a': 'leave', 'seat': mySeat}, kind: 'forfeit'));
+          _report(forfeit: true, leftTeam: true);
+        } else if (isOnline || bot) {
           // flow.js: leaving counts as a loss
           _report(forfeit: true);
         } else {
-          unawaited(Navigator.of(context).maybePop());
+          // Already confirmed in the game bar: leave without the host's second confirmation.
+          final NavigatorState nav = Navigator.of(context);
+          if (nav.canPop()) nav.pop();
         }
         break;
     }
@@ -710,6 +907,7 @@ class _BermudaViewState extends State<BermudaView>
   @override
   void dispose() {
     _disposed = true;
+    _setupFallback?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _ticker.dispose();
     _goalAnim.dispose();
@@ -728,7 +926,10 @@ class _BermudaViewState extends State<BermudaView>
   @override
   Widget build(BuildContext context) {
     if (stage != 'match') {
-      if (launch.soundOn && !_paused && _visible) unawaited(audio.music(true));
+      // v4: no menu soundtrack on the screen that only hands over to an auto-started match (offline intro), and
+      // none during a match; it comes back on the setup screen after leaving a match.
+      if (launch.soundOn && !_paused && _visible && !widget.autoStart) unawaited(audio.music(true));
+      if (_onlinePicking) return _onlinePick();
       return _setupScreen(context);
     }
     final double dpr = math.min(MediaQuery.devicePixelRatioOf(context), 1.75);
@@ -785,9 +986,15 @@ class _BermudaViewState extends State<BermudaView>
               left: 0, right: 0, top: 0, child: SafeArea(child: _scoreboard())),
           Positioned.fill(child: IgnorePointer(child: _overlays())),
           Positioned(
-            left: 12,
+            left: 0,
             bottom: 12 + MediaQuery.paddingOf(context).bottom,
-            child: _RoundBtn(icon: Icons.pause_rounded, onTap: _pause),
+            child: FsBarHandle(players: cfg?.names.length ?? 2, onTap: _pause),
+          ),
+          // Reference in-match "تغییر ترکیب" button (above the game bar handle, bottom left).
+          Positioned(
+            left: 6,
+            bottom: 12 + MediaQuery.paddingOf(context).bottom + 48,
+            child: BmChangeFormButton(label: launch.tx('تغییر ترکیب', 'Formation'), onTap: _changeFormation),
           ),
         ]),
       ),
@@ -876,8 +1083,11 @@ class _BermudaViewState extends State<BermudaView>
           if (e.sd) {
             clock = 'GOLDEN';
           } else {
+            // v3 (owner request 2026-11-20): a natural match clock that counts the played time up in real
+            // seconds (0:00 -> match length) instead of counting down; red over the last 30 s.
             final int t = math.max(0, e.mleft.ceil());
-            clock = '${t ~/ 60}:${(t % 60).toString().padLeft(2, '0')}';
+            final int el = math.min(e.mt, math.max(0, (e.mt - e.mleft).floor()));
+            clock = '${el ~/ 60}:${(el % 60).toString().padLeft(2, '0')}';
             low = t <= 30;
           }
         }
@@ -965,7 +1175,39 @@ class _BermudaViewState extends State<BermudaView>
                         ? accent.withValues(alpha: .72)
                         : Colors.transparent),
               ),
-              child: Row(children: children),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  Row(children: children),
+                  // Reference turn clock: an orange bar under each name, full while waiting, draining toward the
+                  // left on the side whose turn it is.
+                  if (e.tt > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 3),
+                      child: Container(
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: .45),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                        alignment: Alignment.centerLeft,
+                        child: FractionallySizedBox(
+                          widthFactor: on ? (e.tleft / e.tt).clamp(0.0, 1.0).toDouble() : 1,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(2),
+                              gradient: const LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: <Color>[Color(0xFFFFC23A), Color(0xFFFF8A00)],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           );
         }
@@ -1453,21 +1695,33 @@ class _BermudaViewState extends State<BermudaView>
                           launch.tx(
                               'آرایش مهره‌های تیم', 'Set your team shape'),
                           Icons.account_tree_outlined),
-                      Wrap(
-                        spacing: 7,
-                        runSpacing: 7,
-                        children: <Widget>[
-                          for (int i = 0; i < kBmForms.length; i++)
-                            _Chip(
-                              label: '${kBmForms[i][0]} · ${kBmForms[i][1]}',
-                              on: my.form == i,
-                              onTap: () => setState(() {
-                                my.form = i;
-                                audio.sfx('ui');
-                                unawaited(_savePrefs());
-                              }),
-                            ),
-                        ],
+                      // The reference's 3 x 3 formation board: a mini pitch per shape (own goal on the left,
+                      // halfway line on the right), its name and a select button.
+                      LayoutBuilder(
+                        builder: (BuildContext context, BoxConstraints c) {
+                          final double w = (c.maxWidth - 2 * 8) / 3;
+                          return Wrap(
+                            spacing: 8,
+                            runSpacing: 10,
+                            children: <Widget>[
+                              for (int i = 0; i < kBmForms.length; i++)
+                                SizedBox(
+                                  width: w,
+                                  child: BmFormationCard(
+                                    form: kBmForms[i],
+                                    on: my.form == i,
+                                    selectLabel: launch.tx('انتخاب', 'Select'),
+                                    selectedLabel: launch.tx('انتخاب شده', 'Selected'),
+                                    onTap: () => setState(() {
+                                      my.form = i;
+                                      audio.sfx('ui');
+                                      unawaited(_savePrefs());
+                                    }),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -1707,6 +1961,220 @@ class _BermudaViewState extends State<BermudaView>
   }
 }
 
+/// The reference's in-match "تغییر ترکیب" button: a dark pill with the label and a small green pitch icon.
+class BmChangeFormButton extends StatelessWidget {
+  const BmChangeFormButton({super.key, required this.label, required this.onTap});
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 36,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xE61C1E22),
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(color: Colors.white24),
+            boxShadow: const <BoxShadow>[BoxShadow(color: Color(0x66000000), blurRadius: 6, offset: Offset(0, 2))],
+          ),
+          child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+            Text(label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
+            const SizedBox(width: 6),
+            Container(
+              width: 30,
+              height: 22,
+              decoration: BoxDecoration(
+                color: const Color(0xFF2E9B32),
+                borderRadius: BorderRadius.circular(3),
+                border: Border.all(color: const Color(0xFF9CFF7A)),
+              ),
+              child: const Icon(Icons.grid_view_rounded, size: 14, color: Colors.white),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// In-match 3 x 3 formation picker (same cards as the setup board); pops the picked index.
+class BmFormationPicker extends StatelessWidget {
+  const BmFormationPicker({
+    super.key,
+    required this.title,
+    required this.hint,
+    required this.current,
+    this.selectLabel = 'Select',
+    this.selectedLabel = 'Selected',
+  });
+  final String title, hint, selectLabel, selectedLabel;
+  final int current;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+        child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+          Text(title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 2),
+          Text(hint, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          const SizedBox(height: 10),
+          LayoutBuilder(builder: (BuildContext context, BoxConstraints c) {
+            final double w = (c.maxWidth - 2 * 8) / 3;
+            return Wrap(spacing: 8, runSpacing: 10, children: <Widget>[
+              for (int i = 0; i < kBmForms.length; i++)
+                SizedBox(
+                  width: w,
+                  child: BmFormationCard(
+                    form: kBmForms[i],
+                    on: current == i,
+                    selectLabel: selectLabel,
+                    selectedLabel: selectedLabel,
+                    onTap: () => Navigator.of(context).pop(i),
+                  ),
+                ),
+            ]);
+          }),
+        ]),
+      ),
+    );
+  }
+}
+
+/// One formation on the setup board: a mini horizontal pitch (own goal left, halfway right, like the reference's
+/// formation screen) with the five discs, the Persian name, the English label and a select button.
+class BmFormationCard extends StatelessWidget {
+  const BmFormationCard(
+      {super.key, required this.form, required this.on, required this.onTap, this.selectLabel = 'Select', this.selectedLabel = 'Selected'});
+  final BmFormation form;
+  final bool on;
+  final VoidCallback onTap;
+  final String selectLabel, selectedLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final NxThemeColors visual = NxThemeColors.of(context);
+    return Semantics(
+      button: true,
+      selected: on,
+      label: form.label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            AspectRatio(
+              aspectRatio: 82 / 54,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  border: Border.all(color: on ? const Color(0xFF7CFF4A) : Colors.white24, width: on ? 2 : 1),
+                ),
+                child: CustomPaint(painter: BmFormationMiniPainter(form)),
+              ),
+            ),
+            const SizedBox(height: 3),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1C1E22),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: Column(
+                children: <Widget>[
+                  Text(form.fa,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textDirection: TextDirection.rtl,
+                      style: const TextStyle(
+                          fontFamily: 'Estedad', color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800, height: 1.2)),
+                  Text(form.en,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: visual.muted, fontSize: 8.5, fontWeight: FontWeight.w700)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 4),
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(5),
+                gradient: on
+                    ? const LinearGradient(colors: <Color>[Color(0xFFE6E6E6), Color(0xFFBDBDBD)])
+                    : const LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: <Color>[Color(0xFFB6F55A), Color(0xFF5FB61E)]),
+              ),
+              child: Text(on ? selectedLabel : selectLabel,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontFamily: 'Estedad',
+                      color: on ? const Color(0xFF555555) : const Color(0xFF14320A),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      height: 1.2)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Mini pitch of a formation: striped grass, white lines, the own goal box on the left and the centre circle on
+/// the right edge; discs at the formation's slots (depth -> x, width -> y; the width is drawn stretched 1.3x like
+/// the reference board).
+class BmFormationMiniPainter extends CustomPainter {
+  BmFormationMiniPainter(this.form);
+  final BmFormation form;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width, h = size.height;
+    for (int i = 0; i < 8; i++) {
+      canvas.drawRect(Rect.fromLTWH(i * w / 8, 0, w / 8 + .5, h),
+          Paint()..color = i.isEven ? const Color(0xFF4FA83A) : const Color(0xFF5DB845));
+    }
+    final Paint line = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(1, w / 110)
+      ..color = Colors.white.withValues(alpha: .85);
+    canvas.drawRect(Rect.fromLTWH(1, 1, w - 2, h - 2), line);
+    canvas.drawRect(Rect.fromLTWH(1, h * .22, w * .2, h * .56), line);
+    canvas.drawRect(Rect.fromLTWH(1, h * .36, w * .08, h * .28), line);
+    canvas.drawArc(Rect.fromCircle(center: Offset(w - 1, h / 2), radius: h * .2), math.pi / 2, math.pi, false, line);
+    final double r = math.max(3, h * .075);
+    for (final List<double> s in form.slots) {
+      final Offset c = Offset(w * (.03 + .94 * s[1]), h * (.5 + (s[0] - .5) * 1.3).clamp(.08, .92).toDouble());
+      canvas.drawCircle(c + Offset(r * .25, r * .35), r, Paint()..color = Colors.black38);
+      canvas.drawCircle(c, r, Paint()..color = const Color(0xFFE53935));
+      canvas.drawCircle(c, r * .45, Paint()..color = const Color(0xFFFFD54F));
+      canvas.drawCircle(
+          c,
+          r,
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = math.max(.8, r * .22)
+            ..color = const Color(0xFF1A1A1A));
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant BmFormationMiniPainter old) => old.form != form;
+}
+
 class _Chip extends StatelessWidget {
   const _Chip({required this.label, required this.on, required this.onTap});
   final String label;
@@ -1839,103 +2307,6 @@ class _ToastPill extends StatelessWidget {
             fontSize: big ? 30 : 15,
             fontWeight: FontWeight.w900,
             letterSpacing: .8),
-      ),
-    );
-  }
-}
-
-class _RoundBtn extends StatelessWidget {
-  const _RoundBtn({required this.icon, required this.onTap});
-  final IconData icon;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final NxThemeColors visual = NxThemeColors.of(context);
-    return Material(
-      color: visual.surfaceRaised.withValues(alpha: .96),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-        side: BorderSide(color: visual.border.withValues(alpha: .72)),
-      ),
-      elevation: 5,
-      shadowColor: Colors.black.withValues(alpha: .38),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(15),
-        onTap: onTap,
-        child: SizedBox(
-          width: 48,
-          height: 48,
-          child: Icon(icon, color: visual.accent, size: 23),
-        ),
-      ),
-    );
-  }
-}
-
-class _BmDialog extends StatelessWidget {
-  const _BmDialog({required this.title, required this.actions});
-  final String title;
-  final List<(String, String, IconData)> actions;
-
-  @override
-  Widget build(BuildContext context) {
-    final NxThemeColors visual = NxThemeColors.of(context);
-    return Dialog(
-      backgroundColor: visual.surfaceRaised,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: visual.border.withValues(alpha: .75)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                  color: visual.accent.withValues(alpha: .12),
-                  shape: BoxShape.circle,
-                  border:
-                      Border.all(color: visual.accent.withValues(alpha: .42))),
-              child: Icon(Icons.pause_rounded, color: visual.accent, size: 24),
-            ),
-            const SizedBox(height: 9),
-            Text(title,
-                style: TextStyle(
-                    color: visual.text,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900)),
-            const SizedBox(height: 12),
-            for (final (String, String, IconData) a in actions)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: a.$1 == 'continue'
-                          ? visual.accent
-                          : a.$1 == 'leave'
-                              ? const Color(0xFFD9364A)
-                              : visual.backgroundMid,
-                      foregroundColor:
-                          a.$1 == 'continue' ? visual.background : visual.text,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                    ),
-                    onPressed: () => Navigator.of(context).pop(a.$1),
-                    icon: Icon(a.$3),
-                    label: Text(a.$2),
-                  ),
-                ),
-              ),
-          ],
-        ),
       ),
     );
   }

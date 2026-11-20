@@ -30,3 +30,23 @@ jobs:
           grep -E "\[E\]|Error:|error:|Expected:|Actual:|FAILED|Some tests failed|All tests passed|Failed to load" test.txt | head -300
           echo "=====TEST-END====="
           exit 0
+      - name: Render finger soccer preview
+        run: |
+          set +e
+          mkdir -p shots
+          sudo mkdir -p /workspace/work && sudo ln -sfn $FLUTTER_ROOT /workspace/work/flutter_sdk && sudo ln -sfn $PWD /workspace/work/anix
+          sudo apt-get install -y -qq fonts-dejavu-core >/dev/null 2>&1
+          flutter test test_render/finger_soccer_render_test.dart --dart-define=SHOTS=$PWD/shots > render.txt 2>&1
+          tail -20 render.txt
+          flutter test test_render/finger_soccer_intro_render_test.dart --dart-define=SHOTS=$PWD/shots > intro.txt 2>&1
+          echo "=====INTRO-BEGIN====="
+          grep -E "Error|error:|Expected:|Actual:|FAILED|failed|passed|EXCEPTION|overflowed" intro.txt | head -120
+          tail -15 intro.txt
+          echo "=====INTRO-END====="
+          ls -la shots
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: render-shots
+          path: shots
+          if-no-files-found: ignore

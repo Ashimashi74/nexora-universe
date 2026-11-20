@@ -44,11 +44,13 @@ BmConfig _cfg({bool mirror = false, String mode = 'bot'}) => BmConfig(
 void main() {
   test('constants, fields and the art-measured goal geometry', () {
     expect(K, 1.27);
-    expect(PR, 75.0); // finger-soccer proportions: disc diameter ~1/6 of the playing width
-    expect(BR / PR, closeTo(.5, .01)); // ball = half the disc diameter
-    // reference-calibrated felt friction: small constant part, strong speed drag, short launch glide
-    expect(PF2, closeTo(5.0, 1e-9));
-    expect(PF1 * K / 2.88, closeTo(123, 1));
+    expect(PR, 53.0); // reference proportions: disc diameter ~0.12 of the playing width
+    expect(BR / PR, closeTo(.47, .01)); // reference: ball ~0.47 of the disc diameter
+    // reference calibration v4: one felt law for shot and struck discs (pure 3.25/s drag), no launch glide
+    expect(PF2, closeTo(3.25, 1e-9));
+    expect(PF1, 0);
+    expect(kBmLaunchGlide, 0);
+    expect(kBmLaunch, closeTo(2.04, 1e-9));
     expect(BmEngine.strikeOf(2) / BmEngine.strikeOf(10), closeTo(.40, .01));
     expect(STEP, 1 / 240);
     expect(kBmFields.length, 36);
@@ -303,5 +305,338 @@ void main() {
     r.applyRotation(snap);
     expect(r.shooterSeat(0), e.shooterSeat(0));
     expect(r.shooterSeat(1), e.shooterSeat(1));
+  });
+
+  test('formations: the nine reference shapes, five discs each, legal kickoff layouts', () {
+    expect(kBmForms.map((BmFormation f) => f.fa).toList(),
+        <String>['الماس', 'عقاب', 'موج', 'ماه', 'دیوانه', 'لبه', 'نیش', 'بازو', 'حمله همه جانبه']);
+    for (final BmFormation f in kBmForms) {
+      expect(f.slots.length, 5, reason: f.en);
+      expect(f.en, isNotEmpty);
+      for (final List<double> s in f.slots) {
+        expect(s[0], inInclusiveRange(0, 1), reason: f.en);
+        expect(s[1], inInclusiveRange(0, 1), reason: f.en);
+      }
+    }
+    // an old saved index past the list still loads
+    expect(bmSlots(42), kBmForms.last.slots);
+    for (final int fld in <int>[0, 6]) {
+      for (int a = 0; a < kBmForms.length; a++) {
+        for (int b = 0; b < kBmForms.length; b++) {
+          final BmEngine e = BmEngine(_Hooks(), rng: math.Random(1))
+            ..startMatch(BmConfig(
+                mode: 'local', teams: const <String>['club0', 'club1'], form: <int>[a, b], names: const <String>['A', 'B'],
+                field: fld, ball: 0));
+          final List<BmBody> d = e.bodies.where((BmBody x) => x != e.ball).toList();
+          expect(d.length, 10);
+          for (final BmBody x in d) {
+            expect(x.x - x.r, greaterThanOrEqualTo(e.Fl), reason: '$a/$b');
+            expect(x.x + x.r, lessThanOrEqualTo(e.Fr), reason: '$a/$b');
+            // each side kicks off in its own half
+            expect(x.team == 0 ? x.y > e.CY : x.y < e.CY, isTrue, reason: '$a/$b');
+            final BmBody bl = e.ball!;
+            expect(math.sqrt(math.pow(x.x - bl.x, 2) + math.pow(x.y - bl.y, 2)), greaterThan(x.r + bl.r), reason: '$a/$b');
+            for (final BmBody y in d) {
+              if (identical(x, y)) continue;
+              expect(math.sqrt(math.pow(x.x - y.x, 2) + math.pow(x.y - y.y, 2)), greaterThan(2 * PR), reason: '$a/$b');
+            }
+          }
+        }
+      }
+    }
+  });
+
+  test('formations: depth and width follow the slots; the top side is the same shape turned round', () {
+    for (int fi = 0; fi < kBmForms.length; fi++) {
+      final BmEngine e = BmEngine(_Hooks(), rng: math.Random(1))
+        ..startMatch(BmConfig(
+            mode: 'local', teams: const <String>['club0', 'club1'], form: <int>[fi, fi], names: const <String>['A', 'B'],
+            field: 0, ball: 0));
+      final List<BmBody> bot = e.bodies.where((BmBody x) => x.team == 0).toList();
+      final List<BmBody> top = e.bodies.where((BmBody x) => x.team == 1).toList();
+      for (int k = 0; k < 5; k++) {
+        final List<double> s = kBmForms[fi].slots[k];
+        expect(bot[k].y, closeTo(e.Fb - s[1] * e.Fh / 2, 1e-6));
+        expect(bot[k].x, closeTo((e.Fl + s[0] * e.Fw).clamp(e.Fl + PR + 6, e.Fr - PR - 6), 1e-6));
+        expect(top[k].x, closeTo(2 * e.CX - bot[k].x, 1e-6));
+        expect(top[k].y, closeTo(2 * e.CY - bot[k].y, 1e-6));
+      }
+    }
+    // Nish as measured on the reference kickoff: keeper 0.126 deep, wide pair 0.275 / 0.725 of the width.
+    final List<List<double>> nish = kBmForms.firstWhere((BmFormation f) => f.fa == 'نیش').slots;
+    expect(nish.first, <double>[.5, .126]);
+    expect(nish[3], <double>[.275, .898]);
+  });
+
+  test('formations online: both phones put every global side in the same place (mirror)', () {
+    BmEngine mk(bool mirror) => BmEngine(_Hooks(), rng: math.Random(1))
+      ..startMatch(BmConfig(
+          mode: 'online', teams: const <String>['club0', 'club1'], form: const <int>[7, 4], names: const <String>['A', 'B'],
+          field: 0, ball: 0, mirror: mirror));
+    final BmEngine h = mk(false), g = mk(true);
+    // snapshots are global and keyed by piece id: identical at kickoff means both phones agree on every disc
+    expect(g.snapshot()['b'], h.snapshot()['b']);
+    expect((h.snapshot()['b'] as List<dynamic>).length, 11);
+  });
+
+  test('calibration v2: reference speeds agree once each side\'s reference power is divided out', () {
+    // Full pull at power 10, in reference px/s (1 px = 2.88 world units on the 325 px reference pitch).
+    final double full10 = (260 + 1085) * K * kBmLaunch * BmEngine.strikeOf(10) / 2.88;
+    expect(full10, inInclusiveRange(1800, 1950));
+    // Launch speeds fitted on the reference (px/s) with the side's reference power (Japan 2, PSG 10).
+    const List<(String, double)> shots = <(String, double)>[
+      ('Japan', 480), ('Japan', 690), ('Japan', 830), // fitted launches (no glide, v2 friction)
+      ('Paris Saint-Germain', 1688 / .89), // first-frame mean speed / 1-frame drag loss
+    ];
+    for (final (String, double) s in shots) {
+      final int p = kBmRefPower[s.$1]!;
+      final double base = s.$2 * BmEngine.refStrikeOf(10) / BmEngine.refStrikeOf(p);
+      // every shot, normalised to power 10, is at most a full pull (+10% fit error)
+      expect(base, lessThan(full10 * 1.12), reason: '${s.$1} ${s.$2}');
+    }
+    // ANIX keeps its own team stats (the reference numbers are only used to normalise measurements)
+    expect(bmTeam('nat18').power, isNot(2));
+  });
+
+  test('calibration v2: a disc slides the same law whether shot or struck, and the shot still stops short', () {
+    final BmEngine e = BmEngine(_Hooks(), rng: math.Random(2))..startMatch(_cfg(mode: 'local'));
+    final BmBody d = e.bodies.firstWhere((BmBody x) => x.team == 0 && x != e.ball);
+    for (final BmBody o in e.bodies) {
+      if (o != d) o.x = -9999; // nothing to hit
+    }
+    d.x = e.CX;
+    d.y = e.Fb - 60;
+    final double y0 = d.y;
+    e.launch(d, 0, -700 * 2.88, false); // a 700 px/s (Japan-like) shot
+    expect(d.boost, 0);
+    for (int i = 0; i < 240 * 3; i++) {
+      e.sim(STEP);
+    }
+    // reference: such a shot glides ~190 px (= ~550 world) and stops
+    expect((y0 - d.y) / 2.88, inInclusiveRange(150, 230));
+    expect(d.vx == 0 && d.vy == 0, isTrue);
+  });
+
+  test('calibration v2: the ball shoves a resting disc harder, struck discs are not capped', () {
+    double struckSpeed() {
+      final BmEngine e = BmEngine(_Hooks(), rng: math.Random(2))..startMatch(_cfg(mode: 'local'));
+      final BmBody d = e.bodies.firstWhere((BmBody x) => x.team == 0 && x != e.ball);
+      final BmBody b = e.ball!;
+      for (final BmBody o in e.bodies) {
+        if (o != d && o != b) o.x = -9999;
+      }
+      d
+        ..x = e.CX
+        ..y = e.CY
+        ..vx = 0
+        ..vy = 0;
+      b
+        ..x = e.CX
+        ..y = e.CY + PR + BR + 1
+        ..vx = 0
+        ..vy = -3000;
+      e.phase = 'move';
+      e.remote = true;
+      e.sim(STEP);
+      e.sim(STEP);
+      return math.sqrt(d.vx * d.vx + d.vy * d.vy);
+    }
+
+    final double v = struckSpeed();
+    // old tuning: 1/HV impulse then capped at PCAP (190 * K ~ 241 world/s); v2: full mass-ratio push
+    expect(v, greaterThan(PCAP * K * 2));
+    expect(v, lessThan(3000));
+  });
+
+  test('in-match formation change: now on the own kickoff, else at the next kickoff', () {
+    BmEngine fresh(int f0, int f1) => BmEngine(_Hooks(), rng: math.Random(1))
+      ..startMatch(BmConfig(
+          mode: 'local', teams: const <String>['club0', 'club1'], form: <int>[f0, f1], names: const <String>['A', 'B'],
+          field: 0, ball: 0));
+    final BmEngine e = fresh(0, 0);
+    expect(e.turn, 0);
+    expect(e.canReformNow(0), isTrue);
+    expect(e.canReformNow(1), isFalse);
+    // side 0 to kick: applies at once, discs exactly where a match started with that shape puts them
+    expect(e.changeForm(0, 6), isTrue);
+    expect(e.snapshot()['b'], fresh(6, 0).snapshot()['b']);
+    // side 1 is not to play: stored, discs untouched until the next kickoff
+    final Object before = e.snapshot()['b'] as Object;
+    expect(e.changeForm(1, 4), isFalse);
+    expect(e.snapshot()['b'], before);
+    expect(e.form, <int>[6, 4]);
+    e.reset(0);
+    expect(e.snapshot()['b'], fresh(6, 4).snapshot()['b']);
+    // after a shot the own side also waits for the next kickoff
+    final BmBody d = e.bodies.firstWhere((BmBody x) => x.team == 0 && x != e.ball);
+    e.fire(d, 0, -100, 100);
+    expect(e.changeForm(0, 2), isFalse);
+    expect(e.form[0], 2);
+    expect(e.changeForm(0, 99), isFalse); // clamped
+    expect(e.form[0], kBmForms.length - 1);
+  });
+
+  test('in-match formation change online: both phones apply the logged move identically (mirror)', () {
+    BmEngine mk(bool mirror) => BmEngine(_Hooks(), rng: math.Random(1))
+      ..startMatch(BmConfig(
+          mode: 'online', teams: const <String>['club0', 'club1'], form: const <int>[0, 0], names: const <String>['A', 'B'],
+          field: 0, ball: 0, mirror: mirror));
+    final BmEngine h = mk(false), g = mk(true);
+    // the move as sent over the net: global side + formation index, applied by both phones in log order
+    final List<Map<String, int>> log = <Map<String, int>>[
+      <String, int>{'side': 0, 'form': 8}, // host kicks off: now
+      <String, int>{'side': 1, 'form': 5}, // guest, not its turn: next kickoff
+    ];
+    for (final Map<String, int> m in log) {
+      expect(h.changeForm(m['side']!, m['form']!), g.changeForm(m['side']!, m['form']!));
+    }
+    expect(g.snapshot()['b'], h.snapshot()['b']);
+    expect(h.form, g.form);
+    h.reset(1);
+    g.reset(g.ct(1));
+    expect(g.snapshot()['b'], h.snapshot()['b']);
+    // on the guest phone (mirrored) its own side is 1 globally: its kickoff now accepts its own change at once
+    expect(g.canReformNow(1), isTrue);
+    expect(h.canReformNow(1), isTrue);
+    g.changeForm(1, 2);
+    h.changeForm(1, 2);
+    expect(g.snapshot()['b'], h.snapshot()['b']);
+  });
+
+  test('reference aim: arrow, pull circle and dots scale with the pull', () {
+    expect(bmAimPower(LMAX * 2), 1);
+    expect(bmAimArrowTip(PR, 1) / PR, closeTo(4.0, 1e-9));
+    expect(bmAimArrowTip(PR, 0) / PR, closeTo(2.4, 1e-9));
+    expect(bmAimCircleRadius(PR, 1) / PR, closeTo(4.8, 1e-9));
+    expect(bmAimDots(20, PR), 1);
+    expect(bmAimDots(LMAX, PR), 3);
+    expect(bmAimDots(LMAX * 3, PR), 5);
+  });
+
+  // ------------------------------------------------------------ v3 (owner request 2026-11-20)
+  BmEngine lone({bool disc = false}) {
+    final BmEngine e = BmEngine(_Hooks(), rng: math.Random(5))..startMatch(_cfg(mode: 'local'));
+    final BmBody keep = e.bodies.firstWhere((BmBody x) => x != e.ball);
+    e.bodies.removeWhere((BmBody o) => o != e.ball && !(disc && o == keep));
+    e.phase = 'move';
+    e.remote = true;
+    return e;
+  }
+
+  test('v3: a spinning ball travels in a straight line', () {
+    final BmEngine e = lone();
+    final BmBody b = e.ball!
+      ..x = e.CX
+      ..y = e.CY + 300
+      ..vx = 0
+      ..vy = -1500
+      ..spin = 30;
+    for (int i = 0; i < 40; i++) {
+      e.sim(STEP);
+    }
+    expect(b.vx.abs(), lessThan(1e-6));
+    expect(b.x, closeTo(e.CX, 1e-6));
+  });
+
+  test('v3: ball and discs keep their power off the rails', () {
+    final BmEngine e = lone();
+    final BmBody b = e.ball!
+      ..x = e.Fl + BR + 2
+      ..y = e.CY
+      ..vx = -2000
+      ..vy = 0;
+    e.sim(STEP);
+    e.sim(STEP);
+    expect(b.vx, greaterThan(2000 * kBmRailE * .97));
+    final BmEngine f = lone(disc: true);
+    f.ball!
+      ..x = f.CX
+      ..y = f.CY;
+    final BmBody d = f.bodies.firstWhere((BmBody x) => x != f.ball)
+      ..x = f.Fr - PR - 2
+      ..y = f.CY
+      ..vx = 2000
+      ..vy = 0;
+    f.sim(STEP);
+    f.sim(STEP);
+    expect(d.vx, lessThan(-2000 * kBmRailE * .9));
+  });
+
+  double massShare(double discM, double e) => (1 + e) * (1 / discM) / (1 / discM + 1 / BALL_M);
+
+  test('v3: the ball knocks a lighter disc back; a disc strike on the ball is unchanged', () {
+    final BmEngine e = BmEngine(_Hooks(), rng: math.Random(2))..startMatch(_cfg(mode: 'local'));
+    final BmBody d = e.bodies.firstWhere((BmBody x) => x.team == 0 && x != e.ball);
+    final BmBody b = e.ball!;
+    for (final BmBody o in e.bodies) {
+      if (o != d && o != b) o.x = -9999;
+    }
+    d
+      ..x = e.CX
+      ..y = e.CY
+      ..vx = 0
+      ..vy = 0;
+    b
+      ..x = e.CX
+      ..y = e.CY + PR + BR + 1
+      ..vx = 0
+      ..vy = -3000;
+    e.phase = 'move';
+    e.remote = true;
+    e.sim(STEP);
+    e.sim(STEP);
+    final double v = math.sqrt(d.vx * d.vx + d.vy * d.vy);
+    // heavier than the old 8-mass share, still below the light-mass share of the full 3000
+    expect(v, greaterThan(.97 * 2950 * massShare(DISC_M, .43)));
+    expect(v, greaterThan(1.1 * 3000 * massShare(DISC_M, .55)));
+    expect(v, lessThan(3000 * massShare(kBmDiscLightM, .55)));
+
+    // disc strikes a resting ball: ball speed follows DISC_M (shot power unchanged)
+    final BmEngine g = BmEngine(_Hooks(), rng: math.Random(2))..startMatch(_cfg(mode: 'local'));
+    final BmBody s = g.bodies.firstWhere((BmBody x) => x.team == 0 && x != g.ball);
+    final BmBody gb = g.ball!;
+    for (final BmBody o in g.bodies) {
+      if (o != s && o != gb) o.x = -9999;
+    }
+    gb
+      ..x = g.CX
+      ..y = g.CY
+      ..vx = 0
+      ..vy = 0;
+    s
+      ..x = g.CX
+      ..y = g.CY + PR + BR + 1
+      ..vx = 0
+      ..vy = -3000;
+    g.phase = 'move';
+    g.remote = true;
+    g.sim(STEP);
+    g.sim(STEP);
+    final double bv = math.sqrt(gb.vx * gb.vx + gb.vy * gb.vy);
+    final double share8 = (1 / BALL_M) / (1 / DISC_M + 1 / BALL_M);
+    expect(bv, lessThan(1.55 * 3000 * share8 * BKICK));
+    expect(bv, greaterThan(1.3 * 2900 * share8 * BKICK));
+  });
+
+  test('v3: the match clock runs on real time; the scene plays 5% slower with the same steps', () {
+    final BmEngine e = BmEngine(_Hooks(), rng: math.Random(3))..startMatch(_cfg(mode: 'local'));
+    e.frame(.2);
+    expect(e.mleft, closeTo(299.8, 1e-9));
+    expect(kBmSimRate, closeTo(.85, 1e-12)); // v5: 85% speed (was .95)
+    // same sequence of fixed steps -> same result whatever the playback rate
+    BmEngine run() {
+      final BmEngine x = lone();
+      x.ball!
+        ..x = x.CX
+        ..y = x.CY
+        ..vx = 900
+        ..vy = -1700;
+      for (int i = 0; i < 600; i++) {
+        x.sim(STEP);
+      }
+      return x;
+    }
+
+    expect(run().ball!.x, run().ball!.x);
   });
 }

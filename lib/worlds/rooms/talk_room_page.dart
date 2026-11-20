@@ -51,6 +51,19 @@ class TalkRoomLimits {
       };
 }
 
+/// v5 finger soccer (owner request 2026-11-20): the room manager swaps Team 1 and Team 2 before the match. Seats
+/// alternate sides (0,2,4 = home / team 1; 1,3,5 = away / team 2), so swapping each seat pair (0<->1, 2<->3, 4<->5)
+/// moves every player to the other side and keeps their place in the side's turn order. [idsBySeat] is the picked
+/// players in seat order; an unpaired last seat (odd count, which can't start anyway) stays where it is.
+List<String> fsSwapSides(List<String> idsBySeat) {
+  final List<String> out = List<String>.of(idsBySeat);
+  for (int i = 0; i + 1 < idsBySeat.length; i += 2) {
+    out[i] = idsBySeat[i + 1];
+    out[i + 1] = idsBySeat[i];
+  }
+  return out;
+}
+
 class RoomMember {
   RoomMember(this.userId, this.role, this.name, this.avatar, this.muted);
   final String userId, role, name;
@@ -873,6 +886,20 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
                   ? Text(_seatLabel(_picked[m.userId]!), style: const TextStyle(color: Nx2.cyan, fontSize: 11))
                   : null,
             ),
+          if (_isManager && _game == 'finger_soccer' && _picked.length >= 2)
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: TextButton.icon(
+                key: const ValueKey<String>('fs-swap-sides'),
+                // The new seats go to the server (nx_room_select_players) and reach every member's room view; the
+                // match is built from these seats, so it starts with the sides swapped on every phone.
+                onPressed: () => unawaited(_rpc('nx_room_select_players',
+                    <String, dynamic>{'p_room': widget.roomId, 'p_users': fsSwapSides(_pickedBySeat())})),
+                icon: const Icon(Icons.swap_horiz_rounded, color: Nx2.cyan),
+                label: Text(context.tx('جابه‌جایی تیم ۱ و تیم ۲', 'Swap Team 1 and Team 2'),
+                    style: const TextStyle(color: Nx2.cyan, fontWeight: FontWeight.w800)),
+              ),
+            ),
           const SizedBox(height: 8),
           if (iAmPicked && _game == 'finger_soccer') _fingerSoccerSetup(),
           if (_isManager && _game == 'finger_soccer') _arenaSetup(),
@@ -897,6 +924,14 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
       ],
     );
   }
+
+  /// Picked players' ids in seat order.
+  List<String> _pickedBySeat() => <String>[
+        for (final MapEntry<String, Map<String, dynamic>> e in (_picked.entries.toList()
+          ..sort((MapEntry<String, Map<String, dynamic>> a, MapEntry<String, Map<String, dynamic>> b) =>
+              ((a.value['seat'] as num?) ?? 0).compareTo((b.value['seat'] as num?) ?? 0))))
+          e.key
+      ];
 
   String _seatLabel(Map<String, dynamic> p) {
     final int seat = (p['seat'] as num?)?.toInt() ?? 0;
@@ -1028,7 +1063,7 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
         Wrap(spacing: 6, runSpacing: 6, children: <Widget>[
           for (int i = 0; i < kBmForms.length; i++)
             ChoiceChip(
-              label: Text('${kBmForms[i][0]}'),
+              label: Text(kBmForms[i].fa),
               selected: form == i && pr.containsKey('form'),
               onSelected: (_) => unawaited(save(<String, dynamic>{'form': i})),
             ),

@@ -114,7 +114,12 @@ class GameResult {
     this.scores,
     this.tournamentMatchId,
     this.durationMs,
+    this.endsMatch = true,
   });
+
+  /// False when only this player left a match that goes on for the others (team games): the result is shown on this
+  /// phone but not reported as the match's end (the server books this seat's loss when the match ends).
+  final bool endsMatch;
 
   /// Length of the run (solo arcade games; used by the server-side score sanity check).
   final int? durationMs;

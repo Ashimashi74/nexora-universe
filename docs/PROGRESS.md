@@ -134,3 +134,93 @@ No extra server: everything runs in the existing Supabase project (Postgres RPCs
 - Remaining for the split: port rooms/matches/matchmaking + the tournaments engine (~100 SQL functions) to the games project with
   shims (`nx_perm` instead of nx_staff/is_admin), then switch the app's rooms/matches/tournaments calls to a second Supabase client
   (`accessToken` = auth session) in one release.
+
+## Finger soccer — reference physics v2, intro merge, in-match formation change (2026-11-20, branch `work/fs-ref-physics`)
+- Merged `work/fs-intro` (splash, team select, formation select, shop, game bar) into `work/fs-ref-physics`. Conflict in
+  `ui/bm_view.dart` (offline config) resolved to the intro's pick; `intro/fs_intro_data.dart` adapted to the
+  `BmFormation` list (9 shapes, slots [x, depth of half] -> the intro's [x, 0..0.5]). The match render test now drives
+  the intro (team -> formation Nish -> match) and also opens the in-match picker; the intro render test is unchanged.
+- Physics calibration v2 (`core/bm_engine.dart`, constants commented in place; test: `test/games/finger_soccer_test.dart`):
+  frame-by-frame template tracking of the reference recordings (15 fps, 1 px = 2.88 world) — 3 clean shot glides
+  (Japan, power 2) and 4 discs struck by another body, positions fitted with the engine's own friction law.
+  Before -> after: PF1 280 -> 45 (123 -> 20 px/s^2), PF2 5.0 -> 3.5 /s, launch glide .22 s -> 0, kBmLaunch 1.87 -> 2.04
+  (distance-matched so a shot disc still stops where the reference shots stop), kBmDiscVMax 4200 -> 4400 (above the
+  strongest launch), ball striking a disc: disc impulse 1/HV -> full (kBmBallHitDiscK = 1) and no PCAP cap on a disc
+  the ball hits, disc<->disc struck-disc impulse .85 -> 1 (kBmStruckDiscK). Ball rolling friction unchanged
+  (kBmBallF0 23, kBmBallDrag 1.08: the ball could not be tracked reliably next to the white Japan discs).
+  Team power: measured speeds are divided by each side's reference power (`kBmRefPower`, `BmEngine.refStrikeOf`);
+  ANIX team stats unchanged. Contract row: `supabase/games/migrations/20261120030000_physics_reference_v4.sql`
+  (not applied live).
+- In-match "تغییر ترکیب" button (bottom left, above the game bar handle) opens the 3 x 3 picker (`BmFormationPicker`);
+  rule in DECISIONS D11; engine API `canReformNow(side)` / `changeForm(side, fi)`; online move `'form'` (live + replay).
+
+## Finger soccer v3 — owner feedback on the reference-physics build (2026-11-20, branch `work/fs-ref-physics`)
+- Ball travels straight: ball curl per unit spin `kBmBallCurve` .034 -> 0 (spin is still kept and drawn, so the ball
+  still turns round in the corners; no bends after a wall or a glancing hit).
+- Bank shots keep their power: one rail restitution `kBmRailE` = .9 for ball AND discs on side rails, end lines and the
+  round corners, no tangential loss (before: ball .62-.72 speed dependent, disc .48). Goal posts / inside of the goal
+  unchanged.
+- Lighter pieces: a disc the ball strikes reacts with mass `kBmDiscLightM` 5.5 (before DISC_M 8) -> knocked back ~30%
+  further. Disc->ball strikes and disc<->disc hits keep DISC_M 8, so shot power is unchanged (D13).
+- Whole scene 5% slower: `kBmSimRate` .95 scales only the real time fed to the fixed-step accumulator; same steps,
+  same paths and outcomes (online phones still run identical steps).
+- Match clock: runs on real elapsed time (was clamped to 50 ms per frame like physics, so it lagged on slow frames)
+  and the HUD counts the played time up (0:00 -> 5:00), red over the last 30 s.
+- Intro team select: the arrows pick the team shown when it can be fielded (owned, or any team for the opponent side);
+  tapping the big disc selects / buys it. Before, only the small "انتخاب" button picked, so the browsed team was not
+  the one that played.
+- Intro formation select: the whole card (mini pitch, name, button) picks; before, only the small button did, and
+  the auto-advance timer then started the match with the first / saved formation ("stuck on 0").
+- Tests: `test/games/finger_soccer_test.dart` (v3 group), `test/games/finger_soccer_intro_pick_test.dart`; the match
+  render test asserts the intro formation reaches the match.
+
+## Finger soccer v4 — disc friction refit, online team / formation picks (2026-11-20, branch `work/fs-ref-physics`)
+- Disc felt refit "exactly like the video": the v2 tracks (3 Japan shot glides + 4 struck discs) plus 3 fast glides
+  (v1 frames 580 PSG, 1779, 1460 Adidas; up to ~1700 px/s) fitted jointly with the engine's own law, free launch speed
+  per track, no glide (`/workspace/work/fsref/fit4.py`). Best fit: no constant part, 3.25/s drag, rms 6.05 px per
+  position over 10 tracks; v2 (20 px/s^2 + 3.5/s) rms 6.41 px; v1 (123 + 5.1) rms 10.3 px. Engine: PF1 45 -> 0,
+  PF2 3.5 -> 3.25 (a disc glides ~9% further, ~10% longer at the same launch); kBmLaunch, team power, rails, masses,
+  sim rate unchanged. Ball rolling friction not refitted (ball tracking next to the white Japan discs still unreliable).
+- Online matches now open with the same team select and formation select screens (`intro/fs_online_pick.dart`):
+  each phone picks only its own side (the other side's toggle shows "حریف تیمش را خودش انتخاب می‌کند"), owned-team
+  rule and shop as offline, and both screens auto-advance (45 s + 15 s). The pick goes out as the logged `'setup'`
+  move; the match starts when seats 0 and 1 both have a setup in the log (both phones, log order). If the other
+  side's setup is missing 75 s after sending ours, the phone logs a default setup FOR that side (`'for': seat`;
+  room prefs if any, else club0/club1); the first setup per side in the log wins, so phones stay identical.
+  Room matches: the room's pre-game choice is the starting pick. Seats 2..5 (team games) wait for seats 0/1.
+  Legacy room matches (play moves logged, no setups) still start from room prefs as before.
+- Re-check of the v3 asks in code: ball curl 0 (sim), rail .9 for ball + discs (walls), struck disc mass 5.5
+  (collide), sim rate .95 (tick accumulator), real-time count-up clock, intro picks, in-match formation button
+  — all wired in the running paths; unchanged.
+- Tests: `test/games/finger_soccer_online_pick_test.dart` (pick -> setup -> match, idle timeouts + absent-side
+  fallback, replay restart, legacy room prefs, room pick as start); constants test updated to v4.
+- Match soundtrack off (owner request 2026-11-20): the finger soccer menu music never plays during a match. Fixed a
+  race in `BmAudio.music`: a music(true) still creating its player when the match's music(false) arrived (the one
+  setup frame before an auto-started offline match) started the soundtrack under the match; now the last call
+  wins (checked after every await). The auto-start setup frame no longer requests music; the app soundtrack is
+  already faded out by `MusicService.enterGame` while a game page is open and fades back on leaving. Crowd
+  ambience and every sound effect (hits, goals, whistle) unchanged.
+
+## Finger soccer v5 — shared pick clock, 85% speed, visible spin, side swap, team results (2026-11-20, branch `work/fs-v5`)
+- Online picks finished (`intro/fs_online_pick.dart`, `ui/bm_view.dart`): team 15 s then formation 15 s on one shared
+  countdown. The team pick is logged (`{'a': 'tpick'}`); a side that picks early waits on its team screen (banner +
+  seconds left) until the other side's team pick (or setup) is in the log, or the team time + 3 s grace is over, so
+  both phones open the formation screen on the same logged event. After the formation pick the screen waits
+  ("منتظر بقیه‌ی بازیکن‌ها…") until both setups are in and everyone enters the match together. Absent-side fallback
+  75 s -> 25 s. `tpick` is not a play move (legacy room-prefs start untouched).
+- Scene speed `kBmSimRate` .95 -> .85 (same fixed steps, outcomes unchanged).
+- Spin: discs pick up render-only spin from glancing contacts (`kBmDiscSpinK` .16, cap 22 rad/s; never feeds motion
+  or the sync hash); the painter turns each disc by its angle and draws a small white rim notch; the ball sprite also
+  turns by its spin angle on top of the roll direction.
+- Goal mouth 3.5% narrower: `kBmGoalMouthScale` .965 narrows the goal sprite's width only (height / net depth kept);
+  posts, mouth and side nets are still built from the drawn sprite, so colliders match the art.
+- Room: the manager has "جابه‌جایی تیم ۱ و تیم ۲" (talk room games panel, finger soccer, 2+ picked): seat pairs
+  0<->1, 2<->3, 4<->5 are swapped through `nx_room_select_players` (`fsSwapSides`), synced to every member. Note: that
+  RPC re-inserts the picked players, so their room pre-game prefs reset (the in-match pick screens cover it).
+- Team results (2v2 / 3v3): the reported `scores` are per seat (seat i = its side's goals) — the server books
+  `scores[i]` per seat, so seats 2+ were booked 0. Seats that left (forfeited) are never in `winnerSeats` (they book a
+  loss); their turns are played by the next teammate still in (`BmEngine.controllerSeat`, rotation counters
+  unchanged); leaving from the game bar in a team game logs a forfeit for that seat only and shows the loss without
+  ending the match (`GameResult.endsMatch` false); when a whole side has left, the other side wins at once.
+- Tests: `test/games/finger_soccer_v5_test.dart` (shared clock, early-pick wait, idle timeouts + fallback, tpick
+  replay, controller seat, 2v2 / 3v3 results per seat, draw, leaver), `test/worlds/fs_swap_sides_test.dart`.

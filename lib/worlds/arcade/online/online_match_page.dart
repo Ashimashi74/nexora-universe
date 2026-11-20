@@ -153,7 +153,7 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
     if (r.outcome != GameOutcome.draw) NxSfx.instance.play(r.outcome == GameOutcome.win ? 'win' : 'lose');
     final SupabaseMatchLink? l = _link;
     if (ref.read(settingsProvider).haptics) HapticFeedback.heavyImpact();
-    if (l != null && report) {
+    if (l != null && report && r.endsMatch) {
       unawaited(l
           .report(_winnersFor(r, l), r.scores)
           .then((_) => ref.read(cloudSyncProvider).refreshWallet()));
