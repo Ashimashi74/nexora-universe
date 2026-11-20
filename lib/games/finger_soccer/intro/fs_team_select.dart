@@ -41,6 +41,7 @@ class FsTeamSelect extends StatefulWidget {
     this.topLane = 0,
     this.side = 0,
     this.onSide,
+    this.fixedSide,
   });
   final bool fa;
 
@@ -60,6 +61,10 @@ class FsTeamSelect extends StatefulWidget {
   final double topLane;
   final int side;
   final ValueChanged<int>? onSide;
+
+  /// Online: the only side this phone picks for (the opponent picks theirs on their own phone). The other side's
+  /// toggle shows a hint instead of switching, so the arrows / buy button can only change this side.
+  final int? fixedSide;
 
   @override
   State<FsTeamSelect> createState() => _FsTeamSelectState();
@@ -255,6 +260,11 @@ class _FsTeamSelectState extends State<FsTeamSelect> {
       top: 479,
       child: FsPress(
         onTap: () {
+          final int? fx = widget.fixedSide;
+          if (fx != null && side != fx) {
+            _say(widget.fa ? 'حریف تیمش را خودش انتخاب می‌کند' : 'Your opponent picks their own team');
+            return;
+          }
           setState(() => _side = side);
           widget.onSide?.call(side);
         },

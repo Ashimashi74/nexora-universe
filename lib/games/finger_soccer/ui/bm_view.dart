@@ -22,6 +22,8 @@ import 'bm_painter.dart';
 import '../intro/fs_game_bar.dart';
 import '../intro/fs_intro_data.dart';
 import '../intro/fs_intro_ui.dart' show FsBarHandle;
+import '../intro/fs_online_pick.dart';
+import '../intro/fs_team_select.dart' show FsSidePlayer;
 
 const String _a = 'assets/games/bermuda/';
 
@@ -113,10 +115,22 @@ class _BermudaViewState extends State<BermudaView>
   int _pendingShotSeat = -1;
   final List<Completer<void>> _waiters = <Completer<void>>[];
 
+  /// v4 online picks: a play move was replayed before any match started (a match logged before the online
+  /// pre-match picks existed); such a room match starts from its room prefs exactly as before.
+  bool _sawPlay = false;
+
+  /// v4: started when this phone's setup is sent; if the other side's setup has not arrived when it fires, this
+  /// phone logs a default setup FOR that side (first setup per side in the log wins on both phones).
+  Timer? _setupFallback;
+
   GameLaunch get launch => widget.launch;
   bool get online => launch.online;
   int get mySeat => launch.mySeat;
   bool get isHostSeat => mySeat == 0;
+
+  /// Tests: the running match's engine (null before the match starts).
+  @visibleForTesting
+  BmEngine? get matchEngine => stage == 'match' ? e : null;
 
   @override
   void initState() {
@@ -369,7 +383,7 @@ class _BermudaViewState extends State<BermudaView>
   void _maybeStartOnline({bool quiet = false}) {
     if (stage == 'match') return;
     _Setup? h = _setups[0], g = _setups[1];
-    if (_roomPrefs != null) {
+    if (_roomPrefs != null && _sawPlay) {
       h ??= _prefSetup(0);
       g ??= _prefSetup(1);
     }
@@ -535,10 +549,22 @@ class _BermudaViewState extends State<BermudaView>
             e.remoteShot(ps);
           }
         }
-      } else if (_roomPrefs != null) {
+      } else {
         _maybeStartOnline();
-      } else if (_setups.containsKey(mySeat)) {
-        stage = 'waiting';
+        if (stage != 'match') {
+          if (_roomPrefs != null && !_setups.containsKey(mySeat)) {
+            // v4: the room's pre-game choice is the starting pick on the online team / formation screens.
+            final _Setup? rp = _prefSetup(mySeat);
+            if (rp != null) my = _Setup(GemShop.instance.usableTeam(rp.team), rp.form, rp.field, rp.ball);
+          }
+          if (_setups.containsKey(mySeat)) {
+            stage = 'waiting';
+            _armSetupFallback();
+          } else if (mySeat > 1) {
+            // team games: seats 0 and 1 pick their side's team / formation; the others wait for them.
+            stage = 'waiting';
+          }
+        }
       }
       if (mounted) setState(() {});
       return;
@@ -548,12 +574,17 @@ class _BermudaViewState extends State<BermudaView>
     final String a = '${d['a']}';
     if (a == 'setup') {
       final _Setup? s = _Setup.fromJson(d);
-      if (s != null && !_setups.containsKey(m.seat)) _setups[m.seat] = s;
+      // v4: a setup may be logged FOR an absent side ('for', see _armSetupFallback); the first per side wins.
+      final int seat = ((d['for'] as num?)?.toInt() ?? m.seat);
+      if (s != null && seat >= 0 && !_setups.containsKey(seat)) _setups[seat] = s;
       _maybeStartOnline(quiet: m.replay);
       if (mounted) setState(() {});
       return;
     }
-    if (stage != 'match') return;
+    if (stage != 'match') {
+      if (m.replay) _sawPlay = true;
+      return;
+    }
     if (m.replay) {
       _replayMove(m.seat, a, d);
       return;
@@ -633,7 +664,56 @@ class _BermudaViewState extends State<BermudaView>
     net.send(_setups[mySeat]!.toJson());
     stage = 'waiting';
     _maybeStartOnline();
+    _armSetupFallback();
     setState(() {});
+  }
+
+  /// Seconds this phone waits, after sending its own setup, for the other side's (their screens time out after
+  /// 45 + 15 s on their own; this covers a phone that left or never opened the picks).
+  static const int kOnlineSetupWaitSeconds = 75;
+
+  void _armSetupFallback() {
+    if (_setupFallback != null || mySeat > 1 || stage == 'match') return;
+    _setupFallback = Timer(const Duration(seconds: kOnlineSetupWaitSeconds), () {
+      final NetLink? net = launch.net;
+      final int opp = 1 - mySeat;
+      if (_disposed || net == null || stage == 'match' || _setups.containsKey(opp)) return;
+      final _Setup d = (_roomPrefs != null ? _prefSetup(opp) : null) ??
+          _Setup(opp == 0 ? 'club0' : 'club1', 0, my.field, my.ball);
+      net.send(<String, dynamic>{...d.toJson(), 'for': opp});
+    });
+  }
+
+  /// v4: the online team / formation screens (seats 0 and 1, before their setup is logged).
+  bool get _onlinePicking => online && stage == 'setup' && _netReady && mySeat <= 1 && !_setups.containsKey(mySeat);
+
+  Widget _onlinePick() {
+    final NetLink net = launch.net!;
+    final int opp = 1 - mySeat;
+    String nm(int s) => s < net.names.length && net.names[s].isNotEmpty ? net.names[s] : (s == mySeat ? 'من' : 'حریف');
+    final ProfileService? pr = ProfileService.current;
+    return FsOnlinePick(
+      key: const ValueKey<String>('online-pick'),
+      team: my.team,
+      form: my.form,
+      opponentTeam: _setups[opp]?.team ?? (opp == 0 ? 'club0' : 'club1'),
+      players: <FsSidePlayer>[
+        FsSidePlayer(
+            name: nm(mySeat),
+            portrait: 'assets/ui/anix/avatars/${pr?.portrait ?? '01-vanguard'}.webp',
+            badge: 'سطح ${fsFa(pr?.level ?? 1)}'),
+        FsSidePlayer(name: nm(opp), portrait: 'assets/ui/anix/avatars/02-cyber-scout.webp', badge: 'حریف'),
+      ],
+      topLane: 50,
+      onBar: () {},
+      onDone: (String t, int f) {
+        if (_disposed || stage != 'setup' || _setups.containsKey(mySeat)) return;
+        my.team = GemShop.instance.usableTeam(t);
+        my.form = f;
+        unawaited(_savePrefs());
+        _sendSetup();
+      },
+    );
   }
 
   // ------------------------------------------------------------------ in-match formation change
@@ -764,6 +844,7 @@ class _BermudaViewState extends State<BermudaView>
   @override
   void dispose() {
     _disposed = true;
+    _setupFallback?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _ticker.dispose();
     _goalAnim.dispose();
@@ -783,6 +864,7 @@ class _BermudaViewState extends State<BermudaView>
   Widget build(BuildContext context) {
     if (stage != 'match') {
       if (launch.soundOn && !_paused && _visible) unawaited(audio.music(true));
+      if (_onlinePicking) return _onlinePick();
       return _setupScreen(context);
     }
     final double dpr = math.min(MediaQuery.devicePixelRatioOf(context), 1.75);

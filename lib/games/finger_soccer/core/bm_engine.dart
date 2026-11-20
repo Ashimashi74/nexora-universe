@@ -46,7 +46,13 @@ const double BKICK = 1.05;
 /// discs follow ONE law, a weak constant part (~20 px/s^2) + 3.5/s speed drag, with no launch glide (struck discs
 /// never get the glide and still fit; with it the shot fits got worse). The old law (123 px/s^2 + 5.0/s, 0.22 s
 /// glide) stopped struck discs ~40% short. PF1 = 20 px/s^2 * 2.88 / K. Old values: PF1 280, PF2 5.0, glide .22.
-const double HV = 4, PF1 = 45, PF2 = 3.5, PV0 = 181, EPP = .22, PCAP = 190;
+/// Reference calibration v4 (2026-11-20, owner: "disc friction exactly like the video"): the v2 set (3 shots + 4
+/// struck discs) plus 3 fast glides (PSG 580, 1779, Adidas 1460; up to ~1700 px/s), every track fitted jointly with
+/// the engine law (free launch speed per track, no glide). Best: NO constant part, 3.25/s drag (rms 6.05 px per
+/// position over 10 tracks) vs v2's 20 px/s^2 + 3.5/s (rms 6.41 px) and v1's 123 + 5.1 (rms 10.3 px). A slide is
+/// pure speed drag down to kBmDiscStop (~13 px/s), so a disc glides ~9% further and ~10% longer at the same launch;
+/// kBmLaunch is unchanged (shot power untouched). Old values: PF1 45, PF2 3.5.
+const double HV = 4, PF1 = 0, PF2 = 3.25, PV0 = 181, EPP = .22, PCAP = 190;
 /// Launch glide (s at .35 x friction) given to a shot disc. 0 since calibration v2 (was .22).
 const double kBmLaunchGlide = 0;
 /// Ball striking a disc (ball faster than the disc): the disc takes the full mass-ratio impulse (1) instead of the

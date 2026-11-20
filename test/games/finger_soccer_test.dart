@@ -46,9 +46,9 @@ void main() {
     expect(K, 1.27);
     expect(PR, 53.0); // reference proportions: disc diameter ~0.12 of the playing width
     expect(BR / PR, closeTo(.47, .01)); // reference: ball ~0.47 of the disc diameter
-    // reference calibration v2: one felt law for shot and struck discs (~20 px/s^2 + 3.5/s), no launch glide
-    expect(PF2, closeTo(3.5, 1e-9));
-    expect(PF1 * K / 2.88, closeTo(20, 1));
+    // reference calibration v4: one felt law for shot and struck discs (pure 3.25/s drag), no launch glide
+    expect(PF2, closeTo(3.25, 1e-9));
+    expect(PF1, 0);
     expect(kBmLaunchGlide, 0);
     expect(kBmLaunch, closeTo(2.04, 1e-9));
     expect(BmEngine.strikeOf(2) / BmEngine.strikeOf(10), closeTo(.40, .01));
