@@ -5,6 +5,7 @@ import 'package:nexora/core/storage/local_store.dart';
 import 'package:nexora/games/finger_soccer/intro/fs_formation_select.dart';
 import 'package:nexora/games/finger_soccer/intro/fs_game_bar.dart';
 import 'package:nexora/games/finger_soccer/intro/fs_intro_ui.dart';
+import 'package:nexora/games/finger_soccer/intro/fs_score_table.dart';
 import 'package:nexora/games/finger_soccer/intro/fs_shop.dart';
 import 'package:nexora/games/finger_soccer/intro/fs_splash.dart';
 import 'package:nexora/games/finger_soccer/intro/fs_team_select.dart';
@@ -106,10 +107,23 @@ void main() {
     await tester.pumpWidget(_app(_team()));
     await settle(tester, frames: 6);
     final BuildContext ctx = tester.element(find.byType(FsTeamSelect));
+    // ignore: use_build_context_synchronously
     showFsExitConfirm(ctx, online: true);
     await settle(tester, frames: 20);
     await shoot(tester, 'intro/exit_confirm.png');
     expect(find.text('ماندن'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('score table (v6 outro)', (WidgetTester tester) async {
+    await shot(
+        tester,
+        const FsScoreTable(seconds: 16, topLane: 50, rows: <FsScoreRow>[
+          FsScoreRow(name: 'HIIS', score: 3, crest: 'assets/games/bermuda/discs/germany.webp', winner: true, avatar: '07-star-fox'),
+          FsScoreRow(name: 'ربات', score: 1, crest: 'assets/games/bermuda/discs/germany.webp', avatar: '04-iron-warden'),
+        ]),
+        'score_table');
+    expect(find.text('جدول امتیازات'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

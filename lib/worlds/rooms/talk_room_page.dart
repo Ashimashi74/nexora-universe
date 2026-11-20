@@ -1074,7 +1074,7 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
 
   Widget _arenaSetup() {
     final Map<String, dynamic> st = Map<String, dynamic>.from((_room?['settings'] as Map?) ?? const <String, dynamic>{});
-    final int field = (st['field'] as num?)?.toInt() ?? 0, ball = (st['ball'] as num?)?.toInt() ?? 0;
+    final int field = (st['field'] as num?)?.toInt() ?? 0, ball = (st['ball'] as num?)?.toInt() ?? kBmDefaultBall;
     final bool fa = context.isFa;
     Future<void> save(Map<String, dynamic> patch) =>
         _rpc('nx_room_set_settings', <String, dynamic>{'p_room': widget.roomId, 'p_settings': patch});

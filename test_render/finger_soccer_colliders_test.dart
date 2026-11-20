@@ -53,7 +53,7 @@ void main() {
           form: const <int>[0, 3],
           names: const <String>['A', 'B'],
           field: fi,
-          ball: fi % NB));
+          ball: fi % kBmAnimBalls.length));
       // Contact scene: ball touching the top-left post of the top goal; a team-0 disc touching the ball from below.
       final BmGoal g = e.GOALS[0];
       final BmBody ball = e.ball!;
@@ -76,7 +76,7 @@ void main() {
         if (!f.builtInGoals) im.goal = await _load('assets/games/bermuda/goals/${f.gs}.webp');
         im.team[0] = await _load(bmTeam('club0').asset, w: 192);
         im.team[1] = await _load(bmTeam('lux3').asset, w: 192);
-        im.ballSheet = await _load(kBmAnimBalls[fi % NB]!.sheet);
+        im.ballSheet = await _load(kBmAnimBalls[fi % kBmAnimBalls.length]!.sheet);
         im.ballFrames = 16;
       });
       final BmView view = BmView();

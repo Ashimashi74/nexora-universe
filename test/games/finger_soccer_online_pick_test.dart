@@ -1,12 +1,10 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:nexora/core/storage/local_store.dart';
 import 'package:nexora/games/core/game_contract.dart';
-import 'package:nexora/games/core/net_link.dart';
 import 'package:nexora/games/finger_soccer/core/bm_engine.dart';
 import 'package:nexora/games/finger_soccer/intro/fs_formation_select.dart';
 import 'package:nexora/games/finger_soccer/intro/fs_online_pick.dart';

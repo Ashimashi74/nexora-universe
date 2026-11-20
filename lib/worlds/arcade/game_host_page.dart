@@ -91,7 +91,7 @@ class _GameHostPageState extends ConsumerState<GameHostPage> {
     if (ref.read(settingsProvider).haptics) HapticFeedback.heavyImpact();
     _oracleLine = OraclePersona.instance.resultReaction(outcome: outcome, myScore: r.score, oppScore: r.opponentScore);
     // Let the game's own final animation breathe before the overlay.
-    Future<void>.delayed(const Duration(milliseconds: 900), () {
+    Future<void>.delayed(Duration(milliseconds: r.holdMs ?? 900), () {
       if (!mounted) return;
       setState(() {
         _result = r;

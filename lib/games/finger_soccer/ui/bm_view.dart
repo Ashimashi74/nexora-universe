@@ -11,6 +11,7 @@ import 'package:nexora/core/theme/nx_theme.dart';
 import 'package:nexora/core/economy/gem_shop.dart';
 import 'package:nexora/core/profile/profile_service.dart';
 import 'package:nexora/core/ui2/anix_kit.dart';
+import 'package:nexora/core/widgets/user_avatar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:nexora/games/core/game_contract.dart';
@@ -23,6 +24,7 @@ import '../intro/fs_game_bar.dart';
 import '../intro/fs_intro_data.dart';
 import '../intro/fs_intro_ui.dart' show FsBarHandle;
 import '../intro/fs_online_pick.dart';
+import '../intro/fs_score_table.dart';
 import '../intro/fs_team_select.dart' show FsSidePlayer;
 
 const String _a = 'assets/games/bermuda/';
@@ -36,6 +38,9 @@ const double kBmHostButtonLane = 58;
 /// Height of the match scoreboard (team chips + clock) below the status bar.
 const double kBmScoreboardHeight = 64;
 const double kBmOnlineTurnSeconds = 10;
+
+/// v6 reference: how long the "one minute left" toast stays up (about 3 s in the recordings).
+const double kBmMinuteToastSeconds = 3;
 
 class BermudaView extends StatefulWidget {
   const BermudaView({super.key, required this.launch, this.autoStart = false, this.pick});
@@ -87,11 +92,11 @@ class _BermudaViewState extends State<BermudaView>
   Duration _last = Duration.zero;
   double _nowMs = 0;
   late final AnimationController _goalAnim =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1800));
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 2000)); // v6: = kBmGoalHold (was 1800)
 
   // setup
   String stage = 'setup'; // setup | waiting | match
-  late _Setup my = _Setup(kDefaultTeam, 0, 0, 0);
+  late _Setup my = _Setup(kDefaultTeam, 0, 0, kBmDefaultBall);
   int _cat = 0;
   BmConfig? cfg;
 
@@ -103,6 +108,18 @@ class _BermudaViewState extends State<BermudaView>
   // end
   double _finishIn = -1;
   bool _reported = false;
+
+  /// v6: seconds left on the end-of-match score table (reference "جدول امتیازات"), -1 when it is not shown.
+  double _tableT = -1;
+
+  /// v6 reference toast "یک دقیقه تا پایان بازی": seconds it stays up, fired once when the match clock enters its
+  /// last minute.
+  double _minuteT = 0;
+  double _prevMleft = -1;
+
+  /// v6 score table avatars per global seat (ANIX avatar id or photo url), exchanged on the live channel ('fs_av').
+  final Map<int, String> _avatars = <int, String>{};
+  StreamSubscription<NetLiveMessage>? _liveSub;
   bool _disposed = false;
   bool _paused = false;
   final FsBarSettings _barSettings = FsBarSettings();
@@ -150,6 +167,9 @@ class _BermudaViewState extends State<BermudaView>
       _netReady = false;
       final NetInbox inbox = NetInbox(_onNet);
       _inbox = inbox;
+      _avatars[mySeat] = _myAvatar;
+      _liveSub = net.live.listen(_onLive, onError: (Object _) {});
+      _announceAvatar();
       net.listen(inbox.add,
           onReplayDone: () => inbox.add(const NetMove(
               seq: -1,
@@ -176,7 +196,7 @@ class _BermudaViewState extends State<BermudaView>
           GemShop.instance.usableTeam(kBmTeams.any((BmTeam x) => x.id == t) ? t : kDefaultTeam),
           (p.getInt('bm.form') ?? 0).clamp(0, kBmForms.length - 1).toInt(),
           (p.getInt('bm.field') ?? 0).clamp(0, kBmFields.length - 1).toInt(),
-          (p.getInt('bm.ball') ?? 0).clamp(0, NB - 1).toInt());
+          (p.getInt(kBmBallPref) ?? kBmDefaultBall).clamp(0, NB - 1).toInt());
       _cat = math.max(0,
           kBmCats.indexWhere((List<Object> c) => c[0] == bmTeam(my.team).cat));
       audio.announcer = p.getBool('bm.ann') ??
@@ -191,8 +211,32 @@ class _BermudaViewState extends State<BermudaView>
       await p.setString('bm.team', my.team);
       await p.setInt('bm.form', my.form);
       await p.setInt('bm.field', my.field);
-      await p.setInt('bm.ball', my.ball);
+      await p.setInt(kBmBallPref, my.ball);
     } catch (_) {}
+  }
+
+  /// This player's avatar for the score table: an uploaded photo (https) or the chosen ANIX portrait.
+  String get _myAvatar {
+    final ProfileService? pr = ProfileService.current;
+    final String? url = pr?.avatarUrl;
+    if (url != null && NxUserAvatar.isPhoto(url)) return url;
+    return pr?.portrait ?? '01-vanguard';
+  }
+
+  void _announceAvatar() {
+    try {
+      launch.net?.sendLive('fs_av', <String, dynamic>{'av': _myAvatar});
+    } catch (_) {}
+  }
+
+  void _onLive(NetLiveMessage m) {
+    if (_disposed || m.event != 'fs_av' || m.seat < 0 || m.seat == mySeat) return;
+    final dynamic av = m.data['av'];
+    if (av is! String || av.isEmpty || av.length > 512) return;
+    final bool known = _avatars.containsKey(m.seat);
+    _avatars[m.seat] = av;
+    // a phone we had not heard from yet (joined late): tell it ours once
+    if (!known) _announceAvatar();
   }
 
   // ------------------------------------------------------------------ loop
@@ -203,9 +247,16 @@ class _BermudaViewState extends State<BermudaView>
     _nowMs = el.inMicroseconds / 1000;
     audio.frame(dt);
     if (_toastT > 0) _toastT -= dt;
+    if (_minuteT > 0) _minuteT -= dt;
     if (stage == 'match') {
       _ensureBallRenderer();
       e.frame(dt);
+      // v6 reference: "یک دقیقه تا پایان بازی" once, when the clock enters the last minute (not on a rejoin that
+      // starts inside it, not in golden goal).
+      if (e.mt > 60 && !e.sd && e.phase != 'over' && _prevMleft > 60 && e.mleft <= 60) {
+        _minuteT = kBmMinuteToastSeconds;
+      }
+      _prevMleft = e.mleft;
       if (_waiters.isNotEmpty && e.phase != 'goal') {
         final List<Completer<void>> w = List<Completer<void>>.from(_waiters);
         _waiters.clear();
@@ -215,8 +266,16 @@ class _BermudaViewState extends State<BermudaView>
       }
       if (_finishIn > 0) {
         _finishIn -= dt;
-        if (_finishIn <= 0) _report();
+        if (_finishIn <= 0) {
+          // v6: the score table comes up and the result is reported at once; the host holds its own result screen
+          // until the table's countdown is over (GameResult.holdMs).
+          _tableT = kFsScoreTableSeconds.toDouble();
+          _report(holdMs: kFsScoreTableSeconds * 1000);
+          // v6.1 fix: the table is a child of build(), not of the per-frame builders: rebuild once to show it.
+          if (mounted && !_disposed) setState(() {});
+        }
       }
+      if (_tableT > 0) _tableT = math.max(0, _tableT - dt);
       _checkSideLeft();
     }
     if (_disposed) return;
@@ -232,7 +291,7 @@ class _BermudaViewState extends State<BermudaView>
         40, math.min(96, math.max(2, (BR * 2 * view.s * dpr).round())));
     if (im.ballR == null || im.ballR!.n != n) {
       im.ballR?.dispose();
-      final BmBallRenderer r = BmBallRenderer(n);
+      final BmBallRenderer r = BmBallRenderer(n, flat: true);
       im.ballR = r;
       unawaited(r.setTexture(b));
     }
@@ -378,7 +437,7 @@ class _BermudaViewState extends State<BermudaView>
     final String t = '${m['team'] ?? ''}';
     final String team = kBmTeams.any((BmTeam x) => x.id == t) ? t : (seat == 0 ? 'club0' : 'club1');
     int i(dynamic v, int max) => ((v as num?)?.toInt() ?? 0).clamp(0, max - 1).toInt();
-    return _Setup(team, i(m['form'], kBmForms.length), i(st['field'], kBmFields.length), i(st['ball'], NB));
+    return _Setup(team, i(m['form'], kBmForms.length), i(st['field'], kBmFields.length), i(st['ball'] ?? kBmDefaultBall, NB));
   }
 
   /// Side name: "Ali" for 1v1, "Ali · Sara · Reza" for team games.
@@ -436,6 +495,10 @@ class _BermudaViewState extends State<BermudaView>
     if (quiet) e.menuOpen = false;
     stage = 'match';
     _finishIn = -1;
+    _tableT = -1;
+    _minuteT = 0;
+    _prevMleft = -1;
+    if (online) _announceAvatar();
     _loadMatchImages(c);
     unawaited(audio.music(false));
     unawaited(audio.crowd(true));
@@ -461,7 +524,8 @@ class _BermudaViewState extends State<BermudaView>
     final List<ui.Image?> r = await Future.wait(<Future<ui.Image?>>[
       _img(f.asset),
       f.builtInGoals ? Future<ui.Image?>.value(null) : _img('${_a}goals/${f.gs}.webp'),
-      Future<ui.Image?>.value(null),
+      // v6: the classic ball is drawn by the 3D roller from its flat art (no sprite sheet)
+      c.ball == kBmClassicBallIndex ? _img(kBmClassicBall) : Future<ui.Image?>.value(null),
       _img(bmTeam(c.teams[e.ct(0)]).asset, w: 192),
       _img(bmTeam(c.teams[e.ct(1)]).asset, w: 192),
     ]);
@@ -518,7 +582,7 @@ class _BermudaViewState extends State<BermudaView>
     }
   }
 
-  void _report({bool forfeit = false, int? sideLeft, bool leftTeam = false}) {
+  void _report({bool forfeit = false, int? sideLeft, bool leftTeam = false, int? holdMs}) {
     if (_reported) return;
     _reported = true;
     final List<int> sc = e.score; // local: [me, opponent]
@@ -546,6 +610,7 @@ class _BermudaViewState extends State<BermudaView>
       scores: <int>[for (int s = 0; s < math.max(2, seats); s++) global[s % 2]],
       tournamentMatchId: launch.tournamentMatchId,
       endsMatch: !leftTeam,
+      holdMs: holdMs,
       summaryFa:
           'نتیجه‌ی فوتبال: ${sc[0]} - ${sc[1]}${forfeit ? ' (انصراف)' : ''}',
       summaryEn:
@@ -908,6 +973,7 @@ class _BermudaViewState extends State<BermudaView>
   void dispose() {
     _disposed = true;
     _setupFallback?.cancel();
+    unawaited(_liveSub?.cancel());
     WidgetsBinding.instance.removeObserver(this);
     _ticker.dispose();
     _goalAnim.dispose();
@@ -985,12 +1051,32 @@ class _BermudaViewState extends State<BermudaView>
           Positioned(
               left: 0, right: 0, top: 0, child: SafeArea(child: _scoreboard())),
           Positioned.fill(child: IgnorePointer(child: _overlays())),
+          if (_tableT >= 0) Positioned.fill(child: _scoreTable()),
           Positioned(
             left: 0,
             bottom: 12 + MediaQuery.paddingOf(context).bottom,
             child: FsBarHandle(players: cfg?.names.length ?? 2, onTap: _pause),
           ),
-          // Reference in-match "تغییر ترکیب" button (above the game bar handle, bottom left).
+          // v6 reference toast "یک دقیقه تا پایان بازی" (dark pill beside the game bar handle, ~3 s).
+          Positioned(
+            left: 100,
+            right: 8,
+            bottom: 12 + MediaQuery.paddingOf(context).bottom,
+            child: IgnorePointer(
+              child: ValueListenableBuilder<int>(
+                valueListenable: _frame,
+                builder: (BuildContext context, int _, Widget? __) => _minuteT > 0 && _tableT < 0
+                    ? Align(
+                        alignment: Alignment.centerLeft,
+                        child: BmMinuteToast(
+                            text: launch.tx('یک دقیقه تا پایان بازی', 'One minute left'),
+                            opacity: (_minuteT / .25).clamp(0.0, 1.0).toDouble()))
+                    : const SizedBox.shrink(),
+              ),
+            ),
+          ),
+          // Reference in-match "تغییر ترکیب" button (above the game bar handle, bottom left); not over the score table.
+          if (_tableT < 0)
           Positioned(
             left: 6,
             bottom: 12 + MediaQuery.paddingOf(context).bottom + 48,
@@ -1066,6 +1152,57 @@ class _BermudaViewState extends State<BermudaView>
     );
   }
 
+  /// v6: the reference's end-of-match score table: one row per player with their avatar and the match points (their
+  /// side's goals; there are no room points), winner side first (local side first on a draw).
+  Widget _scoreTable() {
+    return ValueListenableBuilder<int>(
+      valueListenable: _frame,
+      builder: (BuildContext context, int _, Widget? __) => FsScoreTable(
+        fa: launch.isFa,
+        topLane: 50,
+        seconds: _tableT.ceil(),
+        rows: scoreRows(),
+      ),
+    );
+  }
+
+  /// Rows of the score table (tests read them).
+  @visibleForTesting
+  List<FsScoreRow> scoreRows() {
+    final List<int> sc = e.score;
+    final List<int> order = sc[1] > sc[0] ? <int>[1, 0] : <int>[0, 1];
+    final NetLink? net = launch.net;
+    final List<FsScoreRow> rows = <FsScoreRow>[];
+    for (final int t in order) {
+      final String crest = bmTeam(e.sel[e.ct(t)]).asset;
+      final bool win = sc[t] > sc[1 - t];
+      if (net == null) {
+        // offline: side 0 is this player, side 1 the bot / the second local player
+        rows.add(FsScoreRow(
+          name: e.nm(t),
+          score: sc[t],
+          crest: crest,
+          winner: win,
+          avatar: t == 0 ? _myAvatar : (launch.vsBot ? '04-iron-warden' : '02-cyber-scout'),
+        ));
+        continue;
+      }
+      // online: every seat of the side (global side g = seats g, g+2, g+4), each with the side's goals
+      final int g = e.ct(t);
+      for (int seat = g; seat < net.seatCount; seat += 2) {
+        final String n = seat < net.names.length ? net.names[seat] : '';
+        rows.add(FsScoreRow(
+          name: n.isNotEmpty ? n : e.nm(t),
+          score: sc[t],
+          crest: crest,
+          winner: win,
+          avatar: seat == mySeat ? _myAvatar : _avatars[seat],
+        ));
+      }
+    }
+    return rows;
+  }
+
   Widget _scoreboard() {
     return ValueListenableBuilder<int>(
       valueListenable: _frame,
@@ -1078,17 +1215,20 @@ class _BermudaViewState extends State<BermudaView>
         final double sw = math.max(0, math.min(screenWidth - 2 * kBmHostButtonLane, 620));
         final bool aim = e.phase == 'aim';
         String clock = '';
-        bool low = false;
+        // v6 reference banner: 0 = white plates / yellow clock, 1 = red; flashes over the last minute and stays red
+        // once the time is up (and in golden goal).
+        double red = 0;
         if (e.mt > 0) {
           if (e.sd) {
-            clock = 'GOLDEN';
+            clock = launch.tx('گل طلایی', 'GOLDEN');
+            red = 1;
           } else {
             // v3 (owner request 2026-11-20): a natural match clock that counts the played time up in real
-            // seconds (0:00 -> match length) instead of counting down; red over the last 30 s.
-            final int t = math.max(0, e.mleft.ceil());
+            // seconds (00:00 -> match length) instead of counting down.
             final int el = math.min(e.mt, math.max(0, (e.mt - e.mleft).floor()));
-            clock = '${el ~/ 60}:${(el % 60).toString().padLeft(2, '0')}';
-            low = t <= 30;
+            clock = '${(el ~/ 60).toString().padLeft(2, '0')}:${(el % 60).toString().padLeft(2, '0')}';
+            if (launch.isFa) clock = fsFa(clock);
+            red = bmClockRed(e.mleft, e.mt);
           }
         }
         final int tl = math.max(0, e.tleft.ceil());
@@ -1144,19 +1284,6 @@ class _BermudaViewState extends State<BermudaView>
                     if (on && t == 1) _TurnDot(color: accent),
                   ],
                 ),
-                const SizedBox(height: 1),
-                Text(
-                  '${e.score[t]}',
-                  style: TextStyle(
-                    color: on ? accent : visual.text,
-                    fontSize: 24,
-                    height: .98,
-                    fontWeight: FontWeight.w900,
-                    fontFeatures: const <ui.FontFeature>[
-                      ui.FontFeature.tabularFigures()
-                    ],
-                  ),
-                ),
               ],
             ),
           );
@@ -1166,7 +1293,7 @@ class _BermudaViewState extends State<BermudaView>
           return Expanded(
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
               decoration: BoxDecoration(
                 color: on ? accent.withValues(alpha: .13) : Colors.transparent,
                 borderRadius: BorderRadius.circular(14),
@@ -1178,7 +1305,10 @@ class _BermudaViewState extends State<BermudaView>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  Row(children: children),
+                  // v6: on a narrow phone the chip keeps the name (the crest is on every disc) so the banner fits.
+                  LayoutBuilder(
+                      builder: (BuildContext context, BoxConstraints box) =>
+                          Row(children: box.maxWidth >= 84 ? children : <Widget>[identity])),
                   // Reference turn clock: an orange bar under each name, full while waiting, draining toward the
                   // left on the side whose turn it is.
                   if (e.tt > 0)
@@ -1238,63 +1368,12 @@ class _BermudaViewState extends State<BermudaView>
                   child: Row(
                     children: <Widget>[
                       team(0),
-                      Container(
-                        width: 74,
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 4, horizontal: 5),
-                        decoration: BoxDecoration(
-                          color: visual.background.withValues(alpha: .76),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                              color: (e.sd
-                                      ? visual.accent
-                                      : (low
-                                          ? const Color(0xFFFF697A)
-                                          : visual.border))
-                                  .withValues(alpha: .72)),
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            Icon(Icons.timer_outlined,
-                                size: 12,
-                                color: e.sd
-                                    ? visual.accent
-                                    : (low
-                                        ? const Color(0xFFFF8794)
-                                        : visual.muted)),
-                            const SizedBox(height: 1),
-                            FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                clock,
-                                maxLines: 1,
-                                style: TextStyle(
-                                  color: e.sd
-                                      ? visual.accent
-                                      : (low
-                                          ? const Color(0xFFFF8794)
-                                          : visual.text),
-                                  fontSize: e.sd ? 9 : 14,
-                                  height: 1.05,
-                                  fontWeight: FontWeight.w900,
-                                  fontFeatures: const <ui.FontFeature>[
-                                    ui.FontFeature.tabularFigures()
-                                  ],
-                                ),
-                              ),
-                            ),
-                            if (!e.sd)
-                              Text(
-                                launch.tx('بازی', 'MATCH'),
-                                style: TextStyle(
-                                    color: visual.muted,
-                                    fontSize: 7,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 1),
-                              ),
-                          ],
-                        ),
+                      // v6: the reference's score banner (white score plates either side of a yellow clock).
+                      BmScoreBanner(
+                        left: launch.isFa ? fsFa(e.score[0]) : '${e.score[0]}',
+                        right: launch.isFa ? fsFa(e.score[1]) : '${e.score[1]}',
+                        clock: clock,
+                        red: red,
                       ),
                       team(1),
                     ],
@@ -1852,7 +1931,7 @@ class _BermudaViewState extends State<BermudaView>
                                   ),
                                   child: Column(
                                     children: <Widget>[
-                                      Expanded(child: Image.asset(kBmAnimBalls[i]!.thumb, cacheWidth: 120)),
+                                      Expanded(child: Image.asset(bmBallThumb(i), cacheWidth: 120)),
                                       const SizedBox(height: 3),
                                       Text(launch.tx(kBmBallFa[i], kBmBallN[i]),
                                           maxLines: 1,
@@ -2307,6 +2386,179 @@ class _ToastPill extends StatelessWidget {
             fontSize: big ? 30 : 15,
             fontWeight: FontWeight.w900,
             letterSpacing: .8),
+      ),
+    );
+  }
+}
+
+/// v6 reference banner colour: 0 = white plates + yellow clock, 1 = red. Over the last minute it pulses
+/// yellow -> red -> yellow every 4 s (01:00 yellow, 00:58 red, 00:56 yellow in the recordings); once the time is up
+/// it stays red.
+double bmClockRed(double mleft, int mt) {
+  if (mt <= 0) return 0;
+  if (mleft <= 0) return 1;
+  if (mleft > 60) return 0;
+  return .5 - .5 * math.cos(2 * math.pi * (60 - mleft) / 4);
+}
+
+/// v6: the reference's in-match score banner: a white score plate on each side of a yellow hexagonal clock, all
+/// turning red by [red] (last-minute pulse, solid red at the final whistle / golden goal).
+class BmScoreBanner extends StatelessWidget {
+  const BmScoreBanner({super.key, required this.left, required this.right, required this.clock, this.red = 0});
+  final String left;
+  final String right;
+  final String clock;
+  final double red;
+
+  static const double kWidth = 122;
+  static const double kHeight = 34;
+  static const double kPlate = 30;
+
+  @override
+  Widget build(BuildContext context) {
+    final double k = red.clamp(0.0, 1.0).toDouble();
+    final Color score = Color.lerp(const Color(0xFF1E2230), const Color(0xFF240306), k)!;
+    final Color clockInk = Color.lerp(const Color(0xFF3C3300), const Color(0xFFFFE9EC), k)!;
+    TextStyle st(Color c, double size) => TextStyle(
+      color: c,
+      fontSize: size,
+      height: 1,
+      fontWeight: FontWeight.w900,
+      fontFeatures: const <ui.FontFeature>[ui.FontFeature.tabularFigures()],
+    );
+    return SizedBox(
+      width: kWidth,
+      height: kHeight,
+      child: CustomPaint(
+        painter: _BannerPainter(k),
+        child: Row(
+          children: <Widget>[
+            SizedBox(
+              width: kPlate,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 5),
+                child: Center(
+                  child: FittedBox(child: Text(left, maxLines: 1, style: st(score, 19))),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(clock, maxLines: 1, style: st(clockInk, 14)),
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(
+              width: kPlate,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 5),
+                child: Center(
+                  child: FittedBox(child: Text(right, maxLines: 1, style: st(score, 19))),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BannerPainter extends CustomPainter {
+  _BannerPainter(this.k);
+  final double k;
+
+  Color _l(int a, int b) => Color.lerp(Color(a), Color(b), k)!;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width, h = size.height, p = BmScoreBanner.kPlate, n = 8;
+    final Paint edge = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..color = Colors.black.withValues(alpha: .55);
+    Paint fill(Rect r, int top, int bottom, int topR, int bottomR) => Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: <Color>[_l(top, topR), _l(bottom, bottomR)],
+      ).createShader(r);
+    // score plates (pointed outward ends), behind the clock
+    final Path lp = Path()
+      ..moveTo(n, 0)
+      ..lineTo(p + n, 0)
+      ..lineTo(p + n, h)
+      ..lineTo(n, h)
+      ..lineTo(0, h / 2)
+      ..close();
+    final Path rp = Path()
+      ..moveTo(w - n, 0)
+      ..lineTo(w - p - n, 0)
+      ..lineTo(w - p - n, h)
+      ..lineTo(w - n, h)
+      ..lineTo(w, h / 2)
+      ..close();
+    final Rect all = Offset.zero & size;
+    for (final Path q in <Path>[lp, rp]) {
+      canvas.drawPath(q, fill(all, 0xFFFFFFFF, 0xFFCFD3DA, 0xFFFFC2CA, 0xFFF0687A));
+      canvas.drawPath(q, edge);
+    }
+    // clock hexagon
+    final Path c = Path()
+      ..moveTo(p + n, 0)
+      ..lineTo(w - p - n, 0)
+      ..lineTo(w - p, h / 2)
+      ..lineTo(w - p - n, h)
+      ..lineTo(p + n, h)
+      ..lineTo(p, h / 2)
+      ..close();
+    canvas.drawShadow(c, Colors.black, 2, false);
+    canvas.drawPath(c, fill(all, 0xFFFFF35A, 0xFFC9B400, 0xFFF0303A, 0xFFA50E16));
+    // top gloss
+    canvas.drawPath(
+      Path()
+        ..moveTo(p + n + 2, 2)
+        ..lineTo(w - p - n - 2, 2)
+        ..lineTo(w - p - n * .5 - 2, h * .42)
+        ..lineTo(p + n * .5 + 2, h * .42)
+        ..close(),
+      Paint()..color = Colors.white.withValues(alpha: .22),
+    );
+    canvas.drawPath(c, edge);
+  }
+
+  @override
+  bool shouldRepaint(_BannerPainter old) => old.k != k;
+}
+
+/// v6 reference: the dark rounded "یک دقیقه تا پایان بازی" pill.
+class BmMinuteToast extends StatelessWidget {
+  const BmMinuteToast({super.key, required this.text, this.opacity = 1});
+  final String text;
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: opacity,
+      child: Container(
+        height: 40,
+        padding: const EdgeInsets.symmetric(horizontal: 22),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: const Color(0xF0101318),
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: const <BoxShadow>[BoxShadow(color: Color(0x66000000), blurRadius: 8, offset: Offset(0, 2))],
+        ),
+        child: Text(text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
       ),
     );
   }

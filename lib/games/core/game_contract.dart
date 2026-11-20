@@ -115,7 +115,13 @@ class GameResult {
     this.tournamentMatchId,
     this.durationMs,
     this.endsMatch = true,
+    this.holdMs,
   });
+
+  /// How long (ms) the game keeps its own end screen up before the host shows its result overlay (null: the host's
+  /// default short pause). The result is reported / recorded at once either way. v6 finger soccer: its 20 s score
+  /// table.
+  final int? holdMs;
 
   /// False when only this player left a match that goes on for the others (team games): the result is shown on this
   /// phone but not reported as the match's end (the server books this seat's loss when the match ends).

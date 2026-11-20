@@ -98,7 +98,7 @@ const List<(String, bool)> kFsShopTabs = <(String, bool)>[
 class _FsShopState extends State<FsShop> {
   late int _tab = widget.tab;
   bool _paged = false;
-  int _field = 0, _ball = 0;
+  int _field = 0, _ball = kBmDefaultBall;
   late String _team = widget.team;
 
   @override
@@ -109,7 +109,7 @@ class _FsShopState extends State<FsShop> {
       if (!mounted) return;
       setState(() {
         _field = (p.getInt('bm.field') ?? 0).clamp(0, kBmFields.length - 1);
-        _ball = (p.getInt('bm.ball') ?? 0).clamp(0, NB - 1);
+        _ball = (p.getInt(kBmBallPref) ?? kBmDefaultBall).clamp(0, NB - 1);
       });
     }, onError: (Object _) {});
   }
@@ -210,9 +210,9 @@ class _FsShopState extends State<FsShop> {
       default:
         return <Widget>[
           for (int i = 0; i < NB; i++)
-            _artCard(widget.fa ? kBmBallFa[i] : kBmBallN[i], kBmAnimBalls[i]?.thumb ?? '', i == _ball, () {
+            _artCard(widget.fa ? kBmBallFa[i] : kBmBallN[i], bmBallThumb(i), i == _ball, () {
               setState(() => _ball = i);
-              _savePref('bm.ball', i);
+              _savePref(kBmBallPref, i);
             }),
         ];
     }

@@ -50,11 +50,11 @@ void main() {
     expect(PF2, closeTo(3.25, 1e-9));
     expect(PF1, 0);
     expect(kBmLaunchGlide, 0);
-    expect(kBmLaunch, closeTo(2.04, 1e-9));
+    expect(kBmLaunch, closeTo(1.97, 1e-9)); // v6: 10/10 recordings (docs/FS_V6_CALIBRATION.md)
     expect(BmEngine.strikeOf(2) / BmEngine.strikeOf(10), closeTo(.40, .01));
     expect(STEP, 1 / 240);
     expect(kBmFields.length, 36);
-    expect(NB, 4);
+    expect(NB, 5); // v6: + the classic reference ball
     expect(kBmBallN.length, NB);
     expect(kBmBallFa.length, NB);
     expect(kBmAnimBalls.keys.toList(), <int>[0, 1, 2, 3]);
@@ -392,7 +392,8 @@ void main() {
       final int p = kBmRefPower[s.$1]!;
       final double base = s.$2 * BmEngine.refStrikeOf(10) / BmEngine.refStrikeOf(p);
       // every shot, normalised to power 10, is at most a full pull (+10% fit error)
-      expect(base, lessThan(full10 * 1.12), reason: '${s.$1} ${s.$2}');
+      // v6: power 10 is now calibrated on the 10/10 recordings (kBmLaunch 1.97); the older tracks stay within 15%
+      expect(base, lessThan(full10 * 1.15), reason: '${s.$1} ${s.$2}');
     }
     // ANIX keeps its own team stats (the reference numbers are only used to normalise measurements)
     expect(bmTeam('nat18').power, isNot(2));
