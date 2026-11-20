@@ -5,5 +5,5 @@
 - Going online: see `docs/ONLINE_SETUP.md`.
 - Finger soccer: engine `lib/games/finger_soccer/core/bm_engine.dart` (physics constants carry their calibration notes;
   retune only from new measurements), view `ui/bm_view.dart`, pre-match intro `intro/` (offline matches), in-match formation
-  change = `BmEngine.changeForm` + `'form'` net move (DECISIONS D11). Branch `work/fs-ref-physics`; CI "ANIX Quick Check"
+  change = `BmEngine.changeForm` + `'form'` net move (DECISIONS D11). v3 tuning (straight ball, rail .9, light struck disc, 5% slower scene, count-up clock, intro picks) in PROGRESS + D13. Branch `work/fs-ref-physics`; CI "ANIX Quick Check"
   renders `test_render/finger_soccer_render_test.dart` + `finger_soccer_intro_render_test.dart`.

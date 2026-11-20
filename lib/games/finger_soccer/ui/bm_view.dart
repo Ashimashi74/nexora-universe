@@ -936,8 +936,11 @@ class _BermudaViewState extends State<BermudaView>
           if (e.sd) {
             clock = 'GOLDEN';
           } else {
+            // v3 (owner request 2026-11-20): a natural match clock that counts the played time up in real
+            // seconds (0:00 -> match length) instead of counting down; red over the last 30 s.
             final int t = math.max(0, e.mleft.ceil());
-            clock = '${t ~/ 60}:${(t % 60).toString().padLeft(2, '0')}';
+            final int el = math.min(e.mt, math.max(0, (e.mt - e.mleft).floor()));
+            clock = '${el ~/ 60}:${(el % 60).toString().padLeft(2, '0')}';
             low = t <= 30;
           }
         }

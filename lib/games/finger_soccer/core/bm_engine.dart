@@ -57,6 +57,23 @@ const double kBmBallHitDiscK = 1.0;
 const double kBmStruckDiscK = 1.0;
 /// Wall / post restitution of a disc (a heavy wooden puck loses most of its speed into the rail).
 const double kBmDiscWallE = .48; // reference: .45 - .5 normal restitution off the rail
+/// Rail restitution (owner request 2026-11-20, v3): a bank shot keeps its power. Every body (ball and discs) comes
+/// off the side rails, the end lines beside the goals and the round corners with this normal restitution and no
+/// tangential loss. Before: ball .62-.72 (speed dependent), disc .48 (kBmDiscWallE). Goal posts and the inside of the
+/// goal keep their old values.
+const double kBmRailE = .9;
+/// Ball curl per unit of spin (rad/s). v3: 0, the ball travels in straight lines (owner request 2026-11-20: no sudden
+/// bends after a wall or a glancing hit). Spin is still kept and drawn (the ball still turns round in the corners).
+/// Before: .034.
+const double kBmBallCurve = 0;
+/// Mass of a disc when the BALL strikes it (ball faster than the disc). v3: lighter pieces (owner request
+/// 2026-11-20) so a hard ball knocks a disc back further. A disc striking the ball, and disc<->disc hits, keep
+/// DISC_M, so shot power and the ball's speed off a strike are unchanged. Before: DISC_M (8).
+const double kBmDiscLightM = 5.5;
+/// Global playback rate of the simulation (owner request 2026-11-20, v3): the whole scene runs 5% slower. Only the
+/// rate real time feeds the fixed-step accumulator changes; every step is the same STEP, so paths, distances and
+/// outcomes are identical (and online phones still run the same steps), just 5% slower to watch. Before: 1.
+const double kBmSimRate = .95;
 /// Below this speed (world units/s, times K) a sliding disc stops dead instead of creeping.
 const double kBmDiscStop = 30; // reference discs stop dead below ~13 px/s
 
@@ -526,7 +543,7 @@ class BmEngine {
           hooks.sfx('wall', vs / 1800);
           wallFx(Fl, b.y, vs);
         }
-        b.vx *= -_eN(bl, -b.vx);
+        b.vx *= -kBmRailE;
         b.spin += b.vy / (bl ? SPIN_R : r) * .05;
       }
     }
@@ -537,7 +554,7 @@ class BmEngine {
           hooks.sfx('wall', vs / 1800);
           wallFx(Fr, b.y, vs);
         }
-        b.vx *= -_eN(bl, b.vx);
+        b.vx *= -kBmRailE;
         b.spin -= b.vy / (bl ? SPIN_R : r) * .05;
       }
     }
@@ -572,7 +589,7 @@ class BmEngine {
           wallFx(b.x, g.y, vs);
         }
         b.y = g.y - g.d * r;
-        if (g.d * b.vy > 0) b.vy = -g.d * b.vy.abs() * _eN(bl, b.vy.abs());
+        if (g.d * b.vy > 0) b.vy = -g.d * b.vy.abs() * kBmRailE;
         b.spin += g.d * b.vx / (bl ? SPIN_R : r) * .05;
       }
     }
@@ -591,7 +608,7 @@ class BmEngine {
           b.x = cx + nx * lim;
           b.y = cy + ny * lim;
           if (vn > 0) {
-            final double ec = _eN(bl, vn);
+            const double ec = kBmRailE;
             b.vx -= (1 + ec) * vn * nx;
             b.vy -= (1 + ec) * vn * ny;
           }
@@ -633,12 +650,15 @@ class BmEngine {
       d = 1;
     }
     final BmBody bl = ball!;
-    final double nx = dx / d, ny = dy / d, sm = a.im + b.im;
+    final double nx = dx / d, ny = dy / d;
     final bool isB = a == bl || b == bl;
     double ka = isB && a != bl ? 1 / HV : 1, kb = isB && b != bl ? 1 / HV : 1;
     // Calibration v2: when the ball is the faster body it is the ball that strikes the disc -> full push.
     final bool ballHits = isB &&
         (bl.vx * bl.vx + bl.vy * bl.vy) > (a == bl ? b.vx * b.vx + b.vy * b.vy : a.vx * a.vx + a.vy * a.vy);
+    // v3: a disc the ball strikes reacts as a lighter piece (kBmDiscLightM); every other contact uses the body masses.
+    final double ima = ballHits && a != bl ? 1 / kBmDiscLightM : a.im, imb = ballHits && b != bl ? 1 / kBmDiscLightM : b.im;
+    final double sm = ima + imb;
     if (ballHits) {
       if (a == bl) {
         kb = kBmBallHitDiscK;
@@ -654,7 +674,7 @@ class BmEngine {
         ka = kBmStruckDiscK;
       }
     }
-    double wa = a.im / sm * ka, wb = b.im / sm * kb;
+    double wa = ima / sm * ka, wb = imb / sm * kb;
     if (isB) {
       if (a == bl) {
         wa = 1 - wb;
@@ -684,10 +704,10 @@ class BmEngine {
         }
       }
     }
-    a.vx -= j * nx * a.im * ka;
-    a.vy -= j * ny * a.im * ka;
-    b.vx += j * nx * b.im * kb;
-    b.vy += j * ny * b.im * kb;
+    a.vx -= j * nx * ima * ka;
+    a.vy -= j * ny * ima * ka;
+    b.vx += j * nx * imb * kb;
+    b.vy += j * ny * imb * kb;
     // PCAP only limits a slow disc that pushes the ball, never a disc the ball struck (calibration v2).
     if (pa != null && pre < 260 * K && !ballHits) {
       final double ps = math.sqrt(pa.vx * pa.vx + pa.vy * pa.vy), cp = PCAP * K;
@@ -768,7 +788,7 @@ class BmEngine {
             b.vx = 0;
             b.vy = 0;
           } else {
-            final double m = _mx(-34, _mn(34, b.spin)) * .034 * dt, cs = math.cos(m), sn = math.sin(m);
+            final double m = _mx(-34, _mn(34, b.spin)) * kBmBallCurve * dt, cs = math.cos(m), sn = math.sin(m);
             final double vx = b.vx * cs - b.vy * sn, vy = b.vx * sn + b.vy * cs, k = _mn(ns, kBmBallVMax * K) / sp;
             b.vx = vx * k;
             b.vy = vy * k;
@@ -1304,7 +1324,10 @@ class BmEngine {
       }
     }
     if (!menuOpen && bodies.isNotEmpty) {
-      if (mt > 0 && !sd && phase != 'over' && mleft > 0) mleft = _mx(0, mleft - dt);
+      // v3 match clock: runs on real elapsed time (not the 50 ms physics clamp, which made it lag on slow frames);
+      // a frame gap over 1 s (app resumed) counts as 1 s.
+      final double clk = rawDt <= 0 ? .016 : _mn(rawDt, 1.0);
+      if (mt > 0 && !sd && phase != 'over' && mleft > 0) mleft = _mx(0, mleft - clk);
       double ts = 1;
       if (freeze > 0) {
         freeze -= dt;
@@ -1313,7 +1336,7 @@ class BmEngine {
         slow -= dt;
         ts = .32 + .68 * math.pow(1 - _mx(0, slow) / 1.1, 2).toDouble();
       }
-      acc += dt * ts;
+      acc += dt * ts * kBmSimRate;
       int n = 0;
       if (phase != 'over') {
         while (acc >= STEP && n++ < 14) {

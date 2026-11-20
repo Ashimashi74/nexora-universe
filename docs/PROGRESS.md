@@ -153,3 +153,23 @@ No extra server: everything runs in the existing Supabase project (Postgres RPCs
   (not applied live).
 - In-match "تغییر ترکیب" button (bottom left, above the game bar handle) opens the 3 x 3 picker (`BmFormationPicker`);
   rule in DECISIONS D11; engine API `canReformNow(side)` / `changeForm(side, fi)`; online move `'form'` (live + replay).
+
+## Finger soccer v3 — owner feedback on the reference-physics build (2026-11-20, branch `work/fs-ref-physics`)
+- Ball travels straight: ball curl per unit spin `kBmBallCurve` .034 -> 0 (spin is still kept and drawn, so the ball
+  still turns round in the corners; no bends after a wall or a glancing hit).
+- Bank shots keep their power: one rail restitution `kBmRailE` = .9 for ball AND discs on side rails, end lines and the
+  round corners, no tangential loss (before: ball .62-.72 speed dependent, disc .48). Goal posts / inside of the goal
+  unchanged.
+- Lighter pieces: a disc the ball strikes reacts with mass `kBmDiscLightM` 5.5 (before DISC_M 8) -> knocked back ~30%
+  further. Disc->ball strikes and disc<->disc hits keep DISC_M 8, so shot power is unchanged (D13).
+- Whole scene 5% slower: `kBmSimRate` .95 scales only the real time fed to the fixed-step accumulator; same steps,
+  same paths and outcomes (online phones still run identical steps).
+- Match clock: runs on real elapsed time (was clamped to 50 ms per frame like physics, so it lagged on slow frames)
+  and the HUD counts the played time up (0:00 -> 5:00), red over the last 30 s.
+- Intro team select: the arrows pick the team shown when it can be fielded (owned, or any team for the opponent side);
+  tapping the big disc selects / buys it. Before, only the small "انتخاب" button picked, so the browsed team was not
+  the one that played.
+- Intro formation select: the whole card (mini pitch, name, button) picks; before, only the small button did, and
+  the auto-advance timer then started the match with the first / saved formation ("stuck on 0").
+- Tests: `test/games/finger_soccer_test.dart` (v3 group), `test/games/finger_soccer_intro_pick_test.dart`; the match
+  render test asserts the intro formation reaches the match.

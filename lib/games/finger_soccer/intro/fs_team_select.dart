@@ -121,7 +121,13 @@ class _FsTeamSelectState extends State<FsTeamSelect> {
 
   BmTeam get _t => kBmTeams[_browse[_side]];
 
-  void _step(int d) => setState(() => _browse[_side] = (_browse[_side] + d) % kBmTeams.length);
+  /// Browsing with the arrows also picks the team shown when it can be fielded (owned, or the opponent side), so the
+  /// team on screen is the team that plays; a locked team still needs the buy button (or a tap on the disc).
+  void _step(int d) => setState(() {
+        _browse[_side] = (_browse[_side] + d) % kBmTeams.length;
+        final BmTeam t = kBmTeams[_browse[_side]];
+        if (!_needsOwn || GemShop.instance.ownsTeam(t.id)) widget.teams[_side] = t.id;
+      });
 
   bool get _needsOwn => _side == 0 && widget.ownedOnlySide0;
 
@@ -363,7 +369,12 @@ class _FsTeamSelectState extends State<FsTeamSelect> {
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 180),
             transitionBuilder: (Widget c, Animation<double> a) => ScaleTransition(scale: a, child: c),
-            child: FsDisc3D(key: ValueKey<String>(t.id), asset: t.asset, r: 56),
+            child: GestureDetector(
+              key: ValueKey<String>(t.id),
+              behavior: HitTestBehavior.opaque,
+              onTap: _selectOrBuy,
+              child: FsDisc3D(asset: t.asset, r: 56),
+            ),
           ),
         ),
       ),

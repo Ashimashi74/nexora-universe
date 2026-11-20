@@ -83,6 +83,14 @@ class _FsFormationSelectState extends State<FsFormationSelect> {
   static const List<double> _cols = <double>[27, 129, 231];
   static const double _row0 = 153, _rowStep = 131, _pw = 80, _ph = 52;
 
+  void _pick(int i) {
+    if (_done) return;
+    setState(() {
+      _sel = i;
+      _picked = true;
+    });
+  }
+
   Widget _cell(FsFormation f, int i) {
     final double left = _cols[i % 3], top = _row0 + (i ~/ 3) * _rowStep;
     final bool on = i == _sel;
@@ -90,7 +98,11 @@ class _FsFormationSelectState extends State<FsFormationSelect> {
       left: left,
       top: top,
       width: _pw,
-      child: Column(children: <Widget>[
+      // The whole card (mini pitch, name, button) picks the formation, not only the small button.
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => _pick(i),
+        child: Column(children: <Widget>[
         SizedBox(
           width: _pw,
           height: _ph,
@@ -120,15 +132,11 @@ class _FsFormationSelectState extends State<FsFormationSelect> {
         ),
         const SizedBox(height: 8),
         FsPress(
-          onTap: _done
-              ? null
-              : () => setState(() {
-                    _sel = i;
-                    _picked = true;
-                  }),
+          onTap: _done ? null : () => _pick(i),
           child: on && _picked ? fsGreyButton('انتخاب شده', _pw, 19, size: 10.5) : fsLimeButton('انتخاب', _pw, 19, size: 10.5),
         ),
-      ]),
+        ]),
+      ),
     );
   }
 

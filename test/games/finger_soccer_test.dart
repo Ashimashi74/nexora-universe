@@ -512,4 +512,131 @@ void main() {
     expect(bmAimDots(LMAX, PR), 3);
     expect(bmAimDots(LMAX * 3, PR), 5);
   });
+
+  // ------------------------------------------------------------ v3 (owner request 2026-11-20)
+  BmEngine lone({bool disc = false}) {
+    final BmEngine e = BmEngine(_Hooks(), rng: math.Random(5))..startMatch(_cfg(mode: 'local'));
+    final BmBody keep = e.bodies.firstWhere((BmBody x) => x != e.ball);
+    e.bodies.removeWhere((BmBody o) => o != e.ball && !(disc && o == keep));
+    e.phase = 'move';
+    e.remote = true;
+    return e;
+  }
+
+  test('v3: a spinning ball travels in a straight line', () {
+    final BmEngine e = lone();
+    final BmBody b = e.ball!
+      ..x = e.CX
+      ..y = e.CY + 300
+      ..vx = 0
+      ..vy = -1500
+      ..spin = 30;
+    for (int i = 0; i < 40; i++) {
+      e.sim(STEP);
+    }
+    expect(b.vx.abs(), lessThan(1e-6));
+    expect(b.x, closeTo(e.CX, 1e-6));
+  });
+
+  test('v3: ball and discs keep their power off the rails', () {
+    final BmEngine e = lone();
+    final BmBody b = e.ball!
+      ..x = e.Fl + BR + 2
+      ..y = e.CY
+      ..vx = -2000
+      ..vy = 0;
+    e.sim(STEP);
+    e.sim(STEP);
+    expect(b.vx, greaterThan(2000 * kBmRailE * .97));
+    final BmEngine f = lone(disc: true);
+    f.ball!
+      ..x = f.CX
+      ..y = f.CY;
+    final BmBody d = f.bodies.firstWhere((BmBody x) => x != f.ball)
+      ..x = f.Fr - PR - 2
+      ..y = f.CY
+      ..vx = 2000
+      ..vy = 0;
+    f.sim(STEP);
+    f.sim(STEP);
+    expect(d.vx, lessThan(-2000 * kBmRailE * .9));
+  });
+
+  double massShare(double discM, double e) => (1 + e) * (1 / discM) / (1 / discM + 1 / BALL_M);
+
+  test('v3: the ball knocks a lighter disc back; a disc strike on the ball is unchanged', () {
+    final BmEngine e = BmEngine(_Hooks(), rng: math.Random(2))..startMatch(_cfg(mode: 'local'));
+    final BmBody d = e.bodies.firstWhere((BmBody x) => x.team == 0 && x != e.ball);
+    final BmBody b = e.ball!;
+    for (final BmBody o in e.bodies) {
+      if (o != d && o != b) o.x = -9999;
+    }
+    d
+      ..x = e.CX
+      ..y = e.CY
+      ..vx = 0
+      ..vy = 0;
+    b
+      ..x = e.CX
+      ..y = e.CY + PR + BR + 1
+      ..vx = 0
+      ..vy = -3000;
+    e.phase = 'move';
+    e.remote = true;
+    e.sim(STEP);
+    e.sim(STEP);
+    final double v = math.sqrt(d.vx * d.vx + d.vy * d.vy);
+    // heavier than the old 8-mass share, still below the light-mass share of the full 3000
+    expect(v, greaterThan(.97 * 2950 * massShare(DISC_M, .43)));
+    expect(v, greaterThan(1.1 * 3000 * massShare(DISC_M, .55)));
+    expect(v, lessThan(3000 * massShare(kBmDiscLightM, .55)));
+
+    // disc strikes a resting ball: ball speed follows DISC_M (shot power unchanged)
+    final BmEngine g = BmEngine(_Hooks(), rng: math.Random(2))..startMatch(_cfg(mode: 'local'));
+    final BmBody s = g.bodies.firstWhere((BmBody x) => x.team == 0 && x != g.ball);
+    final BmBody gb = g.ball!;
+    for (final BmBody o in g.bodies) {
+      if (o != s && o != gb) o.x = -9999;
+    }
+    gb
+      ..x = g.CX
+      ..y = g.CY
+      ..vx = 0
+      ..vy = 0;
+    s
+      ..x = g.CX
+      ..y = g.CY + PR + BR + 1
+      ..vx = 0
+      ..vy = -3000;
+    g.phase = 'move';
+    g.remote = true;
+    g.sim(STEP);
+    g.sim(STEP);
+    final double bv = math.sqrt(gb.vx * gb.vx + gb.vy * gb.vy);
+    final double share8 = (1 / BALL_M) / (1 / DISC_M + 1 / BALL_M);
+    expect(bv, lessThan(1.55 * 3000 * share8 * BKICK));
+    expect(bv, greaterThan(1.3 * 2900 * share8 * BKICK));
+  });
+
+  test('v3: the match clock runs on real time; the scene plays 5% slower with the same steps', () {
+    final BmEngine e = BmEngine(_Hooks(), rng: math.Random(3))..startMatch(_cfg(mode: 'local'));
+    e.frame(.2);
+    expect(e.mleft, closeTo(299.8, 1e-9));
+    expect(kBmSimRate, closeTo(.95, 1e-12));
+    // same sequence of fixed steps -> same result whatever the playback rate
+    BmEngine run() {
+      final BmEngine x = lone();
+      x.ball!
+        ..x = x.CX
+        ..y = x.CY
+        ..vx = 900
+        ..vy = -1700;
+      for (int i = 0; i < 600; i++) {
+        x.sim(STEP);
+      }
+      return x;
+    }
+
+    expect(run().ball!.x, run().ball!.x);
+  });
 }

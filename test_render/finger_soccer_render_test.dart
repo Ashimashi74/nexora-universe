@@ -77,6 +77,8 @@ void main() {
     }
     expect(p.e.phase, 'aim');
     await shoot(tester, 'final/finger_soccer_kickoff.png');
+    // v3: the formation picked in the intro reaches the match (it used to look stuck on the first one).
+    expect(p.e.form[0], 6);
     // In-match "تغییر ترکیب": open the 3 x 3 picker on our kickoff and keep Nish (applies at once).
     expect(find.byType(BmChangeFormButton), findsOneWidget);
     await tester.tap(find.byType(BmChangeFormButton));
