@@ -8,11 +8,15 @@ import 'dart:ui' as ui;
 const int _ts = 256;
 
 class BmBallRenderer {
-  BmBallRenderer(this.n);
+  BmBallRenderer(this.n, {this.flat = false});
 
   final int n;
+
+  /// v6 classic ball: the art is already a lit black / white ball, so no luminance normalisation, a soft studio
+  /// light (no blue rim), and the whole art on the front face at rest (sample scale .99 instead of .93).
+  final bool flat;
   Uint8List? _tex;
-  late final Float32List _g = _buildSphere(n);
+  late final Float32List _g = _buildSphere(n, flat);
   late final Uint8List _out = Uint8List(n * n * 4);
   Float64List? _rp;
   final Float64List _rm = Float64List(9);
@@ -90,7 +94,7 @@ class BmBallRenderer {
     }
     m = cnt > 0 ? m / cnt : 128;
     if (m == 0 || m.isNaN) m = 128;
-    for (int i = 0; i < _ts * _ts; i++) {
+    for (int i = 0; i < _ts * _ts && !flat; i++) {
       final double f = _mx(.75, _mn(1.5, math.pow(m / _mx(24, lum[i]), .6).toDouble()));
       final int q = i * 4;
       d[q] = _mn(255, d[q] * f).toInt();
@@ -108,7 +112,7 @@ class BmBallRenderer {
     _shownRv = -1;
   }
 
-  static Float32List _buildSphere(int n) {
+  static Float32List _buildSphere(int n, bool flat) {
     final Float32List g = Float32List(n * n * 6);
     final double h = n / 2;
     const double lx0 = -.42, ly0 = -.55, lz0 = .72;
@@ -124,8 +128,8 @@ class BmBallRenderer {
         }
         final double z = math.sqrt(_mx(0, 1 - _mn(d2, 1))), dif = _mx(0, px * lx + py * ly + z * lz);
         final double fr = math.pow(1 - z, 2.4).toDouble(), wrap = _mx(0, (px * lx + py * ly + z * lz) * .5 + .5);
-        final double lit = .50 + .58 * wrap * wrap + .14 * dif - .30 * fr;
-        final double back = (math.pow(1 - z, 3) * _mx(0, -(px * lx + py * ly)) * .9).toDouble();
+        final double lit = flat ? .80 + .24 * wrap * wrap + .04 * dif - .16 * fr : .50 + .58 * wrap * wrap + .14 * dif - .30 * fr;
+        final double back = flat ? 0 : (math.pow(1 - z, 3) * _mx(0, -(px * lx + py * ly)) * .9).toDouble();
         g[o] = px;
         g[o + 1] = py;
         g[o + 2] = z;
@@ -172,7 +176,7 @@ class BmBallRenderer {
     for (int i = 0; i < 9; i++) {
       _rm[i] = (r[i] + rp[i]) * .5;
     }
-    const double k = .93 * .5 * _ts;
+    final double k = (flat ? .99 : .93) * .5 * _ts;
     final Float32List g = _g;
     final Uint8List d = _out;
     for (int j = 0; j < n; j++) {
@@ -203,7 +207,7 @@ class BmBallRenderer {
           }
         }
         final double sd = px * hx + py * hy + pz * hz;
-        final double hl = pz > 0 ? (math.pow(_mx(0, sd), 46) * 150 + math.pow(_mx(0, sd), 7) * 20).toDouble() : 0;
+        final double hl = pz > 0 ? (math.pow(_mx(0, sd), 46) * (flat ? 70 : 150) + math.pow(_mx(0, sd), 7) * (flat ? 8 : 20)).toDouble() : 0;
         rr = rr * lit + hl + back * 70;
         gg = gg * lit + hl + back * 105;
         bb = bb * lit + hl + back * 150;

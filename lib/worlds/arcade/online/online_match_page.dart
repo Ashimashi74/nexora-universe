@@ -180,7 +180,7 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
             score: r.score,
           );
     }
-    Future<void>.delayed(Duration(milliseconds: report ? 900 : 200), () {
+    Future<void>.delayed(Duration(milliseconds: report ? (r.holdMs ?? 900) : 200), () {
       if (mounted) setState(() => _result = r);
     });
   }

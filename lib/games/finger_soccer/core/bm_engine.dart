@@ -28,7 +28,9 @@ const double kBmGoalArtScale = 0.92; // mouth = 0.34 of the playing width (refer
 /// net depth unchanged), and the posts / mouth / side nets are still built from the drawn sprite, so the colliders
 /// keep matching the art. Before: 1.
 const double kBmGoalMouthScale = 0.965;
-const int NB = 4;
+/// Match balls: 0-3 the owner's animated balls (kBmAnimBalls), 4 the classic black / white ball of the reference
+/// recordings (kBmClassicBall, v6).
+const int NB = 5;
 /// Weighty pieces (owner request 2026-11): discs are heavy (mass 8) and the ball lighter (2.6) but not a ping-pong
 /// ball. BKICK keeps a disc striking the ball launching it 5% harder than plain elastic transfer.
 const double DISC_M = 8.0;
@@ -98,13 +100,23 @@ const double kBmMaxAimError = 0.11;
 /// reference shots stop (distance-matched over 700..5000 world/s launches: x1.06..1.10). A full pull at power 10 now
 /// leaves at ~1875 px/s (5400 world/s), i.e. ~1670 px/s averaged over the first 1/15 s frame, as measured for the
 /// reference's power-10 sides (PSG, Adidas). Team power scales it through strikeOf (see there).
-const double kBmLaunch = 2.04;
+/// v6 (owner request 2026-11-20, two new recordings where BOTH sides are power 10 / accuracy 10, see
+/// docs/FS_V6_CALIBRATION.md): the hardest ball in the recordings averages 4.57 playing widths/s over its first
+/// 0.2 s (1431 px/s on a 313 px pitch); a power-10 full pull now gives exactly that on screen (4.58 w/s from the
+/// contact, kBmSimRate included; 2.04 gave 4.74 w/s, ~4% too hard). Every other power keeps its reference share of it
+/// (strikeOf / powerShare).
+const double kBmLaunch = 1.97;
 /// Ball rolling friction: constant part (world/s^2 / K) and linear drag (1/s), see sim().
 const double kBmBallF0 = 23, kBmBallDrag = 1.08;
 /// Speed caps (world/s / K): the reference ball leaves a hard strike at up to ~1725 px/s (4970 world/s).
 /// v2: the disc cap is above the strongest launch (power 10 full pull ~4250 world/s / K), so it never limits a
 /// shot or a disc that is struck by another body (was 4200, just under the v2 launch).
 const double kBmBallVMax = 4000, kBmDiscVMax = 4400;
+
+/// v6 (reference recordings 2026-11-20): after a goal the "Goal!" banner holds ~2.0 s (pieces keep rolling), then
+/// every piece glides back to its kickoff slot in ~1.0 s before the kickoff turn starts. The glide is render only
+/// (the bodies already stand on their slots, see BmBody.gx / gy), so online phones stay in lock-step.
+const double kBmGoalHold = 2.0, kBmResetGlide = 1.0;
 
 /// Team powers shown in the reference game's team-select UI (قدرت bar) for the sides in the owner's recordings.
 /// Reference speeds are divided by the side's strike (BmEngine.refStrikeOf) before calibrating kBmLaunch, so a
@@ -233,6 +245,9 @@ class BmBody {
   final List<double> R = <double>[1, 0, 0, 0, 1, 0, 0, 0, 1];
   int rv = 0;
   int cid = 0;
+  /// v6: render-only offset (world units) from the kickoff slot back to where the piece stood when the goal was
+  /// scored; drawn as gx * BmEngine.glideK so the piece glides home (see kBmResetGlide).
+  double gx = 0, gy = 0;
   BmGoal? gout;
   final List<BmTrailPt> tr = <BmTrailPt>[];
 }
@@ -412,7 +427,21 @@ class BmEngine {
   BmBody mk(double x, double y, int team, double r, double m, {int power = 0}) =>
       BmBody(x, y, team, r, m, power: power);
 
-  void reset(int k) {
+  /// v6: seconds left of the post-goal glide back to the kickoff slots (render only; input and the turn clock wait).
+  double glide = 0;
+
+  /// 1 -> 0 while the pieces glide home (smoothstep of the time left), 0 otherwise.
+  double get glideK {
+    if (glide <= 0) return 0;
+    final double u = _mn(1, glide / kBmResetGlide);
+    return u * u * (3 - 2 * u);
+  }
+
+  void reset(int k, {bool glideIn = false}) {
+    final Map<int, List<double>> was = <int, List<double>>{
+      if (glideIn)
+        for (final BmBody b in bodies) b.cid: <double>[b.x, b.y],
+    };
     bodies = <BmBody>[];
     trail = <BmTrailPt>[];
     parts = <BmPart>[];
@@ -447,6 +476,16 @@ class BmEngine {
     bl.cid = 99;
     ball = bl;
     bodies.add(bl);
+    glide = 0;
+    if (glideIn) {
+      for (final BmBody b in bodies) {
+        final List<double>? p = was[b.cid];
+        if (p == null) continue;
+        b.gx = p[0] - b.x;
+        b.gy = p[1] - b.y;
+        if (b.gx.abs() + b.gy.abs() > 1) glide = kBmResetGlide;
+      }
+    }
     turn = k;
     _turnStarted();
     phase = 'aim';
@@ -498,7 +537,7 @@ class BmEngine {
       return;
     }
     score[t]++;
-    pause = 1.8;
+    pause = kBmGoalHold; // v6: was 1.8
     flash = 1;
     shake[t] = .6;
     phase = 'goal';
@@ -896,6 +935,7 @@ class BmEngine {
   bool canCtl() =>
       !menuOpen &&
       phase == 'aim' &&
+      glide <= 0 &&
       !remote &&
       turn != ai &&
       !(mode == 'online' && turn != 0) &&
@@ -950,6 +990,7 @@ class BmEngine {
     b.vx = vx;
     b.vy = vy;
     b.boost = kBmLaunchGlide;
+    glide = 0; // v6: a shot (e.g. a remote one arriving early) ends any post-goal glide at once
     if (b.team != turn) turn = b.team;
     phase = 'move';
     idle = 0;
@@ -964,6 +1005,10 @@ class BmEngine {
   /// Shot multiplier of a power rating (unchanged ANIX tuning): 1 => 0.65x, 5 => 1.05x, 7 => 1.25x, 10 => 1.55x.
   /// Reference calibration: a power-2 side launches at ~0.40x the speed of a power-10 side (700 vs 1720 px/s).
   static double strikeOf(int power) => .39 + power.clamp(1, 10) * .116;
+
+  /// v6: share of the calibrated power-10 shot (the reference recordings, 10 / 10 sides) that a power gets:
+  /// 10 => 1, 9 => .925, 5 => .626, 2 => .401, 1 => .326 (the reference's own Japan 2 vs PSG 10 ratio, .40).
+  static double powerShare(int power) => strikeOf(power) / strikeOf(10);
 
   /// Strike multiplier of a REFERENCE-game power (its scale goes past 10: Starbucks / Oreo show 15). Same linear law,
   /// unclamped; used only to normalise speeds measured on the reference recordings (see kBmRefPower).
@@ -1390,7 +1435,11 @@ class BmEngine {
           }
         }
       } else if (phase == 'aim') {
-        tick(dt);
+        if (glide > 0) {
+          glide = _mx(0, glide - dt);
+        } else {
+          tick(dt);
+        }
       } else if (phase == 'goal') {
         pause -= dt;
         if (pause <= 0) {
@@ -1399,12 +1448,12 @@ class BmEngine {
               end();
             } else {
               if (mleft <= 0) sd = true;
-              reset(kick);
+              reset(kick, glideIn: true);
             }
           } else if (score[0] >= setLim || score[1] >= setLim) {
             end();
           } else {
-            reset(kick);
+            reset(kick, glideIn: true);
           }
         }
       }

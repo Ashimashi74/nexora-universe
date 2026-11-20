@@ -254,8 +254,21 @@ const List<String> kBmTRN = <String>["Bolt", "Prism", "Wave", "Starlight", "Smok
 
 /// Match balls (owner rotation sprites, 16 frames side by side, frame width = sheet width / 16). Every sheet is
 /// normalised by tool/build_fs_assets.py so the ball's radius is exactly [kBmBallArtFill] of half a frame.
-const List<String> kBmBallN = <String>['ANIX Gold Spin', 'ANIX Green', 'ANIX Blue', 'NX Electron'];
-const List<String> kBmBallFa = <String>['انیکس طلایی', 'انیکس سبز', 'انیکس آبی', 'الکترون NX'];
+const List<String> kBmBallN = <String>['ANIX Gold Spin', 'ANIX Green', 'ANIX Blue', 'NX Electron', 'Classic'];
+const List<String> kBmBallFa = <String>['انیکس طلایی', 'انیکس سبز', 'انیکس آبی', 'الکترون NX', 'کلاسیک'];
+
+/// v6 (owner request 2026-11-20): the classic black / white ball of the reference recordings (owner's art, 111 px,
+/// fills its square). It is not a sprite sheet: the 3D ball renderer (BmBallRenderer, flat studio light) rolls it
+/// with the ball's real motion, one turn per 2*pi*r rolled, like the reference. It is the default match ball.
+const int kBmClassicBallIndex = 4;
+const String kBmClassicBall = 'assets/games/bermuda/balls/classic.png';
+const int kBmDefaultBall = kBmClassicBallIndex;
+
+/// Preference key of the player's match ball. v6 uses a new key so every player starts on the classic ball once.
+const String kBmBallPref = 'bm.ball.v6';
+
+/// Picker / shop thumbnail of a ball.
+String bmBallThumb(int i) => kBmAnimBalls[i]?.thumb ?? kBmClassicBall;
 
 class BmAnimBall {
   const BmAnimBall(this.sheet, this.frames, this.frameMs, this.thumb);

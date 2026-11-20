@@ -170,15 +170,19 @@ class BmPainter extends CustomPainter {
     // Pull circle of the aim (translucent, under the pieces like the reference).
     _aimUnder(canvas);
     // Turn rings: every disc of the side whose turn it is, for the whole turn (aim and while the shot rolls).
-    if (bmRingVisible(e)) {
+    if (bmRingVisible(e) && e.phase != 'over') {
       for (final BmBody b in e.bodies) {
-        if (b != e.ball && b.team == e.turn) bmPaintTurnRing(canvas, Offset(b.x, b.y), b.r, bmRingMine(e));
+        if (b != e.ball && b.team == e.turn) {
+          bmPaintTurnRing(canvas, Offset(b.x + b.gx * e.glideK, b.y + b.gy * e.glideK), b.r, bmRingMine(e));
+        }
       }
     }
+    // v6 (reference): at the final whistle the pieces leave the pitch (the score table follows).
+    final bool over = e.phase == 'over';
     for (final BmBody b in e.bodies) {
-      if (b != e.ball) _sprite(canvas, b, t);
+      if (b != e.ball && !over) _sprite(canvas, b, t);
     }
-    if (e.ball != null) _sprite(canvas, e.ball!, t);
+    if (e.ball != null && !over) _sprite(canvas, e.ball!, t);
     // goals (drawn over the ball: the net covers it). The sprite's post bottoms sit exactly on the goal line and its
     // posts on the engine's post colliders (BmEngine.geo builds the colliders from this same placement).
     final ui.Image? gi = im.goal;
@@ -275,16 +279,19 @@ class BmPainter extends CustomPainter {
     final Rect src = Rect.fromLTWH(0, 0, sp.width.toDouble(), sp.height.toDouble());
     final Rect dst = Rect.fromLTWH(-half, -half, half * 2, half * 2);
     canvas.save();
-    double drawY = b.y;
+    // v6: post-goal glide back to the kickoff slots (render only, BmEngine.glideK).
+    final double gk = e.glideK;
+    final double bx = b.x + b.gx * gk, by = b.y + b.gy * gk;
+    final double drawY = by;
     if (isBall) {
       final double sv = math.sqrt(b.vx * b.vx + b.vy * b.vy), fast = math.min(1.0, sv / (1700 * K));
       final BmBallRenderer? br = im.ballR;
       if (br != null && br.ready) br.update(b.R, b.rv);
       final double so = b.r * (.55 + .25 * fast);
-      canvas.drawOval(Rect.fromCenter(center: Offset(b.x + so * .35, b.y + so), width: b.r * .86 * 2, height: b.r * .34 * 2),
+      canvas.drawOval(Rect.fromCenter(center: Offset(bx + so * .35, by + so), width: b.r * .86 * 2, height: b.r * .34 * 2),
           Paint()..color = _rgba(8, 14, 24, .42 * .8));
       // The reference ball stays round while it rolls: no speed stretch, only the 3D roll below.
-      canvas.translate(b.x, b.y);
+      canvas.translate(bx, by);
       final ui.Image? sheet = im.ballSheet;
       final ui.Image? rendered = br?.image;
       if (sheet != null && im.ballFrames > 0) {
@@ -304,11 +311,12 @@ class BmPainter extends CustomPainter {
         canvas.drawImageRect(sheet, Rect.fromLTWH(fi * fw, 0, fw, sheet.height.toDouble()), dst,
             Paint()..filterQuality = FilterQuality.medium);
       } else if (rendered != null) {
-        canvas.drawImageRect(rendered, Rect.fromLTWH(0, 0, rendered.width.toDouble(), rendered.height.toDouble()), dst,
-            Paint()..filterQuality = FilterQuality.medium);
+        // v6: the rolled sphere and the classic art fill their square, so they are drawn at the collider radius.
+        canvas.drawImageRect(rendered, Rect.fromLTWH(0, 0, rendered.width.toDouble(), rendered.height.toDouble()),
+            Rect.fromCircle(center: Offset.zero, radius: b.r), Paint()..filterQuality = FilterQuality.medium);
       } else {
         canvas.rotate(b.ang);
-        canvas.drawImageRect(sp, src, dst, Paint()..filterQuality = FilterQuality.medium);
+        canvas.drawImageRect(sp, src, Rect.fromCircle(center: Offset.zero, radius: b.r), Paint()..filterQuality = FilterQuality.medium);
       }
       canvas.restore();
       return;
@@ -316,7 +324,7 @@ class BmPainter extends CustomPainter {
     // No idle bobbing: the sprite stays exactly on its collider.
     // v5 (owner request 2026-11-20): the disc turns with its spin (b.ang, picked up from glancing hits and rails), so
     // a struck disc visibly rotates; a small rim notch keeps the turn visible on a crest that looks the same rotated.
-    canvas.translate(b.x, drawY);
+    canvas.translate(bx, drawY);
     final Paint dark = Paint()
       ..filterQuality = FilterQuality.medium
       ..colorFilter = const ColorFilter.mode(Color.fromRGBO(6, 8, 24, .66), BlendMode.srcATop);

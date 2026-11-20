@@ -23,6 +23,7 @@ import '../intro/fs_game_bar.dart';
 import '../intro/fs_intro_data.dart';
 import '../intro/fs_intro_ui.dart' show FsBarHandle;
 import '../intro/fs_online_pick.dart';
+import '../intro/fs_score_table.dart';
 import '../intro/fs_team_select.dart' show FsSidePlayer;
 
 const String _a = 'assets/games/bermuda/';
@@ -87,11 +88,11 @@ class _BermudaViewState extends State<BermudaView>
   Duration _last = Duration.zero;
   double _nowMs = 0;
   late final AnimationController _goalAnim =
-      AnimationController(vsync: this, duration: const Duration(milliseconds: 1800));
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 2000)); // v6: = kBmGoalHold (was 1800)
 
   // setup
   String stage = 'setup'; // setup | waiting | match
-  late _Setup my = _Setup(kDefaultTeam, 0, 0, 0);
+  late _Setup my = _Setup(kDefaultTeam, 0, 0, kBmDefaultBall);
   int _cat = 0;
   BmConfig? cfg;
 
@@ -103,6 +104,9 @@ class _BermudaViewState extends State<BermudaView>
   // end
   double _finishIn = -1;
   bool _reported = false;
+
+  /// v6: seconds left on the end-of-match score table (reference "جدول امتیازات"), -1 when it is not shown.
+  double _tableT = -1;
   bool _disposed = false;
   bool _paused = false;
   final FsBarSettings _barSettings = FsBarSettings();
@@ -176,7 +180,7 @@ class _BermudaViewState extends State<BermudaView>
           GemShop.instance.usableTeam(kBmTeams.any((BmTeam x) => x.id == t) ? t : kDefaultTeam),
           (p.getInt('bm.form') ?? 0).clamp(0, kBmForms.length - 1).toInt(),
           (p.getInt('bm.field') ?? 0).clamp(0, kBmFields.length - 1).toInt(),
-          (p.getInt('bm.ball') ?? 0).clamp(0, NB - 1).toInt());
+          (p.getInt(kBmBallPref) ?? kBmDefaultBall).clamp(0, NB - 1).toInt());
       _cat = math.max(0,
           kBmCats.indexWhere((List<Object> c) => c[0] == bmTeam(my.team).cat));
       audio.announcer = p.getBool('bm.ann') ??
@@ -191,7 +195,7 @@ class _BermudaViewState extends State<BermudaView>
       await p.setString('bm.team', my.team);
       await p.setInt('bm.form', my.form);
       await p.setInt('bm.field', my.field);
-      await p.setInt('bm.ball', my.ball);
+      await p.setInt(kBmBallPref, my.ball);
     } catch (_) {}
   }
 
@@ -215,8 +219,14 @@ class _BermudaViewState extends State<BermudaView>
       }
       if (_finishIn > 0) {
         _finishIn -= dt;
-        if (_finishIn <= 0) _report();
+        if (_finishIn <= 0) {
+          // v6: the score table comes up and the result is reported at once; the host holds its own result screen
+          // until the table's countdown is over (GameResult.holdMs).
+          _tableT = kFsScoreTableSeconds.toDouble();
+          _report(holdMs: kFsScoreTableSeconds * 1000);
+        }
       }
+      if (_tableT > 0) _tableT = math.max(0, _tableT - dt);
       _checkSideLeft();
     }
     if (_disposed) return;
@@ -232,7 +242,7 @@ class _BermudaViewState extends State<BermudaView>
         40, math.min(96, math.max(2, (BR * 2 * view.s * dpr).round())));
     if (im.ballR == null || im.ballR!.n != n) {
       im.ballR?.dispose();
-      final BmBallRenderer r = BmBallRenderer(n);
+      final BmBallRenderer r = BmBallRenderer(n, flat: true);
       im.ballR = r;
       unawaited(r.setTexture(b));
     }
@@ -378,7 +388,7 @@ class _BermudaViewState extends State<BermudaView>
     final String t = '${m['team'] ?? ''}';
     final String team = kBmTeams.any((BmTeam x) => x.id == t) ? t : (seat == 0 ? 'club0' : 'club1');
     int i(dynamic v, int max) => ((v as num?)?.toInt() ?? 0).clamp(0, max - 1).toInt();
-    return _Setup(team, i(m['form'], kBmForms.length), i(st['field'], kBmFields.length), i(st['ball'], NB));
+    return _Setup(team, i(m['form'], kBmForms.length), i(st['field'], kBmFields.length), i(st['ball'] ?? kBmDefaultBall, NB));
   }
 
   /// Side name: "Ali" for 1v1, "Ali · Sara · Reza" for team games.
@@ -436,6 +446,7 @@ class _BermudaViewState extends State<BermudaView>
     if (quiet) e.menuOpen = false;
     stage = 'match';
     _finishIn = -1;
+    _tableT = -1;
     _loadMatchImages(c);
     unawaited(audio.music(false));
     unawaited(audio.crowd(true));
@@ -461,7 +472,8 @@ class _BermudaViewState extends State<BermudaView>
     final List<ui.Image?> r = await Future.wait(<Future<ui.Image?>>[
       _img(f.asset),
       f.builtInGoals ? Future<ui.Image?>.value(null) : _img('${_a}goals/${f.gs}.webp'),
-      Future<ui.Image?>.value(null),
+      // v6: the classic ball is drawn by the 3D roller from its flat art (no sprite sheet)
+      c.ball == kBmClassicBallIndex ? _img(kBmClassicBall) : Future<ui.Image?>.value(null),
       _img(bmTeam(c.teams[e.ct(0)]).asset, w: 192),
       _img(bmTeam(c.teams[e.ct(1)]).asset, w: 192),
     ]);
@@ -518,7 +530,7 @@ class _BermudaViewState extends State<BermudaView>
     }
   }
 
-  void _report({bool forfeit = false, int? sideLeft, bool leftTeam = false}) {
+  void _report({bool forfeit = false, int? sideLeft, bool leftTeam = false, int? holdMs}) {
     if (_reported) return;
     _reported = true;
     final List<int> sc = e.score; // local: [me, opponent]
@@ -546,6 +558,7 @@ class _BermudaViewState extends State<BermudaView>
       scores: <int>[for (int s = 0; s < math.max(2, seats); s++) global[s % 2]],
       tournamentMatchId: launch.tournamentMatchId,
       endsMatch: !leftTeam,
+      holdMs: holdMs,
       summaryFa:
           'نتیجه‌ی فوتبال: ${sc[0]} - ${sc[1]}${forfeit ? ' (انصراف)' : ''}',
       summaryEn:
@@ -985,6 +998,7 @@ class _BermudaViewState extends State<BermudaView>
           Positioned(
               left: 0, right: 0, top: 0, child: SafeArea(child: _scoreboard())),
           Positioned.fill(child: IgnorePointer(child: _overlays())),
+          if (_tableT >= 0) Positioned.fill(child: _scoreTable()),
           Positioned(
             left: 0,
             bottom: 12 + MediaQuery.paddingOf(context).bottom,
@@ -1062,6 +1076,31 @@ class _BermudaViewState extends State<BermudaView>
                 width: math.min(sz.width * .82, 460)),
           ),
         ]);
+      },
+    );
+  }
+
+  /// v6: the reference's end-of-match score table (winner first; local side first on a draw).
+  Widget _scoreTable() {
+    return ValueListenableBuilder<int>(
+      valueListenable: _frame,
+      builder: (BuildContext context, int _, Widget? __) {
+        final List<int> sc = e.score;
+        final List<int> order = sc[1] > sc[0] ? <int>[1, 0] : <int>[0, 1];
+        return FsScoreTable(
+          fa: launch.isFa,
+          topLane: 50,
+          seconds: _tableT.ceil(),
+          rows: <FsScoreRow>[
+            for (final int t in order)
+              FsScoreRow(
+                name: e.nm(t),
+                score: sc[t],
+                crest: bmTeam(e.sel[e.ct(t)]).asset,
+                winner: sc[t] > sc[1 - t],
+              ),
+          ],
+        );
       },
     );
   }
@@ -1852,7 +1891,7 @@ class _BermudaViewState extends State<BermudaView>
                                   ),
                                   child: Column(
                                     children: <Widget>[
-                                      Expanded(child: Image.asset(kBmAnimBalls[i]!.thumb, cacheWidth: 120)),
+                                      Expanded(child: Image.asset(bmBallThumb(i), cacheWidth: 120)),
                                       const SizedBox(height: 3),
                                       Text(launch.tx(kBmBallFa[i], kBmBallN[i]),
                                           maxLines: 1,
