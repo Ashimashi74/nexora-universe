@@ -68,6 +68,7 @@ flutter:
     - assets/games/bermuda/discs/
     - assets/games/bermuda/fields/
     - assets/games/bermuda/goals/
+    - assets/games/bermuda/intro/
     - assets/games/bermuda/sfx/
     - assets/games/bermuda/teams/
     - assets/games/bermuda/thumbs/
