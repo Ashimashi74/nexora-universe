@@ -299,7 +299,8 @@ class BmPainter extends CustomPainter {
         im.animT = t;
         final int fi = im.animPhase.floor() % im.ballFrames;
         final double fw = sheet.width / im.ballFrames;
-        if (sv > 40) canvas.rotate(math.atan2(b.vy, b.vx) + math.pi / 2);
+        // v5: the ball's own spin (b.ang, from glancing hits / walls) turns the sprite on top of the roll direction.
+        canvas.rotate((sv > 40 ? math.atan2(b.vy, b.vx) + math.pi / 2 : 0) + b.ang);
         canvas.drawImageRect(sheet, Rect.fromLTWH(fi * fw, 0, fw, sheet.height.toDouble()), dst,
             Paint()..filterQuality = FilterQuality.medium);
       } else if (rendered != null) {
@@ -313,16 +314,32 @@ class BmPainter extends CustomPainter {
       return;
     }
     // No idle bobbing: the sprite stays exactly on its collider.
-    // Reference discs slide without turning or stretching: the crest stays upright the whole shot.
+    // v5 (owner request 2026-11-20): the disc turns with its spin (b.ang, picked up from glancing hits and rails), so
+    // a struck disc visibly rotates; a small rim notch keeps the turn visible on a crest that looks the same rotated.
     canvas.translate(b.x, drawY);
     final Paint dark = Paint()
       ..filterQuality = FilterQuality.medium
       ..colorFilter = const ColorFilter.mode(Color.fromRGBO(6, 8, 24, .66), BlendMode.srcATop);
     // Thin coin edge (3 px-ish) so the top face - the collider - stays where it is drawn.
     for (int k = 3; k >= 1; k--) {
-      canvas.drawImageRect(sp, src, dst.shift(Offset(0, renderRadius * .03 * k)), dark);
+      canvas.save();
+      canvas.translate(0, renderRadius * .03 * k);
+      canvas.rotate(b.ang);
+      canvas.drawImageRect(sp, src, dst, dark);
+      canvas.restore();
     }
+    canvas.rotate(b.ang);
     canvas.drawImageRect(sp, src, dst, Paint()..filterQuality = FilterQuality.medium);
+    canvas.drawArc(
+        Rect.fromCircle(center: Offset.zero, radius: renderRadius * .86),
+        -math.pi / 2 - .2,
+        .4,
+        false,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = renderRadius * .1
+          ..color = const Color(0xD9FFFFFF));
     canvas.restore();
   }
 

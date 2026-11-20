@@ -200,3 +200,27 @@ No extra server: everything runs in the existing Supabase project (Postgres RPCs
   wins (checked after every await). The auto-start setup frame no longer requests music; the app soundtrack is
   already faded out by `MusicService.enterGame` while a game page is open and fades back on leaving. Crowd
   ambience and every sound effect (hits, goals, whistle) unchanged.
+
+## Finger soccer v5 — shared pick clock, 85% speed, visible spin, side swap, team results (2026-11-20, branch `work/fs-v5`)
+- Online picks finished (`intro/fs_online_pick.dart`, `ui/bm_view.dart`): team 15 s then formation 15 s on one shared
+  countdown. The team pick is logged (`{'a': 'tpick'}`); a side that picks early waits on its team screen (banner +
+  seconds left) until the other side's team pick (or setup) is in the log, or the team time + 3 s grace is over, so
+  both phones open the formation screen on the same logged event. After the formation pick the screen waits
+  ("منتظر بقیه‌ی بازیکن‌ها…") until both setups are in and everyone enters the match together. Absent-side fallback
+  75 s -> 25 s. `tpick` is not a play move (legacy room-prefs start untouched).
+- Scene speed `kBmSimRate` .95 -> .85 (same fixed steps, outcomes unchanged).
+- Spin: discs pick up render-only spin from glancing contacts (`kBmDiscSpinK` .16, cap 22 rad/s; never feeds motion
+  or the sync hash); the painter turns each disc by its angle and draws a small white rim notch; the ball sprite also
+  turns by its spin angle on top of the roll direction.
+- Goal mouth 3.5% narrower: `kBmGoalMouthScale` .965 narrows the goal sprite's width only (height / net depth kept);
+  posts, mouth and side nets are still built from the drawn sprite, so colliders match the art.
+- Room: the manager has "جابه‌جایی تیم ۱ و تیم ۲" (talk room games panel, finger soccer, 2+ picked): seat pairs
+  0<->1, 2<->3, 4<->5 are swapped through `nx_room_select_players` (`fsSwapSides`), synced to every member. Note: that
+  RPC re-inserts the picked players, so their room pre-game prefs reset (the in-match pick screens cover it).
+- Team results (2v2 / 3v3): the reported `scores` are per seat (seat i = its side's goals) — the server books
+  `scores[i]` per seat, so seats 2+ were booked 0. Seats that left (forfeited) are never in `winnerSeats` (they book a
+  loss); their turns are played by the next teammate still in (`BmEngine.controllerSeat`, rotation counters
+  unchanged); leaving from the game bar in a team game logs a forfeit for that seat only and shows the loss without
+  ending the match (`GameResult.endsMatch` false); when a whole side has left, the other side wins at once.
+- Tests: `test/games/finger_soccer_v5_test.dart` (shared clock, early-pick wait, idle timeouts + fallback, tpick
+  replay, controller seat, 2v2 / 3v3 results per seat, draw, leaver), `test/worlds/fs_swap_sides_test.dart`.

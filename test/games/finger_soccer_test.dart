@@ -622,7 +622,7 @@ void main() {
     final BmEngine e = BmEngine(_Hooks(), rng: math.Random(3))..startMatch(_cfg(mode: 'local'));
     e.frame(.2);
     expect(e.mleft, closeTo(299.8, 1e-9));
-    expect(kBmSimRate, closeTo(.95, 1e-12));
+    expect(kBmSimRate, closeTo(.85, 1e-12)); // v5: 85% speed (was .95)
     // same sequence of fixed steps -> same result whatever the playback rate
     BmEngine run() {
       final BmEngine x = lone();

@@ -24,6 +24,10 @@ const double SPIN_R = 28.8;
 /// the mouth (inner width between the two side tubes) is about three discs wide. Posts, side nets and back net are
 /// built from the drawn sprite.
 const double kBmGoalArtScale = 0.92; // mouth = 0.34 of the playing width (reference)
+/// v5 (owner request 2026-11-20): goal mouth 3.5% narrower. The goal sprite is drawn 3.5% narrower (its height and
+/// net depth unchanged), and the posts / mouth / side nets are still built from the drawn sprite, so the colliders
+/// keep matching the art. Before: 1.
+const double kBmGoalMouthScale = 0.965;
 const int NB = 4;
 /// Weighty pieces (owner request 2026-11): discs are heavy (mass 8) and the ball lighter (2.6) but not a ping-pong
 /// ball. BKICK keeps a disc striking the ball launching it 5% harder than plain elastic transfer.
@@ -79,7 +83,11 @@ const double kBmDiscLightM = 5.5;
 /// Global playback rate of the simulation (owner request 2026-11-20, v3): the whole scene runs 5% slower. Only the
 /// rate real time feeds the fixed-step accumulator changes; every step is the same STEP, so paths, distances and
 /// outcomes are identical (and online phones still run the same steps), just 5% slower to watch. Before: 1.
-const double kBmSimRate = .95;
+/// v5 (owner request 2026-11-20): 85% speed (15% slower). Before: .95.
+const double kBmSimRate = .85;
+/// v5: spin a disc picks up from a glancing contact (rad/s per unit of tangential speed / radius) and its cap.
+/// Render only: a disc's spin turns its sprite (bm_painter) and never feeds its motion, so paths are unchanged.
+const double kBmDiscSpinK = .16, kBmDiscSpinMax = 22;
 /// Below this speed (world units/s, times K) a sliding disc stops dead instead of creeping.
 const double kBmDiscStop = 30; // reference discs stop dead below ~13 px/s
 
@@ -388,8 +396,8 @@ class BmEngine {
     // Separate goal sprite: [w, h, left post, right post, post half-width, back-bar inner edge, post bottom].
     final List<double> gi = kBmGS[f.gs]!;
     final double fullW = 2 * f.g / (gi[3] - gi[2]);
-    GGw = fullW * kBmGoalArtScale;
-    GGh = GGw * gi[1] / gi[0] * 1.02; // goal depth +2% (owner request)
+    GGw = fullW * kBmGoalArtScale * kBmGoalMouthScale;
+    GGh = fullW * kBmGoalArtScale * gi[1] / gi[0] * 1.02; // goal depth +2% (owner request); v5: not narrowed
     GGleg = gi[6];
     GGx = CX - GGw * (gi[2] + gi[3]) / 2; // post centres symmetric about the centre line
     final double pl = GGx + gi[2] * GGw, pr = GGx + gi[3] * GGw, prad = gi[4] * GGw;
@@ -695,6 +703,10 @@ class BmEngine {
     b.y += ny * pen * wb;
     final double vn = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
     if (vn >= 0) return;
+    // v5: discs pick up spin from the tangential part of the contact (same sign convention as the ball below).
+    final double vt = -ny * (b.vx - a.vx) + nx * (b.vy - a.vy);
+    if (a != bl) a.spin = _mx(-kBmDiscSpinMax, _mn(kBmDiscSpinMax, a.spin - vt / a.r * kBmDiscSpinK));
+    if (b != bl) b.spin = _mx(-kBmDiscSpinMax, _mn(kBmDiscSpinMax, b.spin + vt / b.r * kBmDiscSpinK));
     final double e = vn < -40 * K ? (isB ? .55 - .12 * _mn(1, _mx(0, (-vn - 500 * K) / (1200 * K))) : EPP) : 0,
         j = -(1 + e) * vn / sm;
     final BmBody? pa = isB ? (a == bl ? b : a) : null;
@@ -887,7 +899,7 @@ class BmEngine {
       !remote &&
       turn != ai &&
       !(mode == 'online' && turn != 0) &&
-      !(mode == 'online' && perSide > 1 && localSeat != null && shooterSeat(ct(turn)) != localSeat);
+      !(mode == 'online' && perSide > 1 && localSeat != null && controllerSeat(ct(turn)) != localSeat);
 
   // ---------------------------------------------------------------- team rotation (2v2 / 3v3)
   /// Players per side (from the config) and this phone's seat (online team games).
@@ -904,6 +916,23 @@ class BmEngine {
 
   /// Global seat of the side's current shooter (sides alternate seats: 0,2,4 / 1,3,5).
   int shooterSeat(int side) => side + 2 * shooterIndex(side);
+
+  /// v5 (team games): seats that left the match (online forfeits). Their turns are played by the next teammate still
+  /// in the match; the rotation counters (and so every phone's replay) are unchanged, only who may shoot moves.
+  bool Function(int seat)? seatGone;
+
+  /// Seat that shoots the side's current turn: the shooter, or when they left, the next teammate still playing.
+  int controllerSeat(int side) {
+    final int s = shooterSeat(side);
+    final bool Function(int seat)? gone = seatGone;
+    if (perSide <= 1 || gone == null || !gone(s)) return s;
+    final int i0 = shooterIndex(side);
+    for (int k = 1; k < perSide; k++) {
+      final int c = side + 2 * ((i0 + k) % perSide);
+      if (!gone(c)) return c;
+    }
+    return s;
+  }
 
   /// Replay only: adopt the rotation counters carried in a settled snapshot.
   void applyRotation(Map<String, dynamic>? snap) {

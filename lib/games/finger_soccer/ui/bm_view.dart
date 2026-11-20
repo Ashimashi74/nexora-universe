@@ -123,6 +123,12 @@ class _BermudaViewState extends State<BermudaView>
   /// phone logs a default setup FOR that side (first setup per side in the log wins on both phones).
   Timer? _setupFallback;
 
+  /// v5 shared picks: team picks logged so far ({'a': 'tpick'}, or a side's 'setup'), by side.
+  final Map<int, String> _teamPicks = <int, String>{};
+
+  /// v5: the online pick screens were opened on this phone; they stay up (waiting) until the match starts.
+  bool _pickShown = false;
+
   GameLaunch get launch => widget.launch;
   bool get online => launch.online;
   int get mySeat => launch.mySeat;
@@ -211,6 +217,7 @@ class _BermudaViewState extends State<BermudaView>
         _finishIn -= dt;
         if (_finishIn <= 0) _report();
       }
+      _checkSideLeft();
     }
     if (_disposed) return;
     _frame.value++;
@@ -297,7 +304,7 @@ class _BermudaViewState extends State<BermudaView>
       case 'turn':
         if (net != null) {
           final int side = data['turn'] as int;
-          final int seat = e.shooterSeat(side);
+          final int seat = e.controllerSeat(side);
           net.turnSeat = seat;
           if (e.perSide > 1 && seat < net.names.length) {
             toast(seat == mySeat ? launch.tx('نوبت توست!', 'Your shot!') : net.names[seat], false);
@@ -390,6 +397,8 @@ class _BermudaViewState extends State<BermudaView>
     if (h == null || g == null) return;
     final NetLink net = launch.net!;
     e.localSeat = mySeat;
+    // v5: a teammate takes the turns of a seat that left (team games), so the match plays on without dead turns.
+    e.seatGone = (int s) => launch.net?.forfeitedSeats.contains(s) ?? false;
     _begin(
         BmConfig(
           mode: 'online',
@@ -490,15 +499,39 @@ class _BermudaViewState extends State<BermudaView>
     unawaited(audio.crowd(false));
   }
 
-  void _report({bool forfeit = false}) {
+  /// v5 team games: every seat of one side has left (forfeited) while the match runs -> the other side wins now
+  /// instead of playing on against nobody.
+  void _checkSideLeft() {
+    final NetLink? net = launch.net;
+    if (net == null || _reported || _finishIn > 0 || e.perSide < 2) return;
+    final Set<int> gone = net.forfeitedSeats;
+    if (gone.isEmpty) return;
+    for (int side = 0; side < 2; side++) {
+      bool all = true;
+      for (int s = side; s < net.seatCount; s += 2) {
+        if (!gone.contains(s)) all = false;
+      }
+      if (all) {
+        _report(sideLeft: side);
+        return;
+      }
+    }
+  }
+
+  void _report({bool forfeit = false, int? sideLeft, bool leftTeam = false}) {
     if (_reported) return;
     _reported = true;
     final List<int> sc = e.score; // local: [me, opponent]
-    final bool won = !forfeit && sc[0] > sc[1];
-    final bool draw = !forfeit && sc[0] == sc[1];
+    // v5: a whole side left (team games): the side still playing wins whatever the score.
+    final bool won = sideLeft != null ? sideLeft != _mySide : (!forfeit && sc[0] > sc[1]);
+    final bool draw = sideLeft == null && !forfeit && sc[0] == sc[1];
     final int winSide = won ? _mySide : 1 - _mySide;
     final int seats = launch.net?.seatCount ?? 2;
     final List<int> global = <int>[sc[e.ct(0)], sc[e.ct(1)]];
+    // v5 team games (owner bug: players 3+ got the wrong result): the server books seat i's score from scores[i],
+    // so every seat gets its own side's goals (seats 0,2,4 = side 0; 1,3,5 = side 1), not only seats 0 and 1.
+    // A seat that left (forfeited) is never among the winners: it books a loss while its side keeps its result.
+    final Set<int> gone = launch.net?.forfeitedSeats ?? const <int>{};
     launch.onFinish(GameResult(
       outcome:
           draw ? GameOutcome.draw : (won ? GameOutcome.win : GameOutcome.loss),
@@ -507,10 +540,12 @@ class _BermudaViewState extends State<BermudaView>
       winnerSeats: draw
           ? <int>[]
           : <int>[
-              for (int s = winSide; s < math.max(2, seats); s += 2) s
+              for (int s = winSide; s < math.max(2, seats); s += 2)
+                if (!gone.contains(s)) s
             ],
-      scores: global,
+      scores: <int>[for (int s = 0; s < math.max(2, seats); s++) global[s % 2]],
       tournamentMatchId: launch.tournamentMatchId,
+      endsMatch: !leftTeam,
       summaryFa:
           'نتیجه‌ی فوتبال: ${sc[0]} - ${sc[1]}${forfeit ? ' (انصراف)' : ''}',
       summaryEn:
@@ -572,6 +607,14 @@ class _BermudaViewState extends State<BermudaView>
     if (m.kind != 'move' && m.kind != 'timeout') return;
     final Map<String, dynamic> d = m.data;
     final String a = '${d['a']}';
+    if (a == 'tpick') {
+      // v5: a side's team pick (before its formation). Never a play move, so it does not mark a legacy room match.
+      final int seat = ((d['for'] as num?)?.toInt() ?? m.seat);
+      final dynamic t = d['team'];
+      if (t is String && seat >= 0 && !_teamPicks.containsKey(seat)) _teamPicks[seat] = t;
+      if (mounted) setState(() {});
+      return;
+    }
     if (a == 'setup') {
       final _Setup? s = _Setup.fromJson(d);
       // v4: a setup may be logged FOR an absent side ('for', see _armSetupFallback); the first per side wins.
@@ -668,9 +711,10 @@ class _BermudaViewState extends State<BermudaView>
     setState(() {});
   }
 
-  /// Seconds this phone waits, after sending its own setup, for the other side's (their screens time out after
-  /// 45 + 15 s on their own; this covers a phone that left or never opened the picks).
-  static const int kOnlineSetupWaitSeconds = 75;
+  /// Seconds this phone waits, after sending its own setup, for the other side's (v5: both phones open the formation
+  /// screen on the same logged team pick and it times out after 15 s; this covers a phone that left or never opened
+  /// the picks). Was 75 with the v4 45 s team screen.
+  static const int kOnlineSetupWaitSeconds = 25;
 
   void _armSetupFallback() {
     if (_setupFallback != null || mySeat > 1 || stage == 'match') return;
@@ -685,9 +729,14 @@ class _BermudaViewState extends State<BermudaView>
   }
 
   /// v4: the online team / formation screens (seats 0 and 1, before their setup is logged).
-  bool get _onlinePicking => online && stage == 'setup' && _netReady && mySeat <= 1 && !_setups.containsKey(mySeat);
+  bool get _onlinePicking =>
+      online &&
+      _netReady &&
+      mySeat <= 1 &&
+      ((stage == 'setup' && !_setups.containsKey(mySeat)) || (stage == 'waiting' && _pickShown));
 
   Widget _onlinePick() {
+    _pickShown = true;
     final NetLink net = launch.net!;
     final int opp = 1 - mySeat;
     String nm(int s) => s < net.names.length && net.names[s].isNotEmpty ? net.names[s] : (s == mySeat ? 'من' : 'حریف');
@@ -696,7 +745,16 @@ class _BermudaViewState extends State<BermudaView>
       key: const ValueKey<String>('online-pick'),
       team: my.team,
       form: my.form,
-      opponentTeam: _setups[opp]?.team ?? (opp == 0 ? 'club0' : 'club1'),
+      opponentTeam: _setups[opp]?.team ?? _teamPicks[opp] ?? (opp == 0 ? 'club0' : 'club1'),
+      opponentTeamIn: _teamPicks.containsKey(opp) || _setups.containsKey(opp),
+      onTeam: (String t) {
+        final NetLink? n = launch.net;
+        if (_disposed || n == null || _teamPicks.containsKey(mySeat) || _setups.containsKey(mySeat)) return;
+        final String team = GemShop.instance.usableTeam(t);
+        _teamPicks[mySeat] = team;
+        n.send(<String, dynamic>{'a': 'tpick', 'team': team});
+        if (mounted) setState(() {});
+      },
       players: <FsSidePlayer>[
         FsSidePlayer(
             name: nm(mySeat),
@@ -804,7 +862,12 @@ class _BermudaViewState extends State<BermudaView>
         e.restart(0);
         break;
       case 'leave':
-        if (isOnline || bot) {
+        if (isOnline && e.perSide > 1 && launch.net != null) {
+          // v5 team games: only this seat forfeits (logged, so every phone hands its turns to a teammate); the match
+          // goes on for the others and this player books a loss. When a whole side has left, the other side wins.
+          unawaited(launch.net!.send(<String, dynamic>{'a': 'leave', 'seat': mySeat}, kind: 'forfeit'));
+          _report(forfeit: true, leftTeam: true);
+        } else if (isOnline || bot) {
           // flow.js: leaving counts as a loss
           _report(forfeit: true);
         } else {
