@@ -173,3 +173,24 @@ No extra server: everything runs in the existing Supabase project (Postgres RPCs
   the auto-advance timer then started the match with the first / saved formation ("stuck on 0").
 - Tests: `test/games/finger_soccer_test.dart` (v3 group), `test/games/finger_soccer_intro_pick_test.dart`; the match
   render test asserts the intro formation reaches the match.
+
+## Finger soccer v4 — disc friction refit, online team / formation picks (2026-11-20, branch `work/fs-ref-physics`)
+- Disc felt refit "exactly like the video": the v2 tracks (3 Japan shot glides + 4 struck discs) plus 3 fast glides
+  (v1 frames 580 PSG, 1779, 1460 Adidas; up to ~1700 px/s) fitted jointly with the engine's own law, free launch speed
+  per track, no glide (`/workspace/work/fsref/fit4.py`). Best fit: no constant part, 3.25/s drag, rms 6.05 px per
+  position over 10 tracks; v2 (20 px/s^2 + 3.5/s) rms 6.41 px; v1 (123 + 5.1) rms 10.3 px. Engine: PF1 45 -> 0,
+  PF2 3.5 -> 3.25 (a disc glides ~9% further, ~10% longer at the same launch); kBmLaunch, team power, rails, masses,
+  sim rate unchanged. Ball rolling friction not refitted (ball tracking next to the white Japan discs still unreliable).
+- Online matches now open with the same team select and formation select screens (`intro/fs_online_pick.dart`):
+  each phone picks only its own side (the other side's toggle shows "حریف تیمش را خودش انتخاب می‌کند"), owned-team
+  rule and shop as offline, and both screens auto-advance (45 s + 15 s). The pick goes out as the logged `'setup'`
+  move; the match starts when seats 0 and 1 both have a setup in the log (both phones, log order). If the other
+  side's setup is missing 75 s after sending ours, the phone logs a default setup FOR that side (`'for': seat`;
+  room prefs if any, else club0/club1); the first setup per side in the log wins, so phones stay identical.
+  Room matches: the room's pre-game choice is the starting pick. Seats 2..5 (team games) wait for seats 0/1.
+  Legacy room matches (play moves logged, no setups) still start from room prefs as before.
+- Re-check of the v3 asks in code: ball curl 0 (sim), rail .9 for ball + discs (walls), struck disc mass 5.5
+  (collide), sim rate .95 (tick accumulator), real-time count-up clock, intro picks, in-match formation button
+  — all wired in the running paths; unchanged.
+- Tests: `test/games/finger_soccer_online_pick_test.dart` (pick -> setup -> match, idle timeouts + absent-side
+  fallback, replay restart, legacy room prefs, room pick as start); constants test updated to v4.
