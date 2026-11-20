@@ -53,13 +53,13 @@ void main() {
     expect(kBmLaunch, closeTo(1.97, 1e-9)); // v6: 10/10 recordings (docs/FS_V6_CALIBRATION.md)
     expect(BmEngine.strikeOf(2) / BmEngine.strikeOf(10), closeTo(.40, .01));
     expect(STEP, 1 / 240);
-    expect(kBmFields.length, 36);
-    expect(NB, 5); // v6: + the classic reference ball
+    expect(kBmFields.length, 30); // v7: the six owner art pack pitches were removed
+    expect(NB, 7); // v6: + the classic reference ball; v7: + NX Spin, NX Star
     expect(kBmBallN.length, NB);
     expect(kBmBallFa.length, NB);
-    expect(kBmAnimBalls.keys.toList(), <int>[0, 1, 2, 3]);
-    for (final BmAnimBall b in kBmAnimBalls.values) {
-      expect(b.frames, 16);
+    expect(kBmAnimBalls.keys.toList(), <int>[0, 1, 2, 3, 5, 6]);
+    for (final MapEntry<int, BmAnimBall> b in kBmAnimBalls.entries) {
+      expect(b.value.frames, b.key == kBmNxSpinBallIndex ? 24 : 16);
     }
     final BmFieldS f = kBmFields.firstWhere((BmFieldS x) => x.id == 'forest');
     expect(f.W, (1086 * FS).roundToDouble());

@@ -14,12 +14,22 @@ import 'bm_ball.dart';
 double bmDiscSpriteHalf(BmBody b) => b.r / kBmDiscArtFill;
 double bmBallSpriteHalf(BmBody b) => b.r / kBmBallArtFill;
 
+/// v7 GIF ball playback: the animation runs while the ball moves (speed above [kBmGifBallMinSpeed], world units/s).
+const double kBmGifBallMinSpeed = 4;
+bool bmGifBallPlays(double speed) => speed > kBmGifBallMinSpeed;
+
+/// Frame of a GIF ball after [ms] of playback: GIF order, [frameMs] per frame, looping.
+int bmGifFrame(double ms, int frameMs, int frames) => frames <= 0 ? 0 : (ms / frameMs).floor() % frames;
+
 class BmImages {
   ui.Image? field, goal, ball;
   // Animated sprite-sheet ball (kBmAnimBalls): frames advance with distance rolled + a slow idle spin.
   ui.Image? ballSheet;
   int ballFrames = 0;
   int ballFrameMs = 120;
+  /// v7 GIF balls (BmAnimBall.gifTimed): frames follow the GIF's own order and timing while the ball moves.
+  bool ballTimed = false;
+  double animMs = 0;
   double animPhase = 0, animX = double.nan, animY = double.nan, animT = 0;
   final List<ui.Image?> team = <ui.Image?>[null, null];
   BmBallRenderer? ballR;
@@ -40,6 +50,8 @@ class BmImages {
     ballSheet?.dispose();
     ballSheet = null;
     ballFrames = 0;
+    ballTimed = false;
+    animMs = 0;
     field = goal = ball = bg = null;
     team[0] = team[1] = null;
     ballR = null;
@@ -294,7 +306,18 @@ class BmPainter extends CustomPainter {
       canvas.translate(bx, by);
       final ui.Image? sheet = im.ballSheet;
       final ui.Image? rendered = br?.image;
-      if (sheet != null && im.ballFrames > 0) {
+      if (sheet != null && im.ballFrames > 0 && im.ballTimed) {
+        // v7 GIF ball: exactly the GIF's frames in the GIF's order at its own frame time (e.g. 90 ms) while the ball
+        // moves; at rest it holds the frame it stopped on. No extra rotation (no travel direction, no b.ang): the
+        // GIF's own spin is the only rotation, about the ball centre (every frame was re-centred at build time).
+        final double dt = im.animT > 0 ? (t - im.animT).clamp(0, 250).toDouble() : 0;
+        if (bmGifBallPlays(sv)) im.animMs += dt;
+        im.animT = t;
+        final int fi = bmGifFrame(im.animMs, im.ballFrameMs, im.ballFrames);
+        final double fw = sheet.width / im.ballFrames;
+        canvas.drawImageRect(sheet, Rect.fromLTWH(fi * fw, 0, fw, sheet.height.toDouble()), dst,
+            Paint()..filterQuality = FilterQuality.medium);
+      } else if (sheet != null && im.ballFrames > 0) {
         // distance-driven roll (one frame per ~0.45 radius) + idle spin at a quarter of the GIF speed
         if (!im.animX.isNaN) {
           final double dx = b.x - im.animX, dy = b.y - im.animY;

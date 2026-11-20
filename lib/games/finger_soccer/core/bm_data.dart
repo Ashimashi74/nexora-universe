@@ -51,15 +51,20 @@ const List<BmField> kBmFieldsRaw = <BmField>[
   BmField('persepolis', 'Persepolis', 1152, 1536, 207, 943, 105, 1410, 770, 130, 'white', rc: 150),
   BmField('esteghlal', 'Esteghlal', 1086, 1448, 195, 890, 100, 1322, 690, 130, 'white', rc: 110),
   BmField('mancity', 'Man City', 1086, 1448, 195, 889, 102, 1329, 719, 130, 'white', rc: 110),
-  // Owner art pack (2026-11): boundaries measured on the art (barrier inner edge / touch line). Their painted frame
-  // goals were painted out (tool/fs_goal_cleanup.py) so every pitch uses the one white goal sprite.
-  BmField('neon_cup', 'Neon Cup', 1024, 1536, 99, 923, 100, 1398, 731, 130, 'white', rc: 75),
-  BmField('street_cage', 'Street Cage', 1024, 1536, 100, 922, 112, 1413, 740, 130, 'white', rc: 55),
-  BmField('sockerbox', 'Sockerbox', 1024, 1536, 108, 916, 100, 1394, 704, 130, 'white', rc: 60),
-  BmField('gold_leather', 'Gold Leather', 1024, 1536, 80, 944, 82, 1414, 722, 130, 'white', rc: 85),
-  BmField('neon_grass', 'Neon Grass', 1024, 1536, 108, 915, 102, 1408, 744, 130, 'white', rc: 75),
-  BmField('royal_gold', 'Royal Gold', 1024, 1536, 131, 890, 131, 1364, 724, 130, 'white', rc: 70),
+  // v7 (owner request 2026-11-20): the six owner art pack pitches (Neon Cup, Street Cage, Sockerbox, Gold Leather,
+  // Neon Grass, Royal Gold) were removed. They were the last six entries, so every saved index below 30 still
+  // names the same pitch; a saved / synced index that no longer exists falls back to the default pitch
+  // (bmFieldIndex).
 ];
+
+/// Ids of pitches removed from the game (v7). Kept only so tests can check they never come back.
+const List<String> kBmRemovedFieldIds = <String>[
+  'neon_cup', 'street_cage', 'sockerbox', 'gold_leather', 'neon_grass', 'royal_gold',
+];
+
+/// A saved / synced pitch index -> a valid one: anything missing or out of range (e.g. a removed v6 pitch) is the
+/// default pitch 0 (ANIX Green).
+int bmFieldIndex(int? i) => (i == null || i < 0 || i >= kBmFieldsRaw.length) ? 0 : i;
 
 /// Goal art measured on each sprite (alpha): [width, height, left post centre, right post centre, post half-width,
 /// inner edge of the back bar, bottom of the posts] - x values are fractions of the width, y values of the height.
@@ -254,28 +259,44 @@ const List<String> kBmTRN = <String>["Bolt", "Prism", "Wave", "Starlight", "Smok
 
 /// Match balls (owner rotation sprites, 16 frames side by side, frame width = sheet width / 16). Every sheet is
 /// normalised by tool/build_fs_assets.py so the ball's radius is exactly [kBmBallArtFill] of half a frame.
-const List<String> kBmBallN = <String>['ANIX Gold Spin', 'ANIX Green', 'ANIX Blue', 'NX Electron', 'Classic'];
-const List<String> kBmBallFa = <String>['انیکس طلایی', 'انیکس سبز', 'انیکس آبی', 'الکترون NX', 'کلاسیک'];
+const List<String> kBmBallN = <String>['ANIX Gold Spin', 'ANIX Green', 'ANIX Blue', 'NX Electron', 'Classic', 'NX Spin', 'NX Star'];
+const List<String> kBmBallFa = <String>['انیکس طلایی', 'انیکس سبز', 'انیکس آبی', 'الکترون NX', 'کلاسیک', 'NX چرخان', 'NX ستاره'];
 
 /// v6 (owner request 2026-11-20): the classic black / white ball of the reference recordings (owner's art, 111 px,
 /// fills its square). It is not a sprite sheet: the 3D ball renderer (BmBallRenderer, flat studio light) rolls it
 /// with the ball's real motion, one turn per 2*pi*r rolled, like the reference. It is the default match ball.
 const int kBmClassicBallIndex = 4;
 const String kBmClassicBall = 'assets/games/bermuda/balls/classic.png';
-const int kBmDefaultBall = kBmClassicBallIndex;
+/// v7 (owner request 2026-11-20): the owner's "NX ball fixed center spin" GIF (24 frames, 90 ms) is the main ball.
+const int kBmNxSpinBallIndex = 5;
+/// v7: the owner's "NX football" GIF (16 frames, 90 ms; star panels + NX logo), cropped to the ball.
+const int kBmNxStarBallIndex = 6;
+const int kBmDefaultBall = kBmNxSpinBallIndex;
 
-/// Preference key of the player's match ball. v6 uses a new key so every player starts on the classic ball once.
-const String kBmBallPref = 'bm.ball.v6';
+/// Preference key of the player's match ball. v7 uses a new key so every player (new and existing) starts on the
+/// new main ball once: the old 'bm.ball.v6' value was also written automatically at every match start, so an
+/// explicit choice could not be told apart from the old default. Picking a ball in the shop / setup writes this key.
+const String kBmBallPref = 'bm.ball.v7';
+
+/// A saved / synced ball index -> a valid one (missing or unknown = the default ball).
+int bmBallIndex(int? i) => (i == null || i < 0 || i >= kBmBallN.length) ? kBmDefaultBall : i;
 
 /// Picker / shop thumbnail of a ball.
 String bmBallThumb(int i) => kBmAnimBalls[i]?.thumb ?? kBmClassicBall;
 
 class BmAnimBall {
-  const BmAnimBall(this.sheet, this.frames, this.frameMs, this.thumb);
+  const BmAnimBall(this.sheet, this.frames, this.frameMs, this.thumb, {this.gifTimed = false});
   final String sheet;
   final int frames;
   final int frameMs;
   final String thumb;
+  /// v7 GIF balls: the strip is the GIF's frames in the GIF's order, each re-centred on the ball (no wobble), and
+  /// they play at exactly [frameMs] per frame while the ball moves (held on the current frame while it rests), with
+  /// no extra sprite rotation: the only rotation shown is the GIF's own. Older balls roll with distance instead.
+  final bool gifTimed;
+
+  /// Frame shown after [ms] of playback (GIF order, [frameMs] each, looping).
+  int frameAt(double ms) => (ms / frameMs).floor() % frames;
 }
 
 const Map<int, BmAnimBall> kBmAnimBalls = <int, BmAnimBall>{
@@ -283,6 +304,11 @@ const Map<int, BmAnimBall> kBmAnimBalls = <int, BmAnimBall>{
   1: BmAnimBall('assets/games/bermuda/balls/anix_green_16.webp', 16, 100, 'assets/games/bermuda/balls/anix_green_thumb.webp'),
   2: BmAnimBall('assets/games/bermuda/balls/anix_blue_16.webp', 16, 100, 'assets/games/bermuda/balls/anix_blue_thumb.webp'),
   3: BmAnimBall('assets/games/bermuda/balls/nx_electron_16.webp', 16, 90, 'assets/games/bermuda/balls/nx_electron_thumb.webp'),
+  // v7: built by tool/build_fs_nx_balls.py from the owner's GIFs (tool/ball_src/).
+  5: BmAnimBall('assets/games/bermuda/balls/nx_spin_24.webp', 24, 90, 'assets/games/bermuda/balls/nx_spin_thumb.webp',
+      gifTimed: true),
+  6: BmAnimBall('assets/games/bermuda/balls/nx_star_16.webp', 16, 90, 'assets/games/bermuda/balls/nx_star_thumb.webp',
+      gifTimed: true),
 };
 
 /// Art fills (tool/build_fs_assets.py): disc rim radius / half sprite size, ball radius / half frame size.

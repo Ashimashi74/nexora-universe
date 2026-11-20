@@ -29,8 +29,9 @@ const double kBmGoalArtScale = 0.92; // mouth = 0.34 of the playing width (refer
 /// keep matching the art. Before: 1.
 const double kBmGoalMouthScale = 0.965;
 /// Match balls: 0-3 the owner's animated balls (kBmAnimBalls), 4 the classic black / white ball of the reference
-/// recordings (kBmClassicBall, v6).
-const int NB = 5;
+/// recordings (kBmClassicBall, v6), 5 NX Spin (v7 default) and 6 NX Star, the owner's GIF balls played with the
+/// GIF's own frames and timing (kBmAnimBalls, gifTimed).
+const int NB = 7;
 /// Weighty pieces (owner request 2026-11): discs are heavy (mass 8) and the ball lighter (2.6) but not a ping-pong
 /// ball. BKICK keeps a disc striking the ball launching it 5% harder than plain elastic transfer.
 const double DISC_M = 8.0;
@@ -68,11 +69,13 @@ const double kBmBallHitDiscK = 1.0;
 /// how far a struck disc could travel).
 const double kBmStruckDiscK = 1.0;
 /// Wall / post restitution of a disc (a heavy wooden puck loses most of its speed into the rail).
-const double kBmDiscWallE = .48; // reference: .45 - .5 normal restitution off the rail
+const double kBmDiscWallE = .48; // reference: .45 - .5 normal restitution off the rail (unused since v7, kept for docs)
 /// Rail restitution (owner request 2026-11-20, v3): a bank shot keeps its power. Every body (ball and discs) comes
 /// off the side rails, the end lines beside the goals and the round corners with this normal restitution and no
-/// tangential loss. Before: ball .62-.72 (speed dependent), disc .48 (kBmDiscWallE). Goal posts and the inside of the
-/// goal keep their old values.
+/// tangential loss. Before: ball .62-.72 (speed dependent), disc .48 (kBmDiscWallE).
+/// v7 (owner request 2026-11-20): the goal posts and the inside of the goal (side nets and back net) rebound exactly
+/// like the rails too, for the ball and every disc: same normal restitution [kBmRailE], no tangential loss. Only the
+/// ball settling in the net after a goal (phase 'goal', play already stopped) keeps its soft damping.
 const double kBmRailE = .9;
 /// Ball curl per unit of spin (rad/s). v3: 0, the ball travels in straight lines (owner request 2026-11-20: no sudden
 /// bends after a wall or a glancing hit). Spin is still kept and drawn (the ball still turns round in the corners).
@@ -572,7 +575,6 @@ class BmEngine {
   double _clock = 0;
   void _later(double sec, void Function() f) => _timers.add(MapEntry<double, void Function()>(_clock + sec, f));
 
-  double _eN(bool bl, double vn) => bl ? .72 - .1 * _mn(1, _mx(0, (vn - 270 * K) / (1350 * K))) : kBmDiscWallE;
 
   void walls(BmBody b) {
     final bool bl = b == ball;
@@ -618,7 +620,7 @@ class BmEngine {
       final bool inside = bl ? (b.x > g.x1 && b.x < g.x2) : (dp > 0 || (b.x >= lo && b.x <= hi));
       if (inside) {
         final bool gl = phase == 'goal' && bl;
-        final double eb = gl ? .2 : _eN(bl, b.vy.abs()), back = g.y + g.d * DEPTH;
+        final double eb = gl ? .2 : kBmRailE, back = g.y + g.d * DEPTH;
         if (!bl && dp > r * .3 && vs < 150 * K && b.gout == null) b.gout = g;
         if (dp + r > DEPTH) {
           b.y = back - g.d * r;
@@ -626,7 +628,7 @@ class BmEngine {
           if (gl) b.vx *= .6;
         }
         if (dp > (bl ? r * .6 : 0)) {
-          final double ee = gl ? .3 : _eN(bl, b.vx.abs());
+          final double ee = gl ? .3 : kBmRailE;
           if (b.x < g.x1 + r) {
             b.x = g.x1 + r;
             if (b.vx < 0) b.vx *= -ee;
@@ -677,7 +679,7 @@ class BmEngine {
     b.x = px + nx * m;
     b.y = py + ny * m;
     if (vn < 0) {
-      final double kp = b == ball ? 1.7 - .16 * _mn(1, -vn / (2000 * K)) : 1 + kBmDiscWallE;
+      const double kp = 1 + kBmRailE; // v7: posts rebound like the rails (was ball 1.54-1.7, disc 1.48)
       b.vx -= kp * vn * nx;
       b.vy -= kp * vn * ny;
       if (b == ball) {
@@ -1499,8 +1501,8 @@ class BmEngine {
     sd = false;
     sel = List<String>.from(cfg.teams);
     form = List<int>.from(cfg.form);
-    setFld = cfg.field;
-    setBall = cfg.ball;
+    setFld = bmFieldIndex(cfg.field);
+    setBall = bmBallIndex(cfg.ball);
     setLim = cfg.matchTime > 0 ? 9999 : (cfg.limit == 0 ? 5 : cfg.limit);
     geo();
     score = <int>[0, 0];

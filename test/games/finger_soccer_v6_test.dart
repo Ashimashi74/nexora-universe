@@ -109,15 +109,15 @@ void main() {
     expect(launch('nat30'), closeTo(launch('lux0'), 1e-6));
   });
 
-  test('v6 classic ball: default match ball, art in the assets, no sprite sheet', () {
-    expect(kBmDefaultBall, kBmClassicBallIndex);
+  test('v6 classic ball: art in the assets, no sprite sheet (v7: no longer the default ball)', () {
+    expect(kBmDefaultBall, isNot(kBmClassicBallIndex));
     expect(kBmBallN[kBmClassicBallIndex], 'Classic');
     expect(kBmBallFa.length, NB);
     expect(kBmAnimBalls.containsKey(kBmClassicBallIndex), isFalse);
     expect(File(kBmClassicBall).existsSync(), isTrue);
     expect(bmBallThumb(kBmClassicBallIndex), kBmClassicBall);
     expect(bmBallThumb(0), kBmAnimBalls[0]!.thumb);
-    expect(kBmBallPref, 'bm.ball.v6');
+    expect(kBmBallPref, 'bm.ball.v7');
   });
 
   test('v6 goal: banner hold, then the pieces glide home (render only) before the kickoff turn', () {

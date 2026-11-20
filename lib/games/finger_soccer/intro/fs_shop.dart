@@ -108,8 +108,8 @@ class _FsShopState extends State<FsShop> {
     SharedPreferences.getInstance().then((SharedPreferences p) {
       if (!mounted) return;
       setState(() {
-        _field = (p.getInt('bm.field') ?? 0).clamp(0, kBmFields.length - 1);
-        _ball = (p.getInt(kBmBallPref) ?? kBmDefaultBall).clamp(0, NB - 1);
+        _field = bmFieldIndex(p.getInt('bm.field'));
+        _ball = bmBallIndex(p.getInt(kBmBallPref));
       });
     }, onError: (Object _) {});
   }

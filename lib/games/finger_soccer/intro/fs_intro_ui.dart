@@ -373,6 +373,9 @@ class FsLoadBar extends StatelessWidget {
 }
 
 /// Collapsed game bar ("نوار بازی") handle at the bottom-left: chevron, player count, muted mic.
+/// Size of the game bar handle (bottom-left pill); the in-match formation button sits right beside it.
+const double kFsBarHandleWidth = 97, kFsBarHandleHeight = 40;
+
 class FsBarHandle extends StatelessWidget {
   const FsBarHandle({super.key, required this.players, required this.onTap, this.micOff = true});
   final int players;
@@ -382,8 +385,8 @@ class FsBarHandle extends StatelessWidget {
   Widget build(BuildContext context) => FsPress(
         onTap: onTap,
         child: Container(
-          width: 97,
-          height: 40,
+          width: kFsBarHandleWidth,
+          height: kFsBarHandleHeight,
           decoration: const BoxDecoration(
             color: Color(0xFF1B1F3B),
             borderRadius: BorderRadius.horizontal(right: Radius.circular(20)),

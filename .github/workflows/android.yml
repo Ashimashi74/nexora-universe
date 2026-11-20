@@ -4,6 +4,11 @@ on:
   push:
     branches: ['main']
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Publish a GitHub Release from the dispatched branch under this tag (e.g. anix-fs-v7). Empty = the main-branch rules below.'
+        required: false
+        default: ''
   # Weekly keep-alive: restoring the signing-key cache resets GitHub's 7-day eviction clock, so the app's
   # signing identity never rotates (a rotated key would stop new APKs installing over old ones).
   schedule:
@@ -20,9 +25,11 @@ env:
   # Every push to main analyzes, tests and builds signed APKs (uploaded as workflow artifacts).
   # A push whose commit message contains [release] (or a manual run) also publishes a GitHub Release
   # tagged anix-v1.0.<run number>, marked Latest, with ANIX-universal.apk + ANIX-arm64-v8a.apk.
-  RELEASE_TAG: anix-v1.0.${{ github.run_number }}
+  # A manual run with a release_tag input (e.g. a finger soccer work branch: anix-fs-v7) publishes from that branch
+  # under that tag, same files, same signing key, same vc= marker for the in-app updater.
+  RELEASE_TAG: ${{ (github.event_name == 'workflow_dispatch' && inputs.release_tag != '') && inputs.release_tag || format('anix-v1.0.{0}', github.run_number) }}
   VERSION_NAME: 1.0.${{ github.run_number }}
-  PUBLISH: ${{ github.event_name != 'schedule' && github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]')) && 'true' || 'false' }}
+  PUBLISH: ${{ ((github.event_name == 'workflow_dispatch' && inputs.release_tag != '') || (github.event_name != 'schedule' && github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[release]')))) && 'true' || 'false' }}
   # Public values only (the anon/publishable key is designed to ship inside the app; RLS protects the data).
   SUPABASE_URL: https://eisstodgncimypdawisy.supabase.co
   SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpc3N0b2RnbmNpbXlwZGF3aXN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQyMjkwMTAsImV4cCI6MjEwOTgwNTAxMH0.uEPldAQjJdRyZTGXaz_OpFR7WpFXMiPXlW1S34cR3p8

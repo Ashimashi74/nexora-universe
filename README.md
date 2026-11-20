@@ -79,7 +79,7 @@ Rooms are built around conversation:
 The flagship game: flick discs, bend shots, score.
 
 - **126 teams in three categories** — **Club** (40), **National** (31) and **Luxury** (55; every Luxury set is rated 10/10). Each team carries real **power** and **accuracy** stats that change how hard and how straight it shoots.
-- **36 pitches**, several balls, 6 formations; colliders match the artwork exactly.
+- **30 pitches**, several balls (the animated NX Spin is the default), 6 formations; colliders match the artwork exactly.
 - **1v1, 2v2 and 3v3** online: seats alternate sides and turns **rotate between teammates** each time your side gets the ball.
 - Golden goal, timed or first-to-N matches, 15 s online turns, goal announcer and crowd.
 
@@ -87,7 +87,7 @@ The flagship game: flick discs, bend shots, score.
 
 | | Game | Online | Highlights |
 |---|---|---|---|
-| ⚽ | **Finger Soccer** | 2–6 | Club / National / Luxury teams, 3v3 rotation, 36 pitches |
+| ⚽ | **Finger Soccer** | 2–6 | Club / National / Luxury teams, 3v3 rotation, 30 pitches |
 | 🎯 | **Carrom** | 2–6 | Queen + cover rule, fouls, deterministic replay |
 | 🎱 | **Billiards** | 2 | Groups, ball-in-hand, cue skins |
 | 🎲 | **Backgammon (تخته‌نرد)** | 2 | Bar, bearing off, gammons & backgammons |
@@ -174,7 +174,7 @@ test/         unit + widget tests (games, rooms, auth rules, assets, ORACLE, tou
 ### ✨ امکانات
 
 - **🎙️ اتاق‌ها:** صحنه‌ی صدا، گفتگوی متنی با پیام‌های زنده و کادر نوشتن پایین صفحه، فهرست اعضا با آواتار گرد. سخنران و شنونده **بی‌محدودیت**. مدیر اتاق بازی را انتخاب می‌کند، بازیکن‌ها را تیک می‌زند؛ هر بازیکن تیم و چیدمانش را می‌چیند و مدیر زمین و توپ را؛ بعد از بازی همه به اتاق برمی‌گردند. مافیا و بازی‌های گروهی تا **۱۲ نفر**، بازی‌های تیمی مثل فوتبال انگشتی تا **۶ نفر**.
-- **⚽ فوتبال انگشتی (گل‌کوچیک):** ۱۲۶ تیم در سه دسته‌ی **باشگاهی** (۴۰)، **ملی** (۳۱) و **لوکس** (۵۵؛ همه با امتیاز ۱۰ از ۱۰) با آمار واقعی قدرت و دقت شوت؛ ۳۶ زمین، چند توپ و ۶ چیدمان؛ بازی **۱ به ۱، ۲ به ۲ و ۳ به ۳** با چرخش نوبت بین هم‌تیمی‌ها.
+- **⚽ فوتبال انگشتی (گل‌کوچیک):** ۱۲۶ تیم در سه دسته‌ی **باشگاهی** (۴۰)، **ملی** (۳۱) و **لوکس** (۵۵؛ همه با امتیاز ۱۰ از ۱۰) با آمار واقعی قدرت و دقت شوت؛ ۳۰ زمین، چند توپ و ۶ چیدمان؛ بازی **۱ به ۱، ۲ به ۲ و ۳ به ۳** با چرخش نوبت بین هم‌تیمی‌ها.
 - **🎮 ۱۶ بازی:** تخته‌نرد، کرم، بیلیارد، لودو، مار و پله، NX Cards، مسابقه‌ی اطلاعات عمومی، مافیا، و هفت بازی آرکید — آفلاین با ربات یا آنلاین با آدم‌های واقعی.
 - **⚡ بازی سریع:** پیدا کردن حریف با یک لمس؛ جفت‌شدن منصفانه، بدون صندلی‌های «روح»، اتصال دوباره‌ی امن.
 - **🏆 رده‌بندی و تورنمنت:** امتیاز ELO برای هر بازی، رتبه‌ی کلی، جام‌ها، تورنمنت تا ۶۴ نفر با جایزه‌ی سمت سرور.

@@ -22,7 +22,7 @@ import 'bm_ball.dart';
 import 'bm_painter.dart';
 import '../intro/fs_game_bar.dart';
 import '../intro/fs_intro_data.dart';
-import '../intro/fs_intro_ui.dart' show FsBarHandle;
+import '../intro/fs_intro_ui.dart' show FsBarHandle, kFsBarHandleHeight, kFsBarHandleWidth;
 import '../intro/fs_online_pick.dart';
 import '../intro/fs_score_table.dart';
 import '../intro/fs_team_select.dart' show FsSidePlayer;
@@ -75,8 +75,8 @@ class _Setup {
     return _Setup(
         t,
         i('form').clamp(0, kBmForms.length - 1).toInt(),
-        i('field').clamp(0, kBmFields.length - 1).toInt(),
-        i('ball').clamp(0, NB - 1).toInt());
+        bmFieldIndex(i('field')),
+        bmBallIndex((d['ball'] as num?)?.toInt()));
   }
 }
 
@@ -195,8 +195,8 @@ class _BermudaViewState extends State<BermudaView>
           // Only an owned (or free) team can be fielded; locked teams fall back to the default free team.
           GemShop.instance.usableTeam(kBmTeams.any((BmTeam x) => x.id == t) ? t : kDefaultTeam),
           (p.getInt('bm.form') ?? 0).clamp(0, kBmForms.length - 1).toInt(),
-          (p.getInt('bm.field') ?? 0).clamp(0, kBmFields.length - 1).toInt(),
-          (p.getInt(kBmBallPref) ?? kBmDefaultBall).clamp(0, NB - 1).toInt());
+          bmFieldIndex(p.getInt('bm.field')),
+          bmBallIndex(p.getInt(kBmBallPref)));
       _cat = math.max(0,
           kBmCats.indexWhere((List<Object> c) => c[0] == bmTeam(my.team).cat));
       audio.announcer = p.getBool('bm.ann') ??
@@ -437,7 +437,8 @@ class _BermudaViewState extends State<BermudaView>
     final String t = '${m['team'] ?? ''}';
     final String team = kBmTeams.any((BmTeam x) => x.id == t) ? t : (seat == 0 ? 'club0' : 'club1');
     int i(dynamic v, int max) => ((v as num?)?.toInt() ?? 0).clamp(0, max - 1).toInt();
-    return _Setup(team, i(m['form'], kBmForms.length), i(st['field'], kBmFields.length), i(st['ball'] ?? kBmDefaultBall, NB));
+    return _Setup(team, i(m['form'], kBmForms.length), bmFieldIndex((st['field'] as num?)?.toInt()),
+        bmBallIndex((st['ball'] as num?)?.toInt()));
   }
 
   /// Side name: "Ali" for 1v1, "Ali · Sara · Reza" for team games.
@@ -520,7 +521,7 @@ class _BermudaViewState extends State<BermudaView>
   }
 
   Future<void> _loadMatchImages(BmConfig c) async {
-    final BmFieldS f = kBmFields[c.field];
+    final BmFieldS f = kBmFields[bmFieldIndex(c.field)];
     final List<ui.Image?> r = await Future.wait(<Future<ui.Image?>>[
       _img(f.asset),
       f.builtInGoals ? Future<ui.Image?>.value(null) : _img('${_a}goals/${f.gs}.webp'),
@@ -552,6 +553,8 @@ class _BermudaViewState extends State<BermudaView>
       im.ballSheet = sheet;
       im.ballFrames = anim.frames;
       im.ballFrameMs = anim.frameMs;
+      im.ballTimed = anim.gifTimed;
+      im.animMs = 0;
     }
     im.team[0] = r[3];
     im.team[1] = r[4];
@@ -1057,11 +1060,12 @@ class _BermudaViewState extends State<BermudaView>
             bottom: 12 + MediaQuery.paddingOf(context).bottom,
             child: FsBarHandle(players: cfg?.names.length ?? 2, onTap: _pause),
           ),
-          // v6 reference toast "یک دقیقه تا پایان بازی" (dark pill beside the game bar handle, ~3 s).
+          // v6 reference toast "یک دقیقه تا پایان بازی" (dark pill, ~3 s). v7: one row above the game bar, because
+          // the formation button now sits beside the bar.
           Positioned(
-            left: 100,
+            left: 6,
             right: 8,
-            bottom: 12 + MediaQuery.paddingOf(context).bottom,
+            bottom: 12 + MediaQuery.paddingOf(context).bottom + kBmFormButtonRowLift,
             child: IgnorePointer(
               child: ValueListenableBuilder<int>(
                 valueListenable: _frame,
@@ -1075,11 +1079,13 @@ class _BermudaViewState extends State<BermudaView>
               ),
             ),
           ),
-          // Reference in-match "تغییر ترکیب" button (above the game bar handle, bottom left); not over the score table.
+          // Reference in-match "تغییر ترکیب" button. v7 (owner request 2026-11-20): moved down to sit beside the game
+          // bar handle, on the same row (it used to float one row above the handle). Always shown while the match
+          // runs; only the end-of-match score table (match over) covers that corner.
           if (_tableT < 0)
           Positioned(
-            left: 6,
-            bottom: 12 + MediaQuery.paddingOf(context).bottom + 48,
+            left: kBmFormButtonLeft,
+            bottom: 12 + MediaQuery.paddingOf(context).bottom + (kFsBarHandleHeight - kBmFormButtonHeight) / 2,
             child: BmChangeFormButton(label: launch.tx('تغییر ترکیب', 'Formation'), onTap: _changeFormation),
           ),
         ]),
@@ -2040,6 +2046,13 @@ class _BermudaViewState extends State<BermudaView>
   }
 }
 
+/// v7 layout of the in-match formation button: on the game bar's row, just right of the bar handle
+/// ([kFsBarHandleWidth] wide, at the left edge), vertically centred on it.
+const double kBmFormButtonHeight = 36;
+const double kBmFormButtonLeft = kFsBarHandleWidth + 8;
+/// Lift of the "one minute left" toast: one row above the game bar (where the formation button used to be).
+const double kBmFormButtonRowLift = 48;
+
 /// The reference's in-match "تغییر ترکیب" button: a dark pill with the label and a small green pitch icon.
 class BmChangeFormButton extends StatelessWidget {
   const BmChangeFormButton({super.key, required this.label, required this.onTap});
@@ -2054,7 +2067,7 @@ class BmChangeFormButton extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          height: 36,
+          height: kBmFormButtonHeight,
           padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
             color: const Color(0xE61C1E22),

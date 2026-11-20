@@ -224,3 +224,28 @@ No extra server: everything runs in the existing Supabase project (Postgres RPCs
   ending the match (`GameResult.endsMatch` false); when a whole side has left, the other side wins at once.
 - Tests: `test/games/finger_soccer_v5_test.dart` (shared clock, early-pick wait, idle timeouts + fallback, tpick
   replay, controller seat, 2v2 / 3v3 results per seat, draw, leaver), `test/worlds/fs_swap_sides_test.dart`.
+
+## Finger soccer v7 — rail-like goals, formation button by the bar, 6 pitches removed, NX GIF balls (2026-11-20, branch `work/fs-v7`)
+- Goal posts and the inside of the goal (side nets, back net) rebound exactly like the rails for the ball and every
+  disc: normal restitution `kBmRailE` (.9), no tangential loss (`BmEngine.walls` / `BmEngine.post`). Before: ball
+  nets .62-.72 / post impulse 1.54-1.7 (speed dependent), disc .48. Only the ball settling in the net after a goal
+  (phase 'goal', play stopped) keeps its soft .2 / .3 damping. Contract row: `supabase/games/migrations/20261120040000_physics_fs_v7_rebound.sql`
+  (documentation only, not applied).
+- In-match "تغییر ترکیب" button moved down onto the game bar's row, right beside the bar handle (`kBmFormButtonLeft`,
+  vertically centred on `kFsBarHandleHeight`); same button, same picker, same D11 rule. The "one minute left" toast
+  moved one row up (where the button was). The button is still hidden only under the end-of-match score table.
+- Pitches: Neon Cup, Street Cage, Sockerbox, Gold Leather, Neon Grass, Royal Gold removed (catalog entries, field +
+  thumb art, `tool/fs_goal_cleanup.py` which only served them). They were the last six entries, so saved indices
+  0..29 are unchanged; any saved / synced / room index that no longer exists becomes pitch 0 (`bmFieldIndex`, used by
+  prefs, shop, room panel, online setup, room prefs and `BmEngine.startMatch`). No backend seed referenced them.
+- Balls: NX Spin (index 5, the owner's "NX ball fixed center spin", 24 frames) and NX Star (index 6, the owner's
+  "NX football", 16 frames), both 90 ms per frame, built by `tool/build_fs_nx_balls.py` from `tool/ball_src/`: GIF
+  order kept, each frame re-centred on its silhouette (the source drifted ~3 px; output centre within 0.1 px),
+  one scale per ball, anti-aliased circular trim, 160 px cells (ball radius 76 = kBmBallArtFill). Played with
+  `BmAnimBall.gifTimed`: exactly frameMs per frame while the ball moves, held on the current frame at rest, no extra
+  sprite rotation (only the GIF's own spin). NX Spin is the default (`kBmDefaultBall`); new preference key
+  `bm.ball.v7` so every player starts on it once (the v6 key was also written automatically at each match start, so
+  explicit picks could not be told apart); a pick in the shop / setup is kept under the new key.
+- Tests: `test/games/finger_soccer_v7_test.dart` (rail / back net / side net / post parity for ball and disc on two
+  pitches, speed-independent post, removed pitches + fallback incl. a saved removed pitch, default ball + GIF frame
+  timing, formation button beside the bar and still opening the picker).
