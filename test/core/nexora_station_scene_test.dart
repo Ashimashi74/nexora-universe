@@ -20,9 +20,12 @@ void main() {
         child: const MaterialApp(home: NexoraStationScene()),
       ),
     );
-    await tester.pumpAndSettle(const Duration(milliseconds: 500));
+    await tester.pump(const Duration(milliseconds: 500));
     // It paints a custom-painted scene without throwing.
-    expect(find.byType(CustomPaint), findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(NexoraStationScene), matching: find.byType(CustomPaint)),
+      findsOneWidget,
+    );
   });
 
   testWidgets('reduced motion produces a static scene (no continuous animation)', (WidgetTester tester) async {
@@ -38,7 +41,10 @@ void main() {
       ),
     );
     await tester.pump(const Duration(milliseconds: 200));
-    expect(find.byType(CustomPaint), findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(NexoraStationScene), matching: find.byType(CustomPaint)),
+      findsOneWidget,
+    );
     // The continuous spin loop is stopped under reduced motion, so repaints settle immediately.
     await expectLater(tester.pumpAndSettle(const Duration(milliseconds: 100)), completes);
   });
