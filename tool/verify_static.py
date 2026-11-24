@@ -136,6 +136,51 @@ def scan_dart(src: str) -> tuple[int, int, int, str]:
     return paren, brace, bracket, ''.join(out)
 
 
+def strip_comments(src: str) -> str:
+    """Blank comments (line and block) but keep string literals intact.
+
+    `scan_dart` intentionally empties string bodies because the declaration/collision passes must
+    not see text inside strings. Import/export/part directives live *in* strings, so they need
+    this variant instead — without it `import '' ;` never matched DIRECTIVE_IMPORT and unresolved
+    imports went unreported.
+    """
+    out: list[str] = []
+    i, n = 0, len(src)
+    while i < n:
+        c = src[i]
+        if c == '/' and i + 1 < n and src[i + 1] == '/':
+            j = src.find('\n', i + 2)
+            if j < 0:
+                return ''.join(out)
+            out.append('\n')
+            i = j + 1
+            continue
+        if c == '/' and i + 1 < n and src[i + 1] == '*':
+            j = src.find('*/', i + 2)
+            end = n if j < 0 else j + 2
+            out.append('\n' * src.count('\n', i, end))
+            i = end
+            continue
+        if c in ('"', "'"):
+            triple = src[i:i + 3] == c * 3
+            delim = c * 3 if triple else c
+            j = i + len(delim)
+            while j < n:
+                if src.startswith(delim, j):
+                    j += len(delim)
+                    break
+                if src[j] == '\\' and not src[i - 1:i] == 'r':
+                    j += 2
+                    continue
+                j += 1
+            out.append(src[i:j])
+            i = j
+            continue
+        out.append(c)
+        i += 1
+    return ''.join(out)
+
+
 def dart_files(roots: list[str]) -> list[str]:
     out = []
     for root in roots:
@@ -155,7 +200,13 @@ def resolve(target: str, src_path: str) -> str | None:
     if target.startswith('dart:') or target.startswith('package:'):
         return 'external'
     base = os.path.dirname(src_path)
-    return os.path.normpath(os.path.join(base, target))
+    direct = os.path.normpath(os.path.join(base, target))
+    if os.path.isfile(direct):
+        return direct
+    # A path that does not exist relative to the file is a real error. Still return a path
+    # (relative to `lib/`) so the unresolved-import check reports it precisely and the
+    # collision pass can keep running instead of crashing on an unseen file.
+    return os.path.normpath(os.path.join(LIB, target))
 
 
 def filter_combinators(names: set[str], clause: str) -> set[str]:
@@ -198,8 +249,10 @@ def main() -> int:
         if bracket:
             problems.append(f'{rel(path)}: unbalanced brackets ({bracket:+d})')
 
-    # 1. imports / exports / parts resolve
-    for path, text in srcs.items():
+    # 1. imports / exports / parts resolve (directives live inside string literals, so this pass
+    #    reads the comment-stripped source rather than `srcs`, which blanks string bodies)
+    directives: dict[str, str] = {path: strip_comments(raw[path]) for path in files}
+    for path, text in directives.items():
         for target, _clause in DIRECTIVE_IMPORT.findall(text):
             dest = resolve(target, path)
             if dest == 'external':
@@ -244,13 +297,13 @@ def main() -> int:
         return names
 
     for path in files:
-        if PART_OF.search(srcs[path]):
+        if PART_OF.search(srcs.get(path, '')):
             continue
         own = {n: k for n, k in declared.get(path, {}).items() if not n.startswith('_')}
         imported_names: set[str] = set()
-        for target, clause in DIRECTIVE_IMPORT.findall(srcs[path]):
+        for target, clause in DIRECTIVE_IMPORT.findall(directives[path]):
             dest = resolve(target, path)
-            if dest not in (None, 'external') and dest != path:
+            if dest not in (None, 'external') and dest != path and os.path.isfile(dest):
                 sub = exported_public(dest, {path})
                 imported_names |= filter_combinators(sub, clause)
         for name in sorted(set(own) & imported_names):

@@ -21,8 +21,14 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get
+      # Offline gate that needs no SDK: import/export targets, duplicate declarations between a
+      # library and its imports, unbalanced delimiters, shared design tokens. Runs first so a
+      # broken path is reported in seconds with an exact file name instead of a cascade.
+      - name: Static checks (no SDK)
+        run: python3 tool/verify_static.py
       - name: Analyze
         run: |
+          # Errors fail the gate; infos/warnings stay advisory (they are annotated below).
           set +e
           flutter analyze --no-fatal-infos --no-fatal-warnings > analyze.txt 2>&1
           echo "=====ANALYZE-ISSUES====="
@@ -32,6 +38,12 @@ jobs:
           grep -E " • " analyze.txt | grep -vE "^Analyzing" | head -60 | while IFS= read -r line; do
             echo "::error title=analyze::$line"
           done
+          # Analyzer *errors* are not advisory: they mean the app cannot compile, so the quick
+          # check fails on them (infos / warnings stay non-blocking).
+          if grep -qE "^\s*error\s+•" analyze.txt; then
+            echo "::error title=analyze::flutter analyze reported errors"
+            exit 1
+          fi
           exit 0
       - name: Test
         run: |

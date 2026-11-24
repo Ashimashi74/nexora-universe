@@ -3,17 +3,17 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
-import '../../arcade_kit/arcade_fx.dart';
-import '../../arcade_kit/arcade_skin.dart';
-import '../../core/game_contract.dart';
+import '../arcade_kit/arcade_fx.dart';
+import '../arcade_kit/arcade_skin.dart';
+import '../core/game_contract.dart';
 import 'ui/solo_art.dart';
 
 // `SoloRun` is declared in arcade_shell.dart and is the shell's controller; re-exported so
 // registry and board files that only need the controller do not import the shell machinery.
-export '../../arcade_kit/arcade_shell.dart' show SoloRun;
+export '../arcade_kit/arcade_shell.dart' show SoloRun;
 
 /// Drawing primitives the boards paint with (shaded blocks, spheres, glows, particles).
-export '../../arcade_kit/arcade_fx.dart'
+export '../arcade_kit/arcade_fx.dart'
     show
         ArcadeFx,
         FloatText,
