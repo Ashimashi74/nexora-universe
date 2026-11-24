@@ -77,7 +77,8 @@ class BubbleBoardState extends SoloBoardState<BubbleBoard> {
       final Offset at = Offset(play.center.dx + math.sin(_aim) * play.width * 0.3, g.top + g.cell * 2);
       _impact = at;
       burst(play, at, _colours[world.nextColour % _colours.length], count: 20, speed: 300);
-      fx.text('+${gained * 12}', at, SoloArt.ink, size: 18);
+      // Float the popup in the open water under the wall, never on top of the bubbles.
+      fx.text('+${gained * 12}', Offset(at.dx, play.top + play.height * 0.60), SoloArt.gold, size: 20);
     }
     world.pickColour();
     setState(() {});

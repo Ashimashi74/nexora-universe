@@ -110,12 +110,12 @@ class DashBoardState extends SoloBoardState<DashBoard> {
     // ---------------------------------------------------------------- sky
     SoloArt.backdrop(canvas, size, skin: skin, time: clock, halo: 0.20,
         haloAt: Offset(size.width * 0.70, ceiling + band * 0.2));
-    SoloArt.sunset(canvas, Offset(size.width * 0.74, ceiling + band * 0.26), band * 0.30,
-        SoloArt.a(accent2, 0.9), SoloArt.a(accent, 0.5), glow: accent);
-    SoloArt.ridge(canvas, size, ground, SoloArt.a(SoloArt.mix(accent, const Color(0xFF060A18), 0.84), 0.95),
-        amplitude: band * 0.20, seed: 1.4, speed: 0.015, time: clock);
-    SoloArt.ridge(canvas, size, ground + 3, SoloArt.a(SoloArt.mix(accent, const Color(0xFF04060E), 0.92), 1),
-        amplitude: band * 0.11, seed: 3.9, speed: 0.03, time: clock);
+    SoloArt.sunset(canvas, Offset(size.width * 0.78, ceiling + band * 0.20), band * 0.175,
+        SoloArt.a(accent2, 0.95), SoloArt.a(const Color(0xFFFF5B8A), 0.85), glow: accent);
+    SoloArt.ridge(canvas, size, ground, SoloArt.a(SoloArt.mix(accent, const Color(0xFF05070F), 0.92), 1),
+        amplitude: band * 0.13, seed: 1.4, speed: 0.015, time: clock);
+    SoloArt.ridge(canvas, size, ground + 3, SoloArt.a(const Color(0xFF03050C), 1),
+        amplitude: band * 0.07, seed: 3.9, speed: 0.03, time: clock);
 
     // ---------------------------------------------------------------- floor
     final Rect floorRect = Rect.fromLTRB(0, ground, size.width, size.height);
@@ -164,14 +164,45 @@ class DashBoardState extends SoloBoardState<DashBoard> {
       Rect.fromCenter(center: Offset(c.dx, ground + 4), width: s * (1.5 - lift * 0.7), height: s * (0.42 - lift * 0.16)),
       Paint()..color = SoloArt.a(const Color(0xFF000000), 0.45),
     );
-    paintGlow(canvas, c, s * 3.2, accent, 0.30);
+    paintGlow(canvas, c, s * 3.4, accent, 0.34);
+    // speed trail behind the cube
+    for (int i = 1; i <= 4; i++) {
+      final double k = i / 5;
+      canvas.drawRect(
+        Rect.fromCenter(
+          center: Offset(c.dx - s * (1.1 + i * 0.85), c.dy + math.sin(clock * 9 + i) * s * 0.06),
+          width: s * (0.9 - k * 0.5),
+          height: s * (0.7 - k * 0.4),
+        ),
+        Paint()
+          ..color = SoloArt.a(accent, 0.22 * (1 - k))
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, s * 0.22),
+      );
+    }
     final Rect cube = Rect.fromCenter(center: c, width: s / _squash, height: s * _squash);
-    SoloArt.cube(canvas, cube, accent, radius: s * 0.2, depth: s * 0.15, glow: 0.5, edge: SoloArt.a(const Color(0xFFFFFFFF), 0.66));
+    // body with a lit top face, so the avatar reads as a 3D block rather than a square
+    SoloArt.cube(canvas, cube, accent, radius: s * 0.16, depth: s * 0.18, glow: 0.5, edge: SoloArt.a(const Color(0xFFFFFFFF), 0.7));
     canvas.save();
     canvas.translate(c.dx, c.dy);
-    canvas.rotate(clock * 1.2);
-    canvas.drawRect(Rect.fromCenter(center: Offset.zero, width: s * 0.24, height: s * 0.24),
-        Paint()..color = SoloArt.a(const Color(0xFF04101C), 0.75));
+    canvas.scale(1 / _squash, _squash);
+    // visor
+    final Rect visor = Rect.fromCenter(center: Offset(s * 0.05, -s * 0.06), width: s * 0.56, height: s * 0.24);
+    canvas.drawRRect(RRect.fromRectAndRadius(visor, Radius.circular(s * 0.10)), Paint()..color = const Color(0xFF04101C));
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(visor.deflate(s * 0.045), Radius.circular(s * 0.07)),
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[SoloArt.a(const Color(0xFFB8F8FF), 0.95), SoloArt.a(accent2, 0.55)],
+        ).createShader(visor),
+    );
+    canvas.drawCircle(Offset(-s * 0.10, -s * 0.10), s * 0.045, Paint()..color = SoloArt.a(const Color(0xFFFFFFFF), 0.9));
+    // grip/belly plate
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(0, s * 0.24), width: s * 0.40, height: s * 0.14), Radius.circular(s * 0.06)),
+      Paint()..color = SoloArt.a(const Color(0xFF04101C), 0.45),
+    );
     canvas.restore();
     if (_holding && !world.dead) {
       for (int i = 0; i < 3; i++) {

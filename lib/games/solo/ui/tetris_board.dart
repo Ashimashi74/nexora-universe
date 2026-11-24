@@ -24,13 +24,13 @@ class TetrisBoardState extends SoloBoardState<TetrisBoard> {
   bool _wasOver = false;
 
   static const List<Color> _pieceColours = <Color>[
-    Color(0xFF35D6F0), // i  cyan
-    Color(0xFFFFD166), // o  gold
-    Color(0xFFB98CFF), // t  violet
-    Color(0xFF7CFF9B), // s  mint
-    Color(0xFFFF6B8A), // z  rose
-    Color(0xFF6B8CFF), // j  indigo
-    Color(0xFFFF9F45), // l  amber
+    Color(0xFF2FE3F5), // i  cyan
+    Color(0xFFFFD23F), // o  gold
+    Color(0xFFB26BFF), // t  violet
+    Color(0xFF4BF08B), // s  mint
+    Color(0xFFFF5470), // z  rose
+    Color(0xFF5B7CFF), // j  indigo
+    Color(0xFFFF9A2E), // l  amber
   ];
 
   @override
@@ -164,7 +164,7 @@ class TetrisBoardState extends SoloBoardState<TetrisBoard> {
     // ---------------------------------------------------------------- side panels
     // score / lines / level column on the left of the well when there is room
     final double panelW = play.width - w.width;
-    if (panelW > 120) {
+    if (panelW > 200) {
       final Rect side = Rect.fromLTWH(12, play.top + 16, (w.left - 24).clamp(60.0, 150.0), 150);
       SoloArt.panel(canvas, side, accent, radius: 14, glow: 0.25);
       SoloArt.label(canvas, 'SCORE', side.topLeft + const Offset(12, 16), size: 9, center: false, color: SoloArt.a(SoloArt.mute, 0.9), weight: FontWeight.w700);
@@ -203,7 +203,7 @@ class TetrisBoardState extends SoloBoardState<TetrisBoard> {
               extra: SoloPad(
                 icon: Icons.rotate_right_rounded,
                 onTap: () => _input(world.rotate),
-                size: 66,
+                size: 46,
                 accent: widget.run.skin.accent2,
               ),
               actionIcon: Icons.keyboard_double_arrow_down_rounded,
@@ -222,12 +222,20 @@ class _Well {
   final double cell;
 
   static _Well of(Rect play, TetrisWorld world) {
-    final double cell = math.min((play.width - 96) / TetrisWorld.cols, (play.height - 12) / TetrisWorld.rows);
+    // The band already excludes the deck, so the well is only limited by a header strip (the
+    // gravity meter) and a small margin all round.
+    const double header = 26;
+    const double margin = 14;
+    final double cell = math.min(
+      (play.width - margin * 2) / TetrisWorld.cols,
+      (play.height - header - margin) / TetrisWorld.rows,
+    );
     return _Well(
-      rect: Rect.fromCenter(
-        center: Offset(play.center.dx, play.center.dy),
-        width: cell * TetrisWorld.cols,
-        height: cell * TetrisWorld.rows,
+      rect: Rect.fromLTWH(
+        play.center.dx - cell * TetrisWorld.cols / 2,
+        play.top + header,
+        cell * TetrisWorld.cols,
+        cell * TetrisWorld.rows,
       ),
       cell: cell,
     );

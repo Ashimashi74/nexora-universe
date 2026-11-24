@@ -85,10 +85,22 @@ class RunnerObstacle {
 
 // ---------------------------------------------------------------- fruit ninja
 class FruitSlice {
-  FruitSlice({required this.x, required this.y, required this.vx, required this.vy, required this.radius, this.bomb = false});
+  FruitSlice({
+    required this.x,
+    required this.y,
+    required this.vx,
+    required this.vy,
+    required this.radius,
+    this.bomb = false,
+    this.kind = 0,
+  });
   double x, y, vx, vy;
   final double radius;
   final bool bomb;
+
+  /// Index into the board's fruit palette (stable per fruit, so a slice always matches its
+  /// juice colour; bombs ignore it).
+  final int kind;
   double rotation = 0;
   bool sliced = false;
   bool missed = false;
@@ -116,10 +128,12 @@ class FruitWorld {
     time += dt;
     spawnCooldown -= dt;
     if (spawnCooldown <= 0) {
-      spawnCooldown = (1.05 - time * 0.01).clamp(0.45, 1.05);
-      final int n = 1 + rng.nextInt(2);
+      // A steady stream of fruit: the old 1-in-2 chance of a single fruit left the dojo empty
+      // for most of a run, which read as "nothing happens".
+      spawnCooldown = (0.72 - time * 0.006).clamp(0.34, 0.72);
+      final int n = 2 + rng.nextInt(2);
       for (int i = 0; i < n; i++) {
-        _launch(bomb: rng.nextDouble() < 0.12);
+        _launch(bomb: rng.nextDouble() < 0.10);
       }
     }
     for (final FruitSlice f in items) {
@@ -147,8 +161,9 @@ class FruitWorld {
       y: 1.05,
       vx: (0.5 - x) * 0.9 + (rng.nextDouble() - 0.5) * 0.35,
       vy: vy,
-      radius: bomb ? 0.05 : 0.055 + rng.nextDouble() * 0.02,
+      radius: bomb ? 0.062 : 0.078 + rng.nextDouble() * 0.03,
       bomb: bomb,
+      kind: rng.nextInt(6),
     ));
   }
 

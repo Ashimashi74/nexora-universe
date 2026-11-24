@@ -229,16 +229,32 @@ class World2048BoardState extends SoloBoardState<World2048Board> {
               onRight: () => _move(2),
               leftIcon: Icons.west_rounded,
               rightIcon: Icons.east_rounded,
-              extra: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  SoloPad(icon: Icons.north_rounded, onTap: () => _move(1), size: 52, accent: widget.run.skin.accent),
-                  const SizedBox(height: 6),
-                  SoloPad(icon: Icons.south_rounded, onTap: () => _move(3), size: 52, accent: widget.run.skin.accent),
-                ],
+              extra: _UpDownPad(
+                accent: widget.run.skin.accent2,
+                onUp: () => _move(1),
+                onDown: () => _move(3),
               ),
             ),
           ),
+        ],
+      );
+}
+
+/// Compact stacked up/down pair used by the 2048 deck: two 34 px discs, never taller than the
+/// control row.
+class _UpDownPad extends StatelessWidget {
+  const _UpDownPad({required this.accent, required this.onUp, required this.onDown});
+  final Color accent;
+  final VoidCallback onUp;
+  final VoidCallback onDown;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisSize: MainAxisSize.max,
+        children: <Widget>[
+          Expanded(child: Center(child: SoloPad(icon: Icons.north_rounded, onTap: onUp, size: 34, accent: accent))),
+          Expanded(child: Center(child: SoloPad(icon: Icons.south_rounded, onTap: onDown, size: 34, accent: accent))),
         ],
       );
 }
@@ -251,11 +267,14 @@ class _Board {
   final double gap;
 
   static _Board of(Rect play) {
-    final double side = math.min(play.width - 32, play.height * 0.74);
+    // Reserve the chip strip and the target meter at the top of the band, then take the largest
+    // square that still fits: the board can never slide under the deck.
+    const double header = 56;
+    final double side = math.min(play.width - 32, play.height - header - 24);
     final double gap = side * 0.026;
     final double cell = (side - gap * 5) / 4;
     return _Board(
-      rect: Rect.fromCenter(center: Offset(play.center.dx, play.top + play.height * 0.52), width: side, height: side),
+      rect: Rect.fromLTWH(play.center.dx - side / 2, play.top + header, side, side),
       cell: cell,
       gap: gap,
     );

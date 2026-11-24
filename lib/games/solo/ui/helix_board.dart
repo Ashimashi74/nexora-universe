@@ -109,6 +109,32 @@ class HelixBoardState extends SoloBoardState<HelixBoard> {
           colors: <Color>[SoloArt.a(const Color(0xFF04060E), 0.0), SoloArt.a(const Color(0xFF04060E), 0.85)],
         ).createShader(shaft),
     );
+    // rock walls: two lit bands left and right, brighter near the ball
+    for (final double side in <double>[0, 1]) {
+      final double x = side == 0 ? 0 : size.width * 0.82;
+      final Rect wall = Rect.fromLTWH(x, play.top, size.width * 0.18, play.height + 30);
+      canvas.drawRect(
+        wall,
+        Paint()
+          ..shader = LinearGradient(
+            begin: side == 0 ? Alignment.centerLeft : Alignment.centerRight,
+            end: side == 0 ? Alignment.centerRight : Alignment.centerLeft,
+            colors: <Color>[SoloArt.a(SoloArt.mix(accent, const Color(0xFF060812), 0.86), 0.9), SoloArt.a(const Color(0xFF060812), 0.0)],
+          ).createShader(wall),
+      );
+      for (int i = 0; i < 12; i++) {
+        final double y = play.top + ((i * 58 + _scroll * ringDepth * 2) % (play.height + 70)) - 35;
+        final double d = 4 + (i % 3) * 7;
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(
+            Rect.fromLTWH(side == 0 ? d : size.width - d - 22, y, 18, 3),
+            const Radius.circular(2),
+          ),
+          Paint()..color = SoloArt.a(accent2, 0.10),
+        );
+      }
+    }
+
     // distance markers scrolling down the walls
     for (int i = 0; i < 22; i++) {
       final double y = play.top + ((i * 46 + _scroll * ringDepth * 3) % (play.height + 60)) - 30;
@@ -174,8 +200,33 @@ class HelixBoardState extends SoloBoardState<HelixBoard> {
           ..strokeWidth = math.max(1.4, ry * 0.10)
           ..color = red ? SoloArt.a(SoloArt.danger, 0.95) : SoloArt.a(accent2, 0.55 - k * 0.3),
       );
+      // lower lip: the slab has real thickness
+      final Rect lipRect = ringRect.shift(Offset(0, math.max(2.0, ry * 0.30)));
+      canvas.drawArc(
+        lipRect,
+        0,
+        math.pi,
+        false,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = math.max(2.0, ry * 0.34)
+          ..color = red ? SoloArt.a(const Color(0xFF1A070B), 0.95) : SoloArt.a(const Color(0xFF05080F), 0.92),
+      );
+      // inner ambient occlusion under the top face
+      canvas.drawOval(
+        ringRect.deflate(math.max(1.0, ry * 0.10)),
+        SoloArt.stroke(SoloArt.a(const Color(0xFF000000), 0.35), math.max(1.2, ry * 0.18)),
+      );
       // outer rim
-      canvas.drawOval(ringRect, SoloArt.stroke(red ? SoloArt.a(SoloArt.danger, 0.7) : SoloArt.a(accent, 0.4), math.max(1.2, 2.2 * scale)));
+      canvas.drawOval(ringRect, SoloArt.stroke(red ? SoloArt.a(SoloArt.danger, 0.8) : SoloArt.a(accent, 0.5), math.max(1.4, 2.6 * scale)));
+      // specular sweep across the top of the slab
+      canvas.drawArc(
+        ringRect.deflate(math.max(0.6, ry * 0.05)),
+        start + gapHalf * 2 + math.pi * 0.10,
+        math.pi * 0.62,
+        false,
+        SoloArt.stroke(SoloArt.a(const Color(0xFFFFFFFF), 0.30 * (1 - k * 0.6)), math.max(1.6, ry * 0.16)),
+      );
       if (red) {
         paintGlow(canvas, Offset(play.center.dx, y), rx * 0.8, SoloArt.danger, 0.22 * (1 - k));
         // hazard chevrons on the red band
@@ -193,7 +244,7 @@ class HelixBoardState extends SoloBoardState<HelixBoard> {
     }
 
     // ---------------------------------------------------------------- ball
-    final double radius = play.width * 0.072;
+    final double radius = play.width * 0.085;
     // trail based on falling speed
     final double speed = world.fallSpeed.clamp(0.0, 8.0) / 8.0;
     for (int i = 1; i <= 4; i++) {
@@ -219,6 +270,18 @@ class HelixBoardState extends SoloBoardState<HelixBoard> {
       1.5,
       false,
       SoloArt.stroke(SoloArt.a(accent, 0.75), math.max(1.4, radius * 0.12)),
+    );
+
+    // deep fog: everything below the third ring dissolves into the shaft
+    final Rect fog = Rect.fromLTWH(0, play.top + play.height * 0.52, size.width, play.height * 0.48);
+    canvas.drawRect(
+      fog,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[SoloArt.a(const Color(0xFF05070E), 0.0), SoloArt.a(const Color(0xFF05070E), 0.85)],
+        ).createShader(fog),
     );
 
     // ---------------------------------------------------------------- readouts

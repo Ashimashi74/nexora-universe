@@ -106,8 +106,8 @@ class StackBoardState extends SoloBoardState<StackBoard> {
     // ---------------------------------------------------------------- dusk city
     SoloArt.backdrop(canvas, size, skin: skin, time: clock, halo: 0.20,
         haloAt: Offset(size.width * 0.5, bottom));
-    SoloArt.sunset(canvas, Offset(size.width * 0.72, lay.top - blockH * 3.4), play.height * 0.17,
-        SoloArt.a(accent2, 0.8), SoloArt.a(accent, 0.3), glow: accent);
+    SoloArt.sunset(canvas, Offset(size.width * 0.78, play.top + play.height * 0.30), play.height * 0.105,
+        SoloArt.a(const Color(0xFFFFD166), 0.9), SoloArt.a(const Color(0xFFFF7A9A), 0.8), glow: const Color(0xFFFFA07A));
     SoloArt.skyline(canvas, size, bottom + 4, SoloArt.a(SoloArt.mix(accent, const Color(0xFF0A0F1C), 0.86), 0.95),
         seed: 12, count: 18);
     // plaza reflection
@@ -191,19 +191,72 @@ class StackBoardState extends SoloBoardState<StackBoard> {
     paintFx(canvas, size);
   }
 
+  /// One slab: glass body, chamfered top, lit edge, storey windows and a shadowed south face.
   void _paintSlab(Canvas canvas, Rect r, Color tint, {required bool top, required Color accent, double bounce = 0}) {
-    final Rect body = bounce > 0 ? Rect.fromCenter(center: r.center + Offset(0, bounce * 2), width: r.width * (1 + bounce * 0.04), height: r.height) : r;
-    SoloArt.cube(canvas, body, tint, radius: 3.4, depth: 5, glow: top ? 0.35 : 0.1,
-        edge: SoloArt.a(const Color(0xFFFFFFFF), top ? 0.5 : 0.22));
-    // floor label lines
-    for (double y = body.top + body.height * 0.35; y < body.bottom - 2; y += body.height * 0.32) {
-      canvas.drawLine(Offset(body.left + 3, y), Offset(body.right - 3, y), SoloArt.stroke(SoloArt.a(const Color(0xFF000000), 0.14), 1));
-    }
-    // right-hand shading to sell the 3D read
+    if (r.width < 2 || r.height < 2) return;
+    final Rect body = bounce > 0
+        ? Rect.fromCenter(center: r.center + Offset(0, bounce * 2), width: r.width * (1 + bounce * 0.04), height: r.height)
+        : r;
+    final double h = body.height;
+    final double w = body.width;
+    // contact shadow under the slab
     canvas.drawRect(
-      Rect.fromLTWH(body.right - body.width * 0.14, body.top, body.width * 0.14, body.height),
-      Paint()..color = SoloArt.a(const Color(0xFF000000), 0.16),
+      Rect.fromLTWH(body.left + w * 0.06, body.bottom - h * 0.12, w * 0.98, h * 0.30),
+      Paint()
+        ..color = SoloArt.a(const Color(0xFF000000), 0.32)
+        ..maskFilter = MaskFilter.blur(BlurStyle.normal, h * 0.22),
     );
+    // body with a vertical glass ramp
+    final RRect rr = RRect.fromRectAndRadius(
+      Rect.fromLTWH(body.left, body.top + h * 0.12, w, h * 0.88),
+      Radius.circular(math.min(5.0, h * 0.16)),
+    );
+    canvas.drawRRect(
+      rr,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[SoloArt.lift(tint, 0.16), tint, SoloArt.sink(tint, 0.34)],
+          stops: const <double>[0, 0.45, 1],
+        ).createShader(rr.outerRect),
+    );
+    // chamfered top face: reads as a slab seen slightly from above
+    final Path cap = Path()
+      ..moveTo(body.left + w * 0.05, body.top + h * 0.16)
+      ..lineTo(body.left + w * 0.13, body.top)
+      ..lineTo(body.right - w * 0.13, body.top)
+      ..lineTo(body.right - w * 0.05, body.top + h * 0.16)
+      ..close();
+    canvas.drawPath(cap, Paint()..color = SoloArt.a(SoloArt.lift(tint, 0.34), 0.95));
+    // storey windows
+    final int windows = (w / math.max(9.0, h * 0.55)).floor().clamp(0, 14);
+    if (windows > 0) {
+      final double step = w / (windows + 0.6);
+      for (int i = 0; i < windows; i++) {
+        final double x = body.left + step * (i + 0.8);
+        final Rect pane = Rect.fromLTWH(x, body.top + h * 0.40, step * 0.46, h * 0.30);
+        canvas.drawRect(pane, Paint()..color = SoloArt.a(const Color(0xFF06101C), 0.35));
+        canvas.drawRect(
+          Rect.fromLTWH(pane.left, pane.top, pane.width, pane.height * 0.42),
+          Paint()..color = SoloArt.a(const Color(0xFFFFFFFF), 0.16),
+        );
+      }
+    }
+    // right-hand south face in shade
+    canvas.drawRect(
+      Rect.fromLTWH(body.right - w * 0.10, body.top + h * 0.14, w * 0.10, h * 0.86),
+      Paint()..color = SoloArt.a(const Color(0xFF000000), 0.18),
+    );
+    // lit top edge (the seam the player aligns to)
+    canvas.drawLine(
+      Offset(body.left + w * 0.13, body.top + 0.8),
+      Offset(body.right - w * 0.13, body.top + 0.8),
+      SoloArt.stroke(SoloArt.a(const Color(0xFFFFFFFF), top ? 0.75 : 0.35), top ? 2.0 : 1.2),
+    );
+    if (top) {
+      canvas.drawRRect(rr, SoloArt.stroke(SoloArt.a(accent, 0.55), 1.4));
+    }
   }
 
   @override

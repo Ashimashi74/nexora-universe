@@ -226,15 +226,44 @@ class TrafficBoardState extends SoloBoardState<TrafficBoard> {
             Radius.circular(cw * 0.12)),
         Paint()..color = SoloArt.a(const Color(0xFF0A1424), 0.75),
       );
-      // tail lights (we see their back: they face the player)
+      // wheels poking out of the body
+      for (final double side in <double>[-1, 1]) {
+        for (final double row in <double>[-0.18, 0.24]) {
+          canvas.drawRRect(
+            RRect.fromRectAndRadius(
+              Rect.fromCenter(center: c + Offset(side * cw * 0.54, ch * row), width: cw * 0.20, height: ch * 0.20),
+              Radius.circular(cw * 0.06),
+            ),
+            Paint()..color = const Color(0xFF0A0E16),
+          );
+        }
+      }
+      // roof highlight strip so the body is not a flat slab
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromCenter(center: c + Offset(0, ch * 0.03), width: cw * 0.76, height: ch * 0.34),
+            Radius.circular(cw * 0.18)),
+        Paint()..color = SoloArt.a(SoloArt.lift(tint, 0.2), 0.35),
+      );
+      // brake light bar + reflectors (we see their back: they face the player)
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromCenter(center: c + Offset(0, ch * 0.40), width: cw * 0.72, height: ch * 0.05),
+            Radius.circular(2)),
+        Paint()..color = SoloArt.a(const Color(0xFFFF3B3B), 0.55),
+      );
       for (final double side in <double>[-1, 1]) {
         final Offset lamp = c + Offset(side * cw * 0.34, ch * 0.40);
-        paintGlow(canvas, lamp, cw * 0.5, const Color(0xFFFF3B3B), 0.45);
+        paintGlow(canvas, lamp, cw * 0.5, const Color(0xFFFF3B3B), 0.5);
         canvas.drawRRect(
           RRect.fromRectAndRadius(Rect.fromCenter(center: lamp, width: cw * 0.22, height: ch * 0.07), Radius.circular(2)),
-          Paint()..color = const Color(0xFFFF5C5C),
+          Paint()..color = const Color(0xFFFF6A6A),
         );
       }
+      // licence plate
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromCenter(center: c + Offset(0, ch * 0.20), width: cw * 0.34, height: ch * 0.05),
+            Radius.circular(1.5)),
+        Paint()..color = SoloArt.a(const Color(0xFFE9EEF7), 0.5),
+      );
     }
 
     // ---------------------------------------------------------------- player
@@ -278,7 +307,7 @@ class TrafficBoardState extends SoloBoardState<TrafficBoard> {
         ..shader = LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: <Color>[SoloArt.lift(accent, 0.22), accent, SoloArt.sink(accent, 0.24)],
+          colors: <Color>[const Color(0xFFF4FBFF), SoloArt.lift(accent2, 0.10), SoloArt.sink(accent2, 0.22)],
         ).createShader(Rect.fromCenter(center: Offset.zero, width: pw, height: ph)),
     );
     canvas.drawPath(body, SoloArt.stroke(SoloArt.a(const Color(0xFFFFFFFF), 0.65), 1.4));
@@ -292,7 +321,13 @@ class TrafficBoardState extends SoloBoardState<TrafficBoard> {
         ..close(),
       Paint()..color = SoloArt.a(const Color(0xFF071322), 0.9),
     );
-    canvas.drawCircle(Offset(0, -ph * 0.06), pw * 0.10, Paint()..color = SoloArt.a(accent2, 0.85));
+    canvas.drawCircle(Offset(0, -ph * 0.06), pw * 0.10, Paint()..color = SoloArt.a(const Color(0xFF7FE7FF), 0.95));
+    // rear wing
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(Rect.fromCenter(center: Offset(0, ph * 0.40), width: pw * 0.94, height: ph * 0.09),
+          Radius.circular(pw * 0.05)),
+      Paint()..color = SoloArt.a(SoloArt.sink(accent2, 0.3), 0.9),
+    );
     // exhaust flames
     for (final double side in <double>[-1, 1]) {
       final double flick = 0.6 + 0.4 * math.sin(clock * 26 + side);

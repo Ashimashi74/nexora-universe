@@ -157,55 +157,98 @@ class KnifeBoardState extends SoloBoardState<KnifeBoard> {
         ..color = const Color(0x77000000)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16),
     );
-    paintGlow(canvas, c, r * 1.6, accent, 0.14);
+    paintGlow(canvas, c, r * 1.75, accent, 0.22);
+    // lacquered rim so the log reads against a violet sky
+    canvas.drawCircle(
+      c,
+      r * 1.045,
+      Paint()
+        ..shader = SweepGradient(
+          colors: <Color>[
+            SoloArt.a(accent, 0.55),
+            SoloArt.a(accent2, 0.18),
+            SoloArt.a(accent, 0.55),
+            SoloArt.a(accent2, 0.18),
+            SoloArt.a(accent, 0.55),
+          ],
+        ).createShader(Rect.fromCircle(center: c, radius: r * 1.045)),
+    );
     canvas.drawCircle(
       c,
       r,
       Paint()
         ..shader = RadialGradient(
-          center: const Alignment(-0.35, -0.4),
-          radius: 1.15,
-          colors: <Color>[const Color(0xFFB98A56), const Color(0xFF8A6034), const Color(0xFF54371C)],
+          center: const Alignment(-0.38, -0.42),
+          radius: 1.2,
+          colors: <Color>[const Color(0xFFE0A96B), const Color(0xFFA8703C), const Color(0xFF5A3A1B), const Color(0xFF341F0C)],
+          stops: const <double>[0, 0.42, 0.82, 1],
         ).createShader(Rect.fromCircle(center: c, radius: r)),
     );
-    // bark grain: rings that rotate with the log
+
+    // End-grain: broken growth arcs (not perfect circles) that turn with the log.
     canvas.save();
     canvas.translate(c.dx, c.dy);
     canvas.rotate(_spinVisual);
-    canvas.clipPath(Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: r)));
-    for (int i = 1; i <= 5; i++) {
-      canvas.drawCircle(Offset.zero, r * (i / 6), SoloArt.stroke(SoloArt.a(const Color(0xFF4A2F17), 0.35), 1.4));
-    }
-    for (int i = 0; i < 12; i++) {
-      final double a = i * math.pi / 6;
-      final double rr = r * (0.25 + (i % 3) * 0.22);
-      canvas.drawLine(
-        Offset(math.cos(a) * rr * 0.4, math.sin(a) * rr * 0.4),
-        Offset(math.cos(a) * rr, math.sin(a) * rr),
-        SoloArt.stroke(SoloArt.a(const Color(0xFF3E2611), 0.28), 1.6),
+    canvas.clipPath(Path()..addOval(Rect.fromCircle(center: Offset.zero, radius: r * 0.985)));
+    for (int i = 1; i <= 7; i++) {
+      final double rr = r * (0.10 + i * 0.115);
+      final double start = (i * 1.9) % (math.pi * 2);
+      final double sweep = math.pi * (1.15 + 0.45 * math.sin(i * 1.7));
+      canvas.drawArc(
+        Rect.fromCircle(center: Offset.zero, radius: rr),
+        start,
+        sweep,
+        false,
+        SoloArt.stroke(SoloArt.a(const Color(0xFF4A2C12), 0.30 + 0.05 * (i % 2)), 1.6),
+      );
+      canvas.drawArc(
+        Rect.fromCircle(center: Offset.zero, radius: rr + 1.6),
+        start + 0.4,
+        sweep * 0.7,
+        false,
+        SoloArt.stroke(SoloArt.a(const Color(0xFFF4C98A), 0.16), 1.1),
       );
     }
-    // plank seams
-    for (int i = 0; i < 4; i++) {
-      final double y = -r + r * 0.5 * (i + 1);
-      canvas.drawLine(Offset(-r, y), Offset(r, y), SoloArt.stroke(SoloArt.a(const Color(0xFF3A2410), 0.22), 2));
+    // radial drying cracks
+    for (int i = 0; i < 9; i++) {
+      final double a = i * math.pi * 2 / 9 + 0.3;
+      final double r0 = r * (0.32 + 0.1 * (i % 3));
+      final double r1 = r * (0.72 + 0.12 * ((i + 1) % 3));
+      canvas.drawLine(
+        Offset(math.cos(a) * r0, math.sin(a) * r0),
+        Offset(math.cos(a) * r1, math.sin(a) * r1),
+        SoloArt.stroke(SoloArt.a(const Color(0xFF3A2410), 0.34), 1.8),
+      );
     }
     canvas.restore();
-    // rim light + inner bevel
-    canvas.drawCircle(c, r * 0.985, SoloArt.stroke(SoloArt.a(accent2, 0.35), 2));
-    canvas.drawCircle(c, r * 0.86, SoloArt.stroke(SoloArt.a(const Color(0xFF2B1A0B), 0.28), 3));
-    canvas.drawCircle(c, r * 0.24, Paint()..color = SoloArt.a(const Color(0xFF2B1A0B), 0.35));
-    canvas.drawCircle(c, r * 0.24, SoloArt.stroke(SoloArt.a(accent2, 0.4), 2));
-    // metal boss in the middle
+
+    // outer bark wall (bevel), inner shadow ring, lit inner rim
+    canvas.drawCircle(c, r * 0.985, SoloArt.stroke(SoloArt.a(const Color(0xFF2A1608), 0.55), 4));
+    canvas.drawCircle(c, r * 0.93, SoloArt.stroke(SoloArt.a(const Color(0xFFFFFFFF), 0.20), 2));
+    canvas.drawArc(Rect.fromCircle(center: c, radius: r * 0.955), math.pi * 1.05, math.pi * 0.9, false,
+        SoloArt.stroke(SoloArt.a(const Color(0xFFFFE0B0), 0.55), 2.4));
+    // centre boss: the spin hub
+    canvas.drawCircle(c, r * 0.22, Paint()..color = SoloArt.a(const Color(0xFF241206), 0.55));
     canvas.drawCircle(
       c,
-      r * 0.14,
+      r * 0.16,
       Paint()
         ..shader = RadialGradient(
-          center: const Alignment(-0.4, -0.4),
-          colors: <Color>[const Color(0xFFE7EEF8), const Color(0xFF7C8CA3), const Color(0xFF2C3746)],
-        ).createShader(Rect.fromCircle(center: c, radius: r * 0.14)),
+          center: const Alignment(-0.4, -0.45),
+          colors: <Color>[const Color(0xFFF2F7FF), const Color(0xFF93A4BC), const Color(0xFF2C3746)],
+          stops: const <double>[0, 0.55, 1],
+        ).createShader(Rect.fromCircle(center: c, radius: r * 0.16)),
     );
+    canvas.drawCircle(c, r * 0.16, SoloArt.stroke(SoloArt.a(accent2, 0.55), 1.6));
+    // hub spokes marking the rotation
+    for (int i = 0; i < 6; i++) {
+      final double a = _spinVisual + i * math.pi / 3;
+      canvas.drawLine(
+        Offset(c.dx + math.cos(a) * r * 0.18, c.dy + math.sin(a) * r * 0.18),
+        Offset(c.dx + math.cos(a) * r * 0.26, c.dy + math.sin(a) * r * 0.26),
+        SoloArt.stroke(SoloArt.a(accent2, 0.35), 1.4),
+      );
+    }
 
     // ---------------------------------------------------------------- stuck knives
     for (final double a in world.stuckAngles) {

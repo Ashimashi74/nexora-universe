@@ -172,12 +172,17 @@ abstract class SoloBoardState<T extends SoloBoard> extends State<T> with SingleT
   bool get simulating => widget.run.playing && !widget.run.over;
 
   /// Playfield between the shell HUD and the control deck.
-  Rect playRect(Size size) => Rect.fromLTRB(
-        0,
-        SoloMetrics.hudTop + topInset,
-        size.width,
-        size.height - SoloMetrics.deck,
-      );
+  /// Playfield band: below the shell's HUD chips, above the control deck. The right-hand 8 px
+  /// matches the inset of [SoloArt.frame] so nothing a board draws can sit under the bezel.
+  Rect playRect(Size size) {
+    const double bezel = 8;
+    return Rect.fromLTRB(
+      bezel,
+      SoloMetrics.hudTop + topInset,
+      size.width - bezel,
+      size.height - SoloMetrics.deck,
+    );
+  }
 
   /// Bottom deck rect (control area).
   Rect deckRect(Size size) => Rect.fromLTRB(0, size.height - SoloMetrics.deck, size.width, size.height);
@@ -312,38 +317,63 @@ class SoloStage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool hasDpad = onLeft != null || onRight != null;
+    // A 360 px-wide phone must still fit: [pads] [gap] [extra] [gap] [action]. Everything is
+    // scaled from the measured width instead of assuming a wide screen, and a board that needs
+    // more than one extra control (2048's up/down pair) goes into a wrapping 2x2 block.
     return SizedBox(
       height: SoloMetrics.deck,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
-        child: Row(
-          children: <Widget>[
-            if (hasDpad) ...<Widget>[
-              SoloPad(icon: leftIcon, onTap: onLeft ?? () {}, accent: accent, size: 66),
-              const SizedBox(width: 12),
-              SoloPad(icon: rightIcon, onTap: onRight ?? () {}, accent: accent, size: 66),
+      child: LayoutBuilder(builder: (BuildContext context, BoxConstraints box) {
+        final double available = box.maxWidth - 32;
+        final int padCount = hasDpad ? 2 : 0;
+        final double extraWidth = extra == null ? 0 : box.maxWidth * 0.16;
+        final double gaps = 8.0 * (padCount + (extra == null ? 0 : 1)) + 8.0;
+        final double actionW = math.min(150, math.max(88, available * 0.42));
+        double pad = math.min(66, math.max(44, available - actionW - extraWidth - gaps));
+        if (padCount == 2) pad = math.min(pad, (available - actionW - extraWidth - gaps) / 2);
+        final double padSize = pad.clamp(40.0, 66.0);
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              if (hasDpad)
+                Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+                  SoloPad(icon: leftIcon, onTap: onLeft ?? () {}, accent: accent, size: padSize),
+                  const SizedBox(width: 8),
+                  SoloPad(icon: rightIcon, onTap: onRight ?? () {}, accent: accent, size: padSize),
+                ]),
+              if (extra != null)
+                SizedBox(width: extraWidth.clamp(52.0, 72.0), child: extra),
+              if (onAction != null)
+                _ActionButton(
+                  accent: accent,
+                  width: actionW,
+                  icon: actionIcon,
+                  label: actionLabel,
+                  onTap: onAction!,
+                  onDown: onActionDown,
+                  onUp: onActionUp,
+                ),
             ],
-            const Spacer(),
-            if (extra != null) ...<Widget>[extra!, const SizedBox(width: 12)],
-            if (onAction != null)
-              _ActionButton(
-                accent: accent,
-                icon: actionIcon,
-                label: actionLabel,
-                onTap: onAction!,
-                onDown: onActionDown,
-                onUp: onActionUp,
-              ),
-          ],
-        ),
-      ),
+          ),
+        );
+      }),
     );
   }
 }
 
 class _ActionButton extends StatefulWidget {
-  const _ActionButton({required this.accent, required this.icon, required this.onTap, this.label, this.onDown, this.onUp});
+  const _ActionButton({
+    required this.accent,
+    required this.width,
+    required this.icon,
+    required this.onTap,
+    this.label,
+    this.onDown,
+    this.onUp,
+  });
   final Color accent;
+  final double width;
   final IconData icon;
   final String? label;
   final VoidCallback onTap;
@@ -383,8 +413,8 @@ class _ActionButtonState extends State<_ActionButton> {
           label: widget.label,
           child: Container(
             height: 72,
-            constraints: const BoxConstraints(minWidth: 96),
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            width: widget.width,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
               gradient: LinearGradient(
@@ -407,14 +437,19 @@ class _ActionButtonState extends State<_ActionButton> {
                 Icon(widget.icon, color: const Color(0xFF06101E), size: 26),
                 if (widget.label != null) ...<Widget>[
                   const SizedBox(width: 8),
-                  Text(
-                    widget.label!,
-                    style: const TextStyle(
-                      fontFamily: 'ChakraPetch',
-                      color: Color(0xFF06101E),
-                      fontWeight: FontWeight.w900,
-                      fontSize: 14,
-                      letterSpacing: 1.2,
+                  Flexible(
+                    child: Text(
+                      widget.label!,
+                      maxLines: 1,
+                      overflow: TextOverflow.fade,
+                      softWrap: false,
+                      style: const TextStyle(
+                        fontFamily: 'ChakraPetch',
+                        color: Color(0xFF06101E),
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        letterSpacing: 1.2,
+                      ),
                     ),
                   ),
                 ],

@@ -94,11 +94,11 @@ class RunnerBoardState extends SoloBoardState<RunnerBoard> {
     // ---------------------------------------------------------------- sky + city
     SoloArt.backdrop(canvas, size, skin: skin, time: clock, halo: 0.22,
         haloAt: Offset(size.width * 0.5, horizon));
-    SoloArt.sunset(canvas, Offset(size.width * 0.5, horizon - play.height * 0.01), play.height * 0.16,
-        SoloArt.a(accent2, 0.75), SoloArt.a(accent, 0.35), glow: accent);
+    SoloArt.sunset(canvas, Offset(size.width * 0.26, horizon - play.height * 0.055), play.height * 0.10,
+        SoloArt.a(const Color(0xFFFFD166), 0.9), SoloArt.a(const Color(0xFFFF5B8A), 0.85), glow: const Color(0xFFFF9F7A));
     SoloArt.skyline(canvas, size, horizon + 2, SoloArt.a(const Color(0xFF070B16), 0.98), seed: 7, count: 22);
-    SoloArt.sunset(canvas, Offset(size.width * 0.86, horizon - play.height * 0.06), play.height * 0.07,
-        SoloArt.a(accent2, 0.5), SoloArt.a(accent, 0.2), glow: accent2);
+    SoloArt.skyline(canvas, size, horizon + 2, SoloArt.a(SoloArt.mix(accent, const Color(0xFF04060E), 0.8), 0.85),
+        seed: 31, count: 13, windowAlpha: 0.35);
 
     // ---------------------------------------------------------------- road
     final double bottomW = play.width * 1.16;

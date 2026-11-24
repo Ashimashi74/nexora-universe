@@ -21,13 +21,16 @@ class FruitBoard extends SoloBoard {
 
 /// One half of a sliced fruit (purely visual, decays on its own).
 class _Half {
-  _Half(this.at, this.velocity, this.radius, this.color, this.spin, this.side);
+  _Half(this.at, this.velocity, this.radius, this.color, this.spin, this.cut, this.skin);
   Offset at;
   Offset velocity;
   final double radius;
   final Color color;
+  final Color skin;
   final double spin;
-  final double side;
+
+  /// Direction of the blade at the moment of the cut (halves split across it).
+  final double cut;
 
   double angle = 0;
   double life = 0.9;
@@ -56,14 +59,19 @@ class FruitBoardState extends SoloBoardState<FruitBoard> {
   bool _wasExploded = false;
   double _explodedFor = 0;
 
-  static const List<Color> _fruitColours = <Color>[
-    Color(0xFFFF4D5E), // watermelon flesh
-    Color(0xFFFFC94A), // lemon
-    Color(0xFF8BE06B), // kiwi
-    Color(0xFFB47CFF), // plum
-    Color(0xFFFF8FD1), // dragon fruit
-    Color(0xFF4FD2FF), // ice berry
+  /// Fruit palette: [flesh, skin]. `kind` comes from the rules, so a fruit keeps its colour
+  /// for its whole flight and its two halves are painted in the same flesh tone.
+  static const List<List<Color>> _fruitPalette = <List<Color>>[
+    <Color>[Color(0xFFFF5A6A), Color(0xFF2E8B57)], // watermelon
+    <Color>[Color(0xFFFFC93C), Color(0xFFFFE38A)], // lemon
+    <Color>[Color(0xFF8BE06B), Color(0xFF4E8C3A)], // kiwi
+    <Color>[Color(0xFFB47CFF), Color(0xFF7A4FD6)], // plum
+    <Color>[Color(0xFFFF8FD1), Color(0xFFD94FA0)], // dragon fruit
+    <Color>[Color(0xFF4FD2FF), Color(0xFF2A9CD6)], // ice berry
   ];
+
+  Color _flesh(int kind) => _fruitPalette[kind % _fruitPalette.length][0];
+  Color _skin(int kind) => _fruitPalette[kind % _fruitPalette.length][1];
 
   @override
   void reset() {
@@ -123,8 +131,10 @@ class FruitBoardState extends SoloBoardState<FruitBoard> {
     final double ny = at.dy / viewport.height;
     _trail.add(at);
     if (_trail.length > 26) _trail.removeAt(0);
-    if (_lastPoint != null && (at - _lastPoint!).distance < 2) return;
+    final Offset? prev = _lastPoint;
+    if (prev != null && (at - prev).distance < 2) return;
     _lastPoint = at;
+    final Offset swipe = prev == null ? Offset.zero : at - prev;
 
     // Track fruit before/after so the burst spawns exactly on what was cut.
     final List<FruitSlice> before = <FruitSlice>[...world.items];
@@ -136,17 +146,22 @@ class FruitBoardState extends SoloBoardState<FruitBoard> {
         final Offset p = Offset(f.x * viewport.width, f.y * viewport.height);
         final int key = f.hashCode;
         if (!_cut.add(key)) continue;
-        final Color c = _fruitColours[f.radius > 0.062 ? 0 : (f.hashCode.abs() % _fruitColours.length)];
-        // two halves
-        final Offset dir = Offset(math.cos(f.rotation), math.sin(f.rotation));
+        final Color c = _flesh(f.kind);
+        // Two halves split along the blade direction (fall back to the fruit's tilt when the
+        // finger barely moved between frames).
+        final Offset dir = swipe.distance > 1
+            ? Offset(swipe.dx, swipe.dy) / swipe.distance
+            : Offset(math.cos(f.rotation), math.sin(f.rotation));
         for (final double side in <double>[-1, 1]) {
+          final Offset perp = Offset(-dir.dy, dir.dx);
           _halves.add(_Half(
-            p + Offset(dir.dx, dir.dy) * f.radius * side * 12,
-            Offset(dir.dx * side * 190, -260 + dir.dy * side * 60),
+            p + perp * f.radius * viewport.width * 0.35 * side,
+            perp * (60 + 150 * side.abs()) + Offset(dir.dx * 90, -240 + dir.dy * 40),
             f.radius * viewport.width,
             c,
-            side * (3.4 + math.Random(key + side.toInt()).nextDouble()),
-            side,
+            side * (2.6 + math.Random(key + side.toInt()).nextDouble()),
+            dir.direction,
+            _skin(f.kind),
           ));
         }
         for (int i = 2; i > 0; i--) {
@@ -171,8 +186,8 @@ class FruitBoardState extends SoloBoardState<FruitBoard> {
       case SoloGesture.down:
       case SoloGesture.dragStart:
         _trail.clear();
-        _lastPoint = null;
         _slice(at);
+        _lastPoint = at;
       case SoloGesture.drag:
         _slice(at);
       case SoloGesture.up:
@@ -228,20 +243,17 @@ class FruitBoardState extends SoloBoardState<FruitBoard> {
       canvas.save();
       canvas.translate(h.at.dx, h.at.dy);
       canvas.rotate(h.angle);
-      canvas.drawArc(
-        Rect.fromCircle(center: Offset.zero, radius: h.radius),
-        h.side > 0 ? -math.pi / 2 : math.pi / 2,
-        math.pi,
-        true,
-        Paint()..color = SoloArt.a(h.color, a),
-      );
-      canvas.drawArc(
-        Rect.fromCircle(center: Offset.zero, radius: h.radius * 0.72),
-        h.side > 0 ? -math.pi / 2 : math.pi / 2,
-        math.pi,
-        true,
-        Paint()..color = SoloArt.a(SoloArt.lift(h.color, 0.2), a * 0.8),
-      );
+      final Rect disc = Rect.fromCircle(center: Offset.zero, radius: h.radius);
+      // flesh: a half-disc facing away from the cut line
+      canvas.drawArc(disc, h.cut + math.pi, math.pi, true, Paint()..color = SoloArt.a(h.color, a));
+      // bright core
+      canvas.drawArc(Rect.fromCircle(center: Offset.zero, radius: h.radius * 0.62), h.cut + math.pi, math.pi, true,
+          Paint()..color = SoloArt.a(SoloArt.lift(h.color, 0.24), a * 0.85));
+      // rind along the arc
+      canvas.drawArc(disc.deflate(h.radius * 0.06), h.cut + math.pi, math.pi, false,
+          SoloArt.stroke(SoloArt.a(h.skin, a), math.max(1.6, h.radius * 0.16)));
+      // wet cut face
+      canvas.drawLine(Offset(-h.radius, 0), Offset(h.radius, 0), SoloArt.stroke(SoloArt.a(const Color(0xFFFFFFFF), a * 0.5), 1.4));
       canvas.restore();
     }
     for (final _Drop d in _drops) {
@@ -277,19 +289,21 @@ class FruitBoardState extends SoloBoardState<FruitBoard> {
   }
 
   void _paintFruit(Canvas canvas, Offset at, double r, FruitSlice f) {
-    final Color base = _fruitColours[f.hashCode.abs() % _fruitColours.length];
+    final Color base = _flesh(f.kind);
+    final Color skin = _skin(f.kind);
     paintGlow(canvas, at, r * 2.0, base, 0.16);
     canvas.save();
     canvas.translate(at.dx, at.dy);
     canvas.rotate(f.rotation);
     SoloArt.orb(canvas, Offset.zero, r, base, rim: SoloArt.lift(base, 0.3));
     // rind band
+    canvas.drawCircle(Offset.zero, r, SoloArt.stroke(SoloArt.a(skin, 0.95), math.max(1.8, r * 0.20)));
     canvas.drawArc(
-      Rect.fromCircle(center: Offset.zero, radius: r * 0.98),
+      Rect.fromCircle(center: Offset.zero, radius: r * 0.72),
       -2.3,
       1.7,
       false,
-      SoloArt.stroke(SoloArt.a(SoloArt.sink(base, 0.22), 0.75), math.max(1.6, r * 0.16)),
+      SoloArt.stroke(SoloArt.a(const Color(0xFFFFFFFF), 0.35), math.max(1.4, r * 0.12)),
     );
     // seeds / detail
     canvas.drawCircle(Offset(r * 0.18, r * 0.30), math.max(1.2, r * 0.10), Paint()..color = SoloArt.a(const Color(0xFF3B2A1C), 0.6));
