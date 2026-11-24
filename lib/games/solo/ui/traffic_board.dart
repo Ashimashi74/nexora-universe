@@ -109,7 +109,7 @@ class TrafficBoardState extends SoloBoardState<TrafficBoard> {
         _swipeFrom = null;
       case SoloGesture.cancel:
         _swipeFrom = null;
-      default:
+      case SoloGesture.drag:
         break;
     }
   }

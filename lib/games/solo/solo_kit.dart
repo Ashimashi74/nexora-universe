@@ -212,9 +212,9 @@ abstract class SoloBoardState<T extends SoloBoard> extends State<T> with SingleT
   Widget build(BuildContext context) => LayoutBuilder(
         builder: (BuildContext c, BoxConstraints box) {
           viewport = box.biggest;
-          // The shell already keeps its HUD inside the status bar; the board only needs a hair
-          // of extra room on notched devices.
-          topInset = MediaQuery.paddingOf(context).top * 0.15;
+          // The shell draws its score / best / daily chips at `padding.top + 10` and they are
+          // ~76 px tall, so the playfield starts below that; a notch pushes it a little further.
+          topInset = (MediaQuery.paddingOf(context).top * 0.6).clamp(0.0, 30.0);
           return GestureDetector(
             behavior: HitTestBehavior.opaque,
             onTapDown: (TapDownDetails d) {

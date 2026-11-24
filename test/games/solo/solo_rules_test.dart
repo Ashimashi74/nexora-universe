@@ -152,16 +152,32 @@ void main() {
       expect(w.lane, inInclusiveRange(0, 2));
     });
 
-    test('geo dash jumps, holds and stays inside the world', () {
-      final DashWorld w = DashWorld(seed: 2);
-      expect(w.y, 0);
-      w.leap();
-      expect(w.vy, greaterThan(0), reason: 'a leap must give upward velocity from the ground');
-      for (int i = 0; i < 300; i++) {
-        w.update(1 / 60, holding: i % 30 < 10);
-        expect(w.y, inInclusiveRange(0.0, 1.0));
+    test('traffic racer only crashes on the player line', () {
+      final TrafficWorld w = TrafficWorld(seed: 21);
+      for (int i = 0; i < 240; i++) {
+        w.update(1 / 60);
+        for (final TrafficCar c in w.cars) {
+          final bool inBand = (c.y - TrafficWorld.playerY).abs() < TrafficWorld.hitBand;
+          if (inBand && c.lane != w.lane) {
+            expect(w.crashed, isFalse, reason: 'a car beside the player must never be fatal');
+          }
+        }
       }
-      expect(w.metres, greaterThan(0));
+    });
+
+    test('traffic racer never spawns a car on top of another in the same lane', () {
+      final TrafficWorld w = TrafficWorld(seed: 5);
+      for (int i = 0; i < 1200; i++) {
+        final Set<TrafficCar> before = <TrafficCar>{...w.cars};
+        w.update(1 / 60);
+        for (final TrafficCar fresh in w.cars.where((TrafficCar c) => !before.contains(c))) {
+          for (final TrafficCar old in before) {
+            if (old.lane != fresh.lane) continue;
+            expect((old.y - fresh.y).abs(), greaterThanOrEqualTo(TrafficWorld.minGap - 1e-9),
+                reason: 'a spawn that close could not be steered around');
+          }
+        }
+      }
     });
   });
 
