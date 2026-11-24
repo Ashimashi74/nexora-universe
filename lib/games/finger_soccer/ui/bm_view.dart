@@ -2433,9 +2433,12 @@ class FsMatchTopBar extends StatelessWidget {
           Expanded(child: _FsHudSide(
             name: names[0], score: scores[0], crest: crests[0], pulse: pulse[0], fa: fa, mine: true,
             active: turn >= 0 && turnMine)),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            child: FsClockPill(clock: clock, red: red, turn: turn, turnMine: turnMine),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 108),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: FsClockPill(clock: clock, red: red, turn: turn, turnMine: turnMine),
+            ),
           ),
           Expanded(child: _FsHudSide(
             name: names[1], score: scores[1], crest: crests[1], pulse: pulse[1], fa: fa, mine: false,

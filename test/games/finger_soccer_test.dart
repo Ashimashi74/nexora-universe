@@ -140,7 +140,7 @@ void main() {
     expect(kBmCats.map((List<Object> c) => c[0]).toList(), categories);
     expect(kBmTeams.map((BmTeam t) => t.id).toSet().length, kBmTeams.length);
     for (final BmTeam t in kBmTeams) {
-      expect(builtInCategories, contains(t.cat));
+      expect(categories, contains(t.cat));
       expect(t.power, inInclusiveRange(1, 10));
       expect(t.accuracy, inInclusiveRange(1, 10));
       expect(File(t.asset).existsSync(), isTrue, reason: t.asset);

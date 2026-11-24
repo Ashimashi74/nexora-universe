@@ -85,7 +85,7 @@ The flagship game: flick discs, bend shots, score.
 - **🖤 Black-gold lobby** *(new)* — one luxury pre-match screen for online and pass-and-play: shared 30 s pick timer, opponent status, locked teams bought in place.
 - **📐 Fair pitches** *(new)* — every pitch scaled to one standard, so discs, ball and goals are the same size everywhere; heavier discs and ball for smoother, weightier motion.
 - **✨ Colour trails & rematch** *(new)* — each disc leaves a team-coloured trail; after an online match, ask for a **rematch** and play again in one tap.
-- **4 NX balls**, 5 pitches, 9 formations; **1v1, 2v2, 3v3** online with turns rotating between teammates.
+- **22 balls**, 11 pitches, 9 formations; **1v1, 2v2, 3v3** online with turns rotating between teammates.
 - **🏆 Tournaments** — up to 64 players, check-in, auto rounds, match length shown up front, prizes paid by the server.
 - **🔊 Clean voice** *(new)* — game sound ducks under LiveKit voice instead of drowning it.
 
@@ -161,6 +161,8 @@ flutter analyze && flutter test
 flutter build apk --release \
   --dart-define=SUPABASE_URL=https://<project>.supabase.co \
   --dart-define=SUPABASE_ANON_KEY=<anon key> \
+  --dart-define=SOCIAL_SUPABASE_URL=https://<social-project>.supabase.co \
+  --dart-define=SOCIAL_SUPABASE_ANON_KEY=<social anon key> \
   --dart-define=GAMES_SUPABASE_URL=https://<games-project>.supabase.co \
   --dart-define=GAMES_SUPABASE_ANON_KEY=<games anon key> \
   --dart-define=LIVEKIT_URL=wss://<livekit-host>

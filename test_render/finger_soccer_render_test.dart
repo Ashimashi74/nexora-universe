@@ -48,21 +48,23 @@ void main() {
         home: GameHostPage(game: g, mode: GameMode.vsBot, difficulty: BotDifficulty.normal, players: g.defaultPlayers),
       ),
     ));
-    // Pre-match intro (lib/games/finger_soccer/intro): splash -> team select -> formation select -> match.
-    await settle(tester, frames: 10);
-    for (int i = 0; i < 200; i++) {
-      await tester.pump(const Duration(milliseconds: 16));
-    }
-    await settle(tester, frames: 30);
+    // Black-gold match lobby (_setupScreen): pick formation 6 (Nish) and start the match.
+    await settle(tester, frames: 20);
     await shoot(tester, 'final/finger_soccer_setup.png');
-    final Finder ready = find.text('آماده');
+    await tester.scrollUntilVisible(
+      find.byType(BmFormationCard).at(6),
+      160,
+      scrollable: find.byWidgetPredicate(
+        (Widget w) => w is Scrollable && w.axisDirection == AxisDirection.down,
+      ).first,
+    );
+    await settle(tester, frames: 15);
+    await tester.tap(find.byType(BmFormationCard).at(6));
+    await settle(tester, frames: 15);
+    await shoot(tester, 'final/finger_soccer_formation.png');
+    final Finder ready = find.byKey(const ValueKey<String>('setup-ready'));
     expect(ready, findsOneWidget);
     await tester.tap(ready);
-    await settle(tester, frames: 30);
-    await shoot(tester, 'final/finger_soccer_formation.png');
-    // pick Nish (7th card; the formation the reference player used) so the match frames compare with the reference
-    final Finder pickF = find.text('انتخاب');
-    await tester.tap(pickF.evaluate().length > 6 ? pickF.at(6) : pickF.first);
     for (int i = 0; i < 90; i++) {
       await tester.pump(const Duration(milliseconds: 16));
     }
