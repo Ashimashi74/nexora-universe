@@ -46,6 +46,7 @@ void main() {
       findsOneWidget,
     );
     // The continuous spin loop is stopped under reduced motion, so repaints settle immediately.
-    await expectLater(tester.pumpAndSettle(const Duration(milliseconds: 100)), completes);
+    final int frames = await tester.pumpAndSettle(const Duration(milliseconds: 100));
+    expect(frames, lessThan(5));
   });
 }

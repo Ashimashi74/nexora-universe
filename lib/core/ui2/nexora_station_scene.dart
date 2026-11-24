@@ -81,7 +81,13 @@ class _NexoraStationSceneState extends ConsumerState<NexoraStationScene>
   @override
   Widget build(BuildContext context) {
     final AppSettings settings = ref.watch(settingsProvider);
-    final bool motion = settings.fancyEffects && !settings.reducedMotion;
+    final bool disableAnim = MediaQuery.maybeDisableAnimationsOf(context) == true;
+    final bool motion = settings.fancyEffects && !settings.reducedMotion && !disableAnim;
+    if (!motion && _spin.isAnimating) {
+      _spin.stop();
+    } else if (motion && !_spin.isAnimating) {
+      _spin.repeat();
+    }
     final int count = settings.starCount;
     return Opacity(
       opacity: widget.opacity,
