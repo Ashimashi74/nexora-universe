@@ -30,6 +30,10 @@ const int kSecs = int.fromEnvironment('SECS', defaultValue: 4);
 const int kW = int.fromEnvironment('W', defaultValue: 390);
 const int kH = int.fromEnvironment('H', defaultValue: 844);
 
+/// Device pixel ratio for the captured PNGs: 2 for review shots, 1 (with a smaller window) when
+/// the CI job publishes lightweight previews into the repository.
+const int kDpr = int.fromEnvironment('DPR', defaultValue: 2);
+
 final GlobalKey kShotKey = GlobalKey();
 bool _fontsLoaded = false;
 
@@ -101,8 +105,8 @@ void main() {
   for (final SoloDef d in kSoloDefs) {
     if (kOnly.isNotEmpty && !kOnly.split(',').contains(d.id)) continue;
     testWidgets('render ${d.id}', (WidgetTester tester) async {
-      tester.view.physicalSize = Size(kW * 2, kH * 2);
-      tester.view.devicePixelRatio = 2;
+      tester.view.physicalSize = Size(kW * kDpr.toDouble(), kH * kDpr.toDouble());
+      tester.view.devicePixelRatio = kDpr.toDouble();
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
 

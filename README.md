@@ -127,6 +127,11 @@ sprites, particles, a pinned control deck) so each game has a real look instead 
 | 🔲 | **Tetris Rush** | arrows | Clear lines against an accelerating fall |
 | 🔢 | **NX 2048** | arrows | Slide to merge equal tiles; reach 2048 |
 
+Board previews (rendered by CI from the real widgets, not mockups) live in
+[`docs/solo_shots/`](docs/solo_shots): `play/<id>.png` is a mid-run frame and `ready/<id>.png` the
+quick-start card. Regenerate locally with
+`flutter test test_render/solo_render_test.dart --dart-define=SHOTS=$PWD/shots/solo`.
+
 Player counts are the game's real mechanics, mirrored by the server (`nx_game_bounds`) and re-checked there on every
 capacity change, pick and start — a modified client cannot widen them.
 

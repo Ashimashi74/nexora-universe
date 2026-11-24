@@ -95,10 +95,10 @@ jobs:
   # review even when a board needs a tweak.
   solo-art:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     permissions:
       checks: write
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: subosito/flutter-action@v2
@@ -131,3 +131,25 @@ jobs:
           name: solo-art-shots
           path: shots/solo
           if-no-files-found: warn
+      # Half-resolution copies committed to docs/solo_shots so the art is reviewable straight in
+      # the repository (artifacts expire and are not reachable from every environment).
+      - name: Publish screenshots to docs/solo_shots
+        run: |
+          set +e
+          flutter test test_render/solo_render_test.dart \
+            --dart-define=SHOTS=$PWD/docs/solo_shots --dart-define=DPR=1 \
+            --dart-define=W=270 --dart-define=H=585 --dart-define=SECS=3 > solo-docs.txt 2>&1
+          tail -5 solo-docs.txt
+          find docs/solo_shots -name '*.png' | wc -l
+          du -sh docs/solo_shots 2>/dev/null
+          exit 0
+      - name: Commit screenshots (only when they changed)
+        run: |
+          set +e
+          git config user.name  "ANIX art bot"
+          git config user.email "art-bot@users.noreply.github.com"
+          git add docs/solo_shots
+          if git diff --cached --quiet; then echo "no screenshot changes"; exit 0; fi
+          git commit -m "solo art: refresh board previews [skip ci]"
+          git push origin "HEAD:${{ github.ref_name }}"
+          exit 0
