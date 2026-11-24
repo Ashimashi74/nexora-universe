@@ -6,7 +6,7 @@ import 'package:flutter/scheduler.dart';
 import '../../arcade_kit/arcade_fx.dart';
 import '../../arcade_kit/arcade_skin.dart';
 import '../../core/game_contract.dart';
-import 'solo_art.dart';
+import 'ui/solo_art.dart';
 
 // `SoloRun` is declared in arcade_shell.dart and is the shell's controller; re-exported so
 // registry and board files that only need the controller do not import the shell machinery.
@@ -31,7 +31,7 @@ export '../../arcade_kit/arcade_fx.dart'
         paintVignette,
         shade;
 
-export 'solo_art.dart';
+export 'ui/solo_art.dart';
 
 /// ===================== SOLO ARCADE KIT =====================
 /// Shared plumbing and the visual system for the ten solo arcade games.
