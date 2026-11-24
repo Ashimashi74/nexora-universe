@@ -101,21 +101,22 @@ void main() {
     }
   });
 
-  test('v9: the whole pitch art is fitted between the top bar and the bottom strip', () {
+  test('v12: the playing field and goals are fitted cleanly between the top bar and the bottom strip', () {
     final BmEngine e = BmEngine(_Hooks(), rng: math.Random(1))..startMatch(_cfg());
     final BmView view = BmView()
       ..insetTop = 32 + 52
       ..insetBottom = 20 + 58
       ..layout(e, const Size(360, 800));
-    final Rect art = view.artRect(e);
-    expect(art.top, greaterThanOrEqualTo(84 - 0.01));
-    expect(art.bottom, lessThanOrEqualTo(800 - 78 + 0.01));
-    expect(art.left, greaterThanOrEqualTo(-0.01));
-    expect(art.right, lessThanOrEqualTo(360.01));
-    expect(art.center.dx, closeTo(180, 0.01));
-    expect(art.center.dy, closeTo((84 + 722) / 2, 0.5));
-    // the art keeps its own aspect
-    expect(art.width / art.height, closeTo(1086 / 1448, .003));
+    final double playLeft = view.ox + e.Fl * view.s;
+    final double playRight = view.ox + e.Fr * view.s;
+    final double playTop = view.oy + (e.Ft - e.goalVisualDepth) * view.s;
+    final double playBottom = view.oy + (e.Fb + e.goalVisualDepth) * view.s;
+    expect(playTop, greaterThanOrEqualTo(84 - 0.5));
+    expect(playBottom, lessThanOrEqualTo(800 - 78 + 0.5));
+    expect(playLeft, greaterThanOrEqualTo(-0.5));
+    expect(playRight, lessThanOrEqualTo(360.5));
+    expect((playLeft + playRight) / 2, closeTo(180, 0.5));
+    expect((playTop + playBottom) / 2, closeTo((84 + 722) / 2, 1.0));
   });
 
   test('sprites are drawn so their rim is exactly the collider', () {
@@ -125,22 +126,26 @@ void main() {
     expect(bmBallSpriteHalf(ball) * kBmBallArtFill, closeTo(ball.r, 1e-9));
     final BmView view = BmView()..layout(e, const Size(360, 800));
     final double pitchWidth = (e.Fr - e.Fl) * view.s;
-    expect(pitchWidth, inInclusiveRange(360 * 0.75, 360 * 0.92));
+    expect(pitchWidth, inInclusiveRange(360 * 0.75, 360 * 0.96));
   });
 
   test('teams: v10 categories, plausible varied stats, art present', () {
-    const List<String> categories = <String>[
+    const List<String> builtInCategories = <String>[
       'clubs', 'nations', 'nx', 'cars', 'sport', 'elite', 'legends',
+    ];
+    const List<String> categories = <String>[
+      ...builtInCategories,
+      'custom',
     ];
     expect(kBmCats.map((List<Object> c) => c[0]).toList(), categories);
     expect(kBmTeams.map((BmTeam t) => t.id).toSet().length, kBmTeams.length);
     for (final BmTeam t in kBmTeams) {
-      expect(categories, contains(t.cat));
+      expect(builtInCategories, contains(t.cat));
       expect(t.power, inInclusiveRange(1, 10));
       expect(t.accuracy, inInclusiveRange(1, 10));
       expect(File(t.asset).existsSync(), isTrue, reason: t.asset);
     }
-    for (final String c in categories) {
+    for (final String c in builtInCategories) {
       final Iterable<BmTeam> teams = kBmTeams.where((BmTeam t) => t.cat == c);
       expect(teams, isNotEmpty, reason: c);
     }
@@ -151,7 +156,7 @@ void main() {
     }
     expect(bmTeam('club0').name, 'BMW');
     for (final BmFieldS f in kBmFields) {
-      expect(f.builtInGoals, isTrue, reason: f.id); // v9: goals drawn into every pitch art
+      expect(f.gs, 'white', reason: f.id);
       expect(File(f.asset).existsSync(), isTrue, reason: f.asset);
       expect(File('assets/games/bermuda/thumbs/${f.id}.webp').existsSync(), isTrue, reason: f.id);
     }

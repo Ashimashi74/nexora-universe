@@ -10,6 +10,7 @@ import '../../core/audio/music_service.dart';
 import '../../core/online/online_service.dart';
 import '../../core/profile/profile_service.dart';
 import '../../core/settings/app_settings.dart';
+import '../../core/theme/nx_theme.dart';
 import '../../core/ui2/anix_kit.dart';
 import '../../core/ui2/luxe.dart';
 import '../../core/ui2/nx2_widgets.dart';

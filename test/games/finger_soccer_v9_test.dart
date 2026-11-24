@@ -218,7 +218,7 @@ void main() {
         expect(bot.y, e.Fb);
         expect(top.y + bot.y, closeTo(2 * e.CY, .01));
         expect(e.DEPTH, greaterThan(2 * BR), reason: e.field.id);
-        expect(e.KY, closeTo(e.CY, 2), reason: e.field.id);
+        expect(e.KY, closeTo(e.field.CS, 1), reason: e.field.id);
       }
     });
 
