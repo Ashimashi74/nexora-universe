@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import '../arcade_kit/arcade_fx.dart';
+import '../arcade_kit/arcade_shell.dart' show ArcadeSoloShell, SoloRun;
 import '../arcade_kit/arcade_skin.dart';
 import '../core/game_contract.dart';
 import 'ui/solo_art.dart';

@@ -179,8 +179,6 @@ class FruitBoardState extends SoloBoardState<FruitBoard> {
       case SoloGesture.cancel:
       case SoloGesture.dragEnd:
         _lastPoint = null;
-      default:
-        break;
     }
   }
 
@@ -337,7 +335,4 @@ class FruitBoardState extends SoloBoardState<FruitBoard> {
     canvas.drawCircle(spark, r * 0.16 * (0.8 + pulse * 0.4), Paint()..color = const Color(0xFFFFF3C4));
     SoloArt.label(canvas, '✕', at + Offset(0, r * 0.05), size: r * 0.85, color: SoloArt.a(const Color(0xFFFF6B6B), 0.85));
   }
-
-  @override
-  Widget build(BuildContext context) => super.build(context);
 }

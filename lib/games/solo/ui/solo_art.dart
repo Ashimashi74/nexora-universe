@@ -636,6 +636,27 @@ class SoloArt {
     tp.paint(canvas, Offset(r.left + padH + 6, r.center.dy - tp.height / 2));
   }
 
+  /// Inset frame with short illuminated corner ticks. Drawn last by every board so the ten
+  /// games share one bezel; it never competes with gameplay.
+  static void frame(Canvas canvas, Size size, Color accent) {
+    if (size.width < 60 || size.height < 60) return;
+    const double m = 8;
+    const double len = 18;
+    final Rect r = Rect.fromLTWH(m, m, size.width - 2 * m, size.height - 2 * m);
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(r, const Radius.circular(20)),
+      stroke(a(const Color(0xFFB8D4FF), 0.10), 0.8),
+    );
+    final Paint p = stroke(a(accent, 0.75), 1.6);
+    for (final Offset c in <Offset>[r.topLeft, r.topRight, r.bottomLeft, r.bottomRight]) {
+      final double sx = c.dx == r.left ? 1 : -1;
+      final double sy = c.dy == r.top ? 1 : -1;
+      canvas.drawLine(c, c + Offset(len * sx, 0), p);
+      canvas.drawLine(c, c + Offset(0, len * sy), p);
+      canvas.drawCircle(c + Offset(len * sx * 0.44, len * sy * 0.44), 2, fill(accent));
+    }
+  }
+
   /// Soft scrim so controls and the deck never fight a busy playfield.
   static void bottomScrim(Canvas canvas, Size size, {double height = 250}) {
     final Rect r = Rect.fromLTWH(0, size.height - height, size.width, height);

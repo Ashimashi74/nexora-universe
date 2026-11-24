@@ -182,7 +182,7 @@ class BubbleBoardState extends SoloBoardState<BubbleBoard> {
     // barrel
     canvas.save();
     canvas.rotate(_aimVisual);
-    final Rect barrel = Rect.fromCenter(center: const Offset(0, -g.cell * 0.42), width: g.cell * 0.40, height: g.cell * 0.9);
+    final Rect barrel = Rect.fromCenter(center: Offset(0, -g.cell * 0.42), width: g.cell * 0.40, height: g.cell * 0.9);
     canvas.drawRRect(
       RRect.fromRectAndRadius(barrel, Radius.circular(g.cell * 0.16)),
       Paint()
