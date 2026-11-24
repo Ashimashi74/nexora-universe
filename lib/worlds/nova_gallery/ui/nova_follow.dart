@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/settings/app_settings.dart';
 import '../../../core/theme/nx_theme.dart';
+import '../../../core/widgets/user_profile_preview.dart';
 import '../data/supabase_nova_repository.dart';
 import '../state/nova_controller.dart';
 import 'nova_visuals.dart';
@@ -117,11 +118,20 @@ class NovaUserLookup extends ConsumerWidget {
         }
         final Map<dynamic, dynamic> p = s.data!.first as Map;
         final String uid = '${p['id']}';
+        final String uname = '${p['username'] ?? username}';
+        final String? av = p['avatar_url'] as String?;
         return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
-          NovaAvatar(name: '${p['username'] ?? username}', avatarUrl: p['avatar_url'] as String?, size: 64, ring: true),
-          const SizedBox(height: 8),
-          Text('Lv ${p['level'] ?? 1}${(p['bio'] ?? '').toString().isEmpty ? '' : ' · ${p['bio']}'}',
-              style: const TextStyle(color: NxColors.textDim)),
+          InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => showUserProfilePreview(context, userId: uid, username: uname, avatarUrl: av),
+            child: Column(children: <Widget>[
+              NovaAvatar(name: uname, avatarUrl: av, size: 64, ring: true),
+              const SizedBox(height: 8),
+              Text('@$uname · Lv ${p['level'] ?? 1}${(p['bio'] ?? '').toString().isEmpty ? '' : ' · ${p['bio']}'}',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: NxColors.textDim)),
+            ]),
+          ),
           const SizedBox(height: 10),
           NovaFollowBar(uid: uid, self: uid == r.me),
         ]);

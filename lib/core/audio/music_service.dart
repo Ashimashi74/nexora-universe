@@ -6,43 +6,32 @@ import 'package:flutter/widgets.dart';
 
 import 'audio_mix.dart';
 
-/// Looping menu music (assets/media/bgm_main.ogg).
+/// App lifecycle + game-presence tracker (formerly also played menu background music).
 ///
-/// * Starts only after [start] (the launch intro calls it when it ends) and only when the user's
-///   Music setting is on.
-/// * Fades out while a game is open ([enterGame]/[exitGame], counted so nested pages are safe)
-///   and fades back in on return.
-/// * Pauses when the app goes to the background and resumes when it comes back.
-/// * Every platform call is guarded: no audio plugin (tests) never throws into the UI.
+/// Menu background music is permanently disabled per product design so menus, lobbies, and voice rooms stay clean
+/// and quiet while in-game sound effects remain crisp. [inGameListenable] and [primeGlobal] continue to work for
+/// the rest of the app (e.g., hiding the corner ORACLE inside games and priming `mixWithOthers` audio context).
 class MusicService with WidgetsBindingObserver {
   MusicService._();
   static final MusicService instance = MusicService._();
 
   static const String asset = 'media/bgm_main.ogg';
-  static const Duration _fade = Duration(milliseconds: 900);
 
   AudioPlayer? _player;
   bool _started = false;
-  bool _enabled = true;
-  double _volume = 0.6;
+  bool _enabled = false;
+  double _volume = 0.0;
   int _games = 0;
-  bool _background = false;
-  double _current = 0;
-  Timer? _fadeTimer;
-  bool _playing = false;
 
-  /// True once the intro handed over to the app.
   bool get started => _started;
   bool get inGame => _games > 0;
 
-  /// Applies the Settings values (call whenever they change).
   void configure({required bool enabled, required double volume}) {
-    _enabled = enabled;
-    _volume = volume.clamp(0.0, 1.0);
-    _sync();
+    _enabled = false;
+    _volume = 0.0;
+    _stopIfAny();
   }
 
-  /// No audio plugin under `flutter test`.
   static final bool _underTest = Platform.environment.containsKey('FLUTTER_TEST');
 
   Future<void> start() async {
@@ -50,9 +39,7 @@ class MusicService with WidgetsBindingObserver {
     _started = true;
     WidgetsBinding.instance.addObserver(this);
     NxAudioMix.primeGlobal();
-    // Menu music fades out for the length of a voice call (it would reach the other side through the mic).
-    NxAudioMix.voice.addListener(_sync);
-    _sync();
+    _stopIfAny();
   }
 
   /// True while any game page is open (the corner ORACLE hides itself inside games).
@@ -61,86 +48,24 @@ class MusicService with WidgetsBindingObserver {
   void enterGame() {
     _games++;
     inGameListenable.value = _games > 0;
-    _sync();
   }
 
   void exitGame() {
     if (_games > 0) _games--;
     inGameListenable.value = _games > 0;
-    _sync();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _background = state != AppLifecycleState.resumed;
-    if (_background) {
-      // Leave immediately (no fade) when the app is hidden.
-      _fadeTimer?.cancel();
-      _current = 0;
-      _safe(() async {
-        await _player?.setVolume(0);
-        await _player?.pause();
-      });
-      _playing = false;
-    } else {
-      _sync();
+    if (state != AppLifecycleState.resumed) {
+      _stopIfAny();
     }
   }
 
-  double get _target =>
-      (_started && _enabled && _games == 0 && !_background && !NxAudioMix.voice.value) ? _volume : 0.0;
-
-  void _sync() {
-    if (!_started) return;
-    final double target = _target;
-    if (target > 0 && !_playing) {
-      _playing = true;
-      _safe(() async {
-        final AudioPlayer p = await _ensure();
-        if (p.state == PlayerState.paused) {
-          await p.resume();
-        } else if (p.state != PlayerState.playing) {
-          await p.play(AssetSource(asset), volume: _current);
-        }
-      });
+  void _stopIfAny() {
+    final AudioPlayer? p = _player;
+    if (p != null && (_enabled || _volume >= 0)) {
+      unawaited(p.stop().catchError((Object _) {}));
     }
-    _fadeTo(target);
-  }
-
-  Future<AudioPlayer> _ensure() async {
-    final AudioPlayer? existing = _player;
-    if (existing != null) return existing;
-    final AudioPlayer p = AudioPlayer(playerId: 'nx_bgm');
-    _player = p;
-    await NxAudioMix.apply(p);
-    await p.setReleaseMode(ReleaseMode.loop);
-    return p;
-  }
-
-  void _fadeTo(double target) {
-    _fadeTimer?.cancel();
-    const int steps = 18;
-    final double from = _current;
-    int i = 0;
-    _fadeTimer = Timer.periodic(
-        Duration(milliseconds: _fade.inMilliseconds ~/ steps), (Timer t) {
-      i++;
-      _current = from + (target - from) * (i / steps);
-      final double v = _current;
-      _safe(() async => _player?.setVolume(v));
-      if (i >= steps) {
-        t.cancel();
-        if (target == 0 && _playing) {
-          _playing = false;
-          _safe(() async => _player?.pause());
-        }
-      }
-    });
-  }
-
-  void _safe(Future<void> Function() f) {
-    unawaited(f().catchError((Object e) {
-      debugPrint('nx music: $e');
-    }));
   }
 }

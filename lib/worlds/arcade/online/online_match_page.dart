@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/audio/music_service.dart';
 import '../../../core/audio/sfx_service.dart';
+import '../../../core/backend/backend_gateway.dart';
 import '../../../core/online/cloud_profile_sync.dart';
 import '../../../core/online/match_link.dart';
 import '../../../core/online/online_service.dart';
@@ -299,6 +300,7 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(backendProvider);
     final AppSettings s = ref.watch(settingsProvider);
     final SupabaseMatchLink? l = _link;
     final GameInfo? game = gameById(widget.gameId);
@@ -329,7 +331,7 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
         isFa: s.isFa,
         fancyEffects: s.fancyEffects,
         reducedMotion: s.reducedMotion,
-        soundOn: s.sound && s.haptics,
+        soundOn: s.sound,
         playerCount: l.seatCount,
         skins: Map<String, String>.from(ref.read(profileProvider).equipped),
         seed: l.seed,
@@ -415,28 +417,48 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
   }
 
   Widget _presenceBar(SupabaseMatchLink l) {
+    final int? rtt = l.rttMs;
+    final Color pingColor = rtt == null
+        ? NxColors.textDim
+        : (rtt < 85 ? NxColors.success : (rtt < 170 ? NxColors.gold : NxColors.danger));
     return IgnorePointer(
-      child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
-        for (int s = 0; s < l.seatCount; s++)
-          Padding(
-            padding: const EdgeInsets.only(left: 3),
-            child: Container(
-              width: 9,
-              height: 9,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: l.forfeitedSeats.contains(s)
-                    ? NxColors.danger
-                    : (l.connectedSeats.contains(s)
-                        ? NxColors.success
-                        : NxColors.gold),
-                border: s == l.mySeat
-                    ? Border.all(color: Colors.white, width: 1.5)
-                    : null,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.42),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+          if (rtt != null) ...<Widget>[
+            Icon(Icons.network_check_rounded, size: 12, color: pingColor),
+            const SizedBox(width: 3),
+            Text(
+              '${rtt}ms',
+              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: pingColor),
+            ),
+            const SizedBox(width: 5),
+          ],
+          for (int s = 0; s < l.seatCount; s++)
+            Padding(
+              padding: const EdgeInsets.only(left: 3),
+              child: Container(
+                width: 9,
+                height: 9,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: l.forfeitedSeats.contains(s)
+                      ? NxColors.danger
+                      : (l.connectedSeats.contains(s)
+                          ? NxColors.success
+                          : NxColors.gold),
+                  border: s == l.mySeat
+                      ? Border.all(color: Colors.white, width: 1.5)
+                      : null,
+                ),
               ),
             ),
-          ),
-      ]),
+        ]),
+      ),
     );
   }
 

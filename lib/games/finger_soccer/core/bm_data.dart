@@ -310,10 +310,79 @@ const List<String> kBmTRN = <String>["Bolt", "Prism", "Wave", "Starlight", "Smok
 /// cut on its own detected circle, fully transparent outside it, by tool/build_fs_v12_assets.py into
 /// `assets/games/bermuda/balls/v9/<slug>.webp` (256 x 256, the ball fills its square; the folder name is kept). The
 /// 3D ball renderer (BmBallRenderer) rolls each flat art with the ball's real motion.
-const List<String> kBmBallN = <String>['NX Lime', 'NX Blue', 'NX Violet', 'NX Orange'];
-const List<String> kBmBallFa = <String>['NX لیمویی', 'NX آبی', 'NX بنفش', 'NX نارنجی'];
-/// v13 (owner art 2026-11-24): the four NX balls replace the v9 set.
-const List<String> kBmBallSlug = <String>['nx_lime', 'nx_blue', 'nx_violet', 'nx_orange'];
+const List<String> kBmBallN = <String>[
+  'NX Lime',
+  'NX Blue',
+  'NX Violet',
+  'NX Orange',
+  'Classic',
+  'NX Blue Wave',
+  'NX Blue Stripe',
+  'NX Cobalt',
+  'NX Red Hex',
+  'NX Carbon',
+  'NX White Strike',
+  'NX Black Strike',
+  'NX Red Strike',
+  'NX Blue Strike',
+  'NX Red Flash',
+  'NX Blue Flash',
+  'Pro Sky',
+  'Pro Red',
+  'Pro Lime',
+  'Pro Violet',
+  'Pro Orange',
+  'Pro Teal',
+];
+const List<String> kBmBallFa = <String>[
+  'NX لیمویی',
+  'NX آبی',
+  'NX بنفش',
+  'NX نارنجی',
+  'کلاسیک',
+  'موج آبی',
+  'نوار آبی',
+  'کبالت',
+  'شش‌ضلعی سرخ',
+  'کربن',
+  'صاعقه سفید',
+  'صاعقه سیاه',
+  'صاعقه سرخ',
+  'صاعقه آبی',
+  'آذرخش سرخ',
+  'آذرخش آبی',
+  'پرو آسمانی',
+  'پرو سرخ',
+  'پرو لیمویی',
+  'پرو بنفش',
+  'پرو نارنجی',
+  'پرو فیروزه‌ای',
+];
+/// All 22 Finger Soccer balls in `assets/games/bermuda/balls/v9/` (4 NX v13 + 18 Pro/Strike v12).
+const List<String> kBmBallSlug = <String>[
+  'nx_lime',
+  'nx_blue',
+  'nx_violet',
+  'nx_orange',
+  'nx_red_classic',
+  'nx_blue_wave',
+  'nx_blue_stripe',
+  'nx_cobalt',
+  'nx_red_hex',
+  'nx_carbon',
+  'nx_white_strike',
+  'nx_black_strike',
+  'nx_red_strike',
+  'nx_blue_strike',
+  'nx_red_flash',
+  'nx_blue_flash',
+  'pro_sky',
+  'pro_red',
+  'pro_lime',
+  'pro_violet',
+  'pro_orange',
+  'pro_teal',
+];
 const int kBmDefaultBall = 0;
 
 /// Preference key of the player's match ball. v9 uses a new key: every saved index named an old ball.

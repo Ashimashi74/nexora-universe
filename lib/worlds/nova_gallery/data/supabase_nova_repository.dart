@@ -12,13 +12,14 @@ import 'nova_repository.dart';
 /// The UI identifies "me" by the explorer id, so my auth uid is mapped to [explorerId] in everything returned
 /// (author, likes, comments) and back again on the way in. Network errors fall back to the last server copy.
 class SupabaseNovaRepository implements NovaRepository {
-  SupabaseNovaRepository(this.c, this.local, {required this.explorerId});
+  SupabaseNovaRepository(this.c, this.local, {required this.explorerId, String? userId}) : _uid = userId;
 
   final SupabaseClient c;
   final LocalNovaRepository local;
   final String explorerId;
+  final String? _uid;
 
-  String get me => c.auth.currentUser!.id;
+  String get me => _uid ?? c.auth.currentUser!.id;
   String _out(String uid) => uid == me ? explorerId : uid;
 
   static const String bucket = 'nx-media';
@@ -27,20 +28,25 @@ class SupabaseNovaRepository implements NovaRepository {
 
   List<NovaPost> _feed = <NovaPost>[];
   final Map<String, String> _names = <String, String>{};
+  final Map<String, String?> _avatars = <String, String?>{};
 
   static DateTime _t(Object? v) => DateTime.tryParse('${v ?? ''}')?.toLocal() ?? DateTime.now();
 
   Future<void> _loadNames(Iterable<String> ids) async {
     final List<String> need = ids.where((String i) => !_names.containsKey(i)).toSet().toList();
     if (need.isEmpty) return;
-    final List<dynamic> rows = await c.from('profiles').select('id, username').inFilter('id', need);
+    final List<dynamic> rows = await c.from('profiles').select('id, username, avatar_url').inFilter('id', need);
     for (final dynamic r in rows) {
       final Map<dynamic, dynamic> m = r as Map;
-      _names['${m['id']}'] = '${m['username'] ?? 'Pilot'}';
+      final String id = '${m['id']}';
+      _names[id] = '${m['username'] ?? 'Pilot'}';
+      final String? av = m['avatar_url'] as String?;
+      _avatars[id] = (av != null && av.isNotEmpty) ? av : null;
     }
   }
 
   String _name(String uid) => _names[uid] ?? 'Pilot';
+  String? avatarOf(String authorId) => _avatars[uidOf(authorId)];
 
   /// Builds full posts (real likers + comments) from nx_posts rows.
   Future<List<NovaPost>> _hydrate(List<dynamic> rows) async {

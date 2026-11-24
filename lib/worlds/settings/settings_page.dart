@@ -41,40 +41,19 @@ class SettingsPage extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(NxSpace.md),
         children: [
-          _section(context, context.tx('صدا و موسیقی', 'Sound & music')),
+          _section(context, context.tx('صدا', 'Sound')),
           GlassPanel(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               AnixSwitchTile(
                 contentPadding: EdgeInsets.zero,
-                value: s.music,
-                onChanged: (v) => s.music = v,
-                secondary: const Icon(Icons.music_note_rounded),
-                title: Text(context.tx('موسیقی منو', 'Menu music')),
-                subtitle: Text(context.tx(
-                    'در منوها پخش می‌شود و داخل بازی آرام قطع می‌شود',
-                    'Plays on menus, fades out inside games')),
-              ),
-              Row(children: [
-                const Icon(Icons.volume_down_rounded, color: NxColors.textDim),
-                Expanded(
-                  child: Slider(
-                    value: s.musicVolume,
-                    onChanged: s.music ? (v) => s.musicVolume = v : null,
-                    label: '${(s.musicVolume * 100).round()}%',
-                    divisions: 20,
-                  ),
-                ),
-                const Icon(Icons.volume_up_rounded, color: NxColors.textDim),
-              ]),
-              AnixSwitchTile(
-                contentPadding: EdgeInsets.zero,
                 value: s.sound,
                 onChanged: (v) => s.sound = v,
                 secondary: const Icon(Icons.graphic_eq_rounded),
-                title: Text(context.tx('جلوه‌های صوتی', 'Sound effects')),
-                subtitle: Text(context.tx('دکمه‌ها، اتاق‌ها، برد و باخت و صداهای داخل بازی',
-                    'Buttons, rooms, wins and losses and in-game sounds')),
+                title: Text(context.tx('صداهای بازی و جلوه‌های صوتی', 'Game & UI sound effects')),
+                subtitle: Text(context.tx(
+                    'صدای بازی‌ها بدون مزاحمت برای مکالمه صوتی پخش می‌شود',
+                    'In-game sounds play cleanly without interfering with voice chat')),
               ),
               Row(children: [
                 const Icon(Icons.volume_down_rounded, color: NxColors.textDim),
@@ -91,23 +70,30 @@ class SettingsPage extends ConsumerWidget {
               ]),
             ]),
           ),
-          _section(context, context.tx('گرافیک و حرکت', 'Graphics & motion')),
+          _section(context, context.tx('حالت روز و شب · گرافیک', 'Day & Night · Graphics')),
           GlassPanel(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // Light mode repaints Material chrome and the theme extension. The rest of the
-              // app (the whole Station Luxe art direction) is dark-only, so this is labelled as
-              // a Material-chrome option instead of implying a full light redesign.
-              AnixSwitchTile(
-                contentPadding: EdgeInsets.zero,
-                value: s.appearanceMode == NxAppearanceMode.light,
-                onChanged: (v) => s.appearanceMode =
-                    v ? NxAppearanceMode.light : NxAppearanceMode.dark,
-                secondary: const Icon(Icons.contrast_rounded, color: NxColors.gold),
-                title: Text(context.tx('نمایش روشن', 'Light appearance')),
-                subtitle: Text(context.tx('روشن‌کردن فیلدها و دیالوگ‌های سیستم',
-                    'Lighter Material fields, dialogs and menus')),
+              Text(context.tx('حالت نمایش (روز / شب)', 'Appearance mode (Day / Night)'),
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 10),
+              SegmentedButton<NxAppearanceMode>(
+                segments: <ButtonSegment<NxAppearanceMode>>[
+                  ButtonSegment<NxAppearanceMode>(
+                    value: NxAppearanceMode.dark,
+                    icon: const Icon(Icons.dark_mode_rounded, size: 18),
+                    label: Text(context.tx('حالت شب', 'Night mode')),
+                  ),
+                  ButtonSegment<NxAppearanceMode>(
+                    value: NxAppearanceMode.light,
+                    icon: const Icon(Icons.light_mode_rounded, size: 18),
+                    label: Text(context.tx('حالت روز', 'Day mode')),
+                  ),
+                ],
+                selected: <NxAppearanceMode>{s.appearanceMode},
+                onSelectionChanged: (Set<NxAppearanceMode> sel) => s.appearanceMode = sel.first,
               ),
+              const SizedBox(height: 14),
               Text(context.tx('کیفیت گرافیک', 'Graphics quality'),
                   style: const TextStyle(fontWeight: FontWeight.w700)),
               const SizedBox(height: 10),

@@ -83,6 +83,9 @@ class CloudProfileSync {
       final Map<String, dynamic>? nx = await c.from('nx_profiles').select('data, avatar_core').eq('id', uid).maybeSingle();
       final bool otherAccount = lastUid != null && lastUid != uid;
       if (otherAccount) await _store.remove(_kQueue);
+      final String serverUsername = ((prof?['username'] as String?) ?? '').trim();
+      final bool hasCustomServerUsername =
+          serverUsername.isNotEmpty && !RegExp(r'^pilot_[0-9a-f]{4,}$', caseSensitive: false).hasMatch(serverUsername);
 
       if (nx == null) {
         // First link of this account to ANIX Flutter.
@@ -97,20 +100,29 @@ class CloudProfileSync {
               xp: (prof['xp'] as num?)?.toInt(), coins: (prof['coins'] as num?)?.toInt(), gems: (prof['gems'] as num?)?.toInt());
         }
         _applyAvatarFromProfile(prof);
-        if (otherAccount) {
-          final String? metaName = c.auth.currentUser?.userMetadata?['username'] as String?;
-          _profile.applyCloudBlob(const <String, dynamic>{},
-              replace: true, serverName: (prof?['username'] as String?) ?? metaName);
+        final String? metaName = c.auth.currentUser?.userMetadata?['username'] as String?;
+        final String resolvedServerName = serverUsername.isNotEmpty ? serverUsername : (metaName ?? '');
+        if (otherAccount || hasCustomServerUsername || !_profile.hasIdentity) {
+          _profile.applyCloudBlob(
+            const <String, dynamic>{},
+            replace: otherAccount,
+            serverName: resolvedServerName,
+            serverAuthoritativeName: resolvedServerName.isNotEmpty,
+          );
+        } else if (ProfileService.isValidRealUsername(_profile.username)) {
+          await setUsername(_profile.username);
+        } else if (resolvedServerName.isNotEmpty) {
+          await _profile.setConfirmedUsername(resolvedServerName);
         }
         await _upload();
-        if (_profile.username.isNotEmpty && !otherAccount) await _pushName(_profile.username);
       } else {
         final Map<String, dynamic> data = Map<String, dynamic>.from((nx['data'] as Map?) ?? const <String, dynamic>{});
         _profile.applyCloudBlob(
           data,
           replace: otherAccount,
-          serverName: prof?['username'] as String?,
+          serverName: serverUsername.isEmpty ? null : serverUsername,
           avatar: nx['avatar_core'] as String?,
+          serverAuthoritativeName: serverUsername.isNotEmpty,
         );
         if (prof != null) {
           _profile.applyWallet(
@@ -282,19 +294,39 @@ class CloudProfileSync {
     await _profile.saveCustomTeam();
   }
 
-  Future<void> _pushName(String name) async {
+  /// Validates and saves a real username (`3..20` ASCII letters, digits, `_`, `.`).
+  /// Returns `'ok'`, `'taken'`, `'bad_length'`, `'bad_chars'`, or `'network'`.
+  Future<String> setUsername(String raw) async {
+    final String n = raw.trim().replaceFirst(RegExp(r'^@+'), '');
+    if (n.length < 3 || n.length > 20) return 'bad_length';
+    if (!RegExp(r'^[A-Za-z0-9_.]+$').hasMatch(n)) return 'bad_chars';
     final SupabaseClient? c = _c;
-    if (c == null || _online.uid == null || name.trim().length < 2) return;
+    if (!_online.isOnline || c == null || _online.uid == null) {
+      await _profile.setConfirmedUsername(n);
+      return 'ok';
+    }
     try {
-      String n = name.trim();
-      if (n.length > 24) n = n.substring(0, 24);
-      dynamic r = await c.rpc('nx_set_username', params: <String, dynamic>{'p_name': n});
-      if (r == 'taken') {
-        final String alt = '${n.length > 20 ? n.substring(0, 20) : n}${Random().nextInt(900) + 100}';
-        r = await c.rpc('nx_set_username', params: <String, dynamic>{'p_name': alt});
+      final dynamic r = await c.rpc('nx_set_username', params: <String, dynamic>{'p_name': n});
+      final String status = '${r ?? 'ok'}';
+      if (status == 'ok') {
+        await _profile.setConfirmedUsername(n);
+        final SupabaseClient? soc = _online.social;
+        if (soc != null && !identical(soc, c)) {
+          unawaited(soc.rpc('nx_set_username', params: <String, dynamic>{'p_name': n}).then((_) {}, onError: (Object _) {}));
+        }
+        unawaited(_online.gamesHello(force: true));
       }
+      return status;
     } catch (e) {
-      debugPrint('username sync failed: $e');
+      debugPrint('setUsername failed: $e');
+      return 'network';
+    }
+  }
+
+  Future<void> _pushName(String name) async {
+    final String res = await setUsername(name);
+    if (res != 'ok') {
+      debugPrint('username sync skipped/rejected: $res');
     }
   }
 

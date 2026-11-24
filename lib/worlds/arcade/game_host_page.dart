@@ -148,7 +148,7 @@ class _GameHostPageState extends ConsumerState<GameHostPage> {
       isFa: s.isFa,
       fancyEffects: s.fancyEffects,
       reducedMotion: s.reducedMotion,
-      soundOn: s.sound && s.haptics,
+      soundOn: s.sound,
       playerCount: widget.players,
       skins: Map<String, String>.from(p.equipped),
       seed: widget.daily ? ArcadeDaily.seed(widget.game.id) : DateTime.now().millisecondsSinceEpoch ^ _round,

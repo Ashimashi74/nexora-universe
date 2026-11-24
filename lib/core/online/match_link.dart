@@ -159,7 +159,13 @@ class SupabaseMatchLink extends ChangeNotifier implements NetLink {
   Timer? _poll;
   Timer? _watch;
   Timer? _heartbeat;
+  Timer? _rttTimer;
   bool _disposed = false;
+  int? _rttMs;
+  int _pollTick = 0;
+
+  /// Latest measured round-trip latency in milliseconds (WebSocket peer RTT when peers are present, else RPC RTT).
+  int? get rttMs => _rttMs;
 
   final Map<int, NetMove> _rows = <int, NetMove>{};
   final Map<int, String> _rowUser = <int, String>{};
@@ -235,6 +241,39 @@ class SupabaseMatchLink extends ChangeNotifier implements NetLink {
           callback: (PostgresChangePayload p) => _onMatch(p.newRecord),
         )
         .onBroadcast(
+          event: 'mv',
+          callback: (Map<String, dynamic> p) {
+            final dynamic payload = p['payload'] ?? p;
+            if (payload is Map) {
+              _onRow(Map<String, dynamic>.from(payload));
+            }
+          },
+        )
+        .onBroadcast(
+          event: 'rtt_q',
+          callback: (Map<String, dynamic> p) {
+            final dynamic payload = p['payload'] ?? p;
+            if (payload is Map && payload['t'] is num && _ch != null) {
+              unawaited(_ch!.sendBroadcastMessage(
+                event: 'rtt_a',
+                payload: <String, dynamic>{'to': payload['from'], 't': payload['t']},
+              ));
+            }
+          },
+        )
+        .onBroadcast(
+          event: 'rtt_a',
+          callback: (Map<String, dynamic> p) {
+            final dynamic payload = p['payload'] ?? p;
+            if (payload is Map && payload['to'] == mySeat && payload['t'] is num) {
+              final int dt = DateTime.now().millisecondsSinceEpoch - (payload['t'] as num).toInt();
+              if (dt >= 0 && dt < 10000) {
+                _updateRtt(dt);
+              }
+            }
+          },
+        )
+        .onBroadcast(
           event: 'live',
           callback: (Map<String, dynamic> p) {
             final dynamic payload = p['payload'] ?? p;
@@ -252,13 +291,49 @@ class SupabaseMatchLink extends ChangeNotifier implements NetLink {
           if (status == RealtimeSubscribeStatus.subscribed) {
             unawaited(ch.track(<String, dynamic>{'seat': mySeat, 'uid': _uid}));
             unawaited(_catchUp());
+            _sendRttProbe();
           }
         });
     _ch = ch;
-    _poll = Timer.periodic(const Duration(seconds: 4), (_) => unawaited(_catchUp()));
+    _poll = Timer.periodic(const Duration(milliseconds: 1400), (_) => unawaited(_catchUp()));
     _watch = Timer.periodic(const Duration(seconds: 5), (_) => _watchAbsent());
+    _rttTimer = Timer.periodic(const Duration(seconds: 4), (_) => _sendRttProbe());
     unawaited(_ping());
     _heartbeat = Timer.periodic(const Duration(seconds: 10), (_) => unawaited(_ping()));
+  }
+
+  void _sendRttProbe() {
+    final RealtimeChannel? ch = _ch;
+    if (ch == null || _disposed || isOver) return;
+    unawaited(ch.sendBroadcastMessage(
+      event: 'rtt_q',
+      payload: <String, dynamic>{'from': mySeat, 't': DateTime.now().millisecondsSinceEpoch},
+    ));
+  }
+
+  void _updateRtt(int sampleMs) {
+    final int next = _rttMs == null ? sampleMs : ((_rttMs! * 2 + sampleMs) / 3).round();
+    if (_rttMs == null || (_rttMs! - next).abs() >= 4) {
+      _rttMs = next;
+      if (!_disposed) notifyListeners();
+    }
+  }
+
+  void _broadcastConfirmedMove(int seq, String kind, Map<String, dynamic> data, String? hash, int seat) {
+    final RealtimeChannel? ch = _ch;
+    if (ch == null || _disposed) return;
+    final bool wrap = kWireWrapped.contains(kind);
+    unawaited(ch.sendBroadcastMessage(
+      event: 'mv',
+      payload: <String, dynamic>{
+        'seq': seq,
+        'seat': seat,
+        'kind': wrap ? 'system' : kind,
+        'move': wrap ? <String, dynamic>{...data, '_k': kind} : data,
+        'hash': hash,
+        'by_user': _uid,
+      },
+    ));
   }
 
   bool _pingSupported = true;
@@ -268,8 +343,13 @@ class SupabaseMatchLink extends ChangeNotifier implements NetLink {
   Future<void> _ping() async {
     final SupabaseClient? c = _c;
     if (c == null || !_pingSupported || _disposed || isOver) return;
+    final int t0 = DateTime.now().millisecondsSinceEpoch;
     try {
       final dynamic r = await c.rpc('nx_match_ping', params: <String, dynamic>{'p_match': matchId});
+      if (_rttMs == null) {
+        final int dt = DateTime.now().millisecondsSinceEpoch - t0;
+        if (dt >= 0 && dt < 10000) _updateRtt(dt);
+      }
       if (r is Map && r['status'] is String && r['status'] != 'playing' && !_disposed) unawaited(_catchUp());
     } on PostgrestException catch (e) {
       if (e.code == 'PGRST202' || e.message.contains('nx_match_ping')) _pingSupported = false;
@@ -402,7 +482,8 @@ class SupabaseMatchLink extends ChangeNotifier implements NetLink {
       for (final Map<String, dynamic> r in rows) {
         _onRow(r);
       }
-      if (_status == 'playing') {
+      _pollTick++;
+      if (_status == 'playing' && (_c == null || rows.isNotEmpty || _pollTick.isOdd)) {
         final Map<String, dynamic>? m = await _b.fetchStatus();
         if (m != null && !_disposed) _onMatch(m);
       }
@@ -467,6 +548,7 @@ class SupabaseMatchLink extends ChangeNotifier implements NetLink {
           if (r is Map && r['ok'] == true) {
             ok = true;
             _server.add(seq);
+            _broadcastConfirmedMove(seq, kind, data, hash, seat);
           } else {
             // 'seq': someone else's move landed first (e.g. a timeout); 'seat' / 'forfeited' / ...: refused.
             if (r is! Map || r['reason'] != 'seq') debugPrint('push move $seq refused: $r');
@@ -474,7 +556,7 @@ class SupabaseMatchLink extends ChangeNotifier implements NetLink {
           }
         } catch (e) {
           debugPrint('push move $seq failed (try $attempt): $e');
-          await Future<void>.delayed(Duration(milliseconds: 600 * (attempt + 1)));
+          await Future<void>.delayed(Duration(milliseconds: 180 * (attempt + 1)));
         }
       }
       if (!ok && !isOver && !_disposed) {
@@ -524,6 +606,7 @@ class SupabaseMatchLink extends ChangeNotifier implements NetLink {
             ok = true;
             _floating.remove(seq);
             _server.add(seq);
+            _broadcastConfirmedMove(seq, kind, data, hash, seat);
             break;
           }
           if (r is Map && r['reason'] != 'seq') debugPrint('push float $seq refused: $r');
@@ -533,7 +616,7 @@ class SupabaseMatchLink extends ChangeNotifier implements NetLink {
           }
         } catch (e) {
           debugPrint('push float $seq failed (try $attempt): $e');
-          await Future<void>.delayed(Duration(milliseconds: 300 * (attempt + 1)));
+          await Future<void>.delayed(Duration(milliseconds: 150 * (attempt + 1)));
         }
         // lost the seq (or failed): give it back, learn the log, try again at the next free seq
         _floating.remove(seq);
@@ -617,13 +700,13 @@ class SupabaseMatchLink extends ChangeNotifier implements NetLink {
     if (c == null) return _end;
     try {
       dynamic r = await c.rpc('nx_finish_match', params: params);
-      for (int i = 0; i < 9 && !_disposed && r is Map && r['pending'] == true; i++) {
-        await Future<void>.delayed(const Duration(seconds: 5));
+      for (int i = 0; i < 16 && !_disposed && r is Map && r['pending'] == true; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 1200));
         if (_disposed) break;
         final Map<String, dynamic>? m =
             await c.from('nx_matches').select('status').eq('id', matchId).maybeSingle();
         if (m != null && '${m['status']}' != 'playing') break;
-        if (i.isOdd) r = await c.rpc('nx_finish_match', params: params);
+        if (i % 3 == 2) r = await c.rpc('nx_finish_match', params: params);
       }
       final Map<String, dynamic>? m =
           await c.from('nx_matches').select('status, winner_seats, reason, scores').eq('id', matchId).maybeSingle();
@@ -653,6 +736,7 @@ class SupabaseMatchLink extends ChangeNotifier implements NetLink {
     _poll?.cancel();
     _watch?.cancel();
     _heartbeat?.cancel();
+    _rttTimer?.cancel();
     final RealtimeChannel? ch = _ch;
     if (ch != null) unawaited(_c?.removeChannel(ch));
     unawaited(_live.close());

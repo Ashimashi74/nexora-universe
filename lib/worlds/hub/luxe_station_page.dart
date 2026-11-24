@@ -51,16 +51,16 @@ class _LuxeStationPageState extends ConsumerState<LuxeStationPage> {
     final LuxeWorld? w = luxeWorld(widget.k);
     if (w == null) {
       return Scaffold(
-        backgroundColor: Luxe.bg,
+        backgroundColor: Luxe.bgOf(context),
         body: Center(
-          child: Text(context.tx('این بخش پیدا نشد', 'Section not found'), style: const TextStyle(color: Luxe.ink)),
+          child: Text(context.tx('این بخش پیدا نشد', 'Section not found'), style: TextStyle(color: Luxe.inkOf(context))),
         ),
       );
     }
     final List<LuxeItem> items = w.items.where((LuxeItem i) => i.tab == _tab).toList();
     final List<String> tabs = context.isFa ? w.tabsFa : w.tabsEn;
     return Scaffold(
-      backgroundColor: Luxe.bg,
+      backgroundColor: Luxe.bgOf(context),
       extendBody: true,
       bottomNavigationBar: Nx2Dock(current: _dockTab(w.k)),
       body: LuxeScene(
@@ -90,17 +90,17 @@ class _LuxeStationPageState extends ConsumerState<LuxeStationPage> {
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-                    Text(w.fa, style: const TextStyle(fontSize: 21, color: Luxe.ink)),
-                    Text(w.en, style: Luxe.latin),
+                    Text(w.fa, style: TextStyle(fontSize: 21, color: Luxe.inkOf(context))),
+                    Text(w.en, style: Luxe.latin.copyWith(color: Luxe.goldOf(context))),
                   ]),
                 ),
                 LuxePress(
                   semantics: context.tx('بازگشت', 'Back'),
                   onTap: () => context.canPop() ? context.pop() : context.go('/hub'),
-                  child: const LuxeGlass(
+                  child: LuxeGlass(
                     radius: 99,
-                    padding: EdgeInsets.all(11),
-                    child: Icon(Icons.close_rounded, size: 18, color: Luxe.ink),
+                    padding: const EdgeInsets.all(11),
+                    child: Icon(Icons.close_rounded, size: 18, color: Luxe.inkOf(context)),
                   ),
                 ),
               ]),
@@ -124,13 +124,13 @@ class _LuxeStationPageState extends ConsumerState<LuxeStationPage> {
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(99),
                             gradient: on ? Luxe.goldGrad : null,
-                            border: Border.all(color: on ? Colors.transparent : Luxe.line),
+                            border: Border.all(color: on ? Colors.transparent : Luxe.lineOf(context)),
                             boxShadow: on
                                 ? const <BoxShadow>[BoxShadow(color: Color(0x88D9B872), blurRadius: 22, spreadRadius: -4)]
                                 : const <BoxShadow>[],
                           ),
                           child: Text(tabs[i],
-                              style: TextStyle(fontSize: 13, color: on ? const Color(0xFF1A1408) : Luxe.mute)),
+                              style: TextStyle(fontSize: 13, color: on ? const Color(0xFF1A1408) : Luxe.muteOf(context))),
                         ),
                       );
                     },
@@ -141,7 +141,7 @@ class _LuxeStationPageState extends ConsumerState<LuxeStationPage> {
                 child: items.isEmpty
                     ? Center(
                         child: Text(context.tx('چیزی اینجا نیست', 'Nothing here yet'),
-                            style: const TextStyle(color: Luxe.mute)))
+                            style: TextStyle(color: Luxe.muteOf(context))))
                     : GridView.builder(
                         padding: const EdgeInsets.only(bottom: 150, top: 2),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -199,7 +199,7 @@ class _Tile extends ConsumerWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 14.5, color: Luxe.ink, fontWeight: FontWeight.w500)),
+              style: TextStyle(fontSize: 14.5, color: Luxe.inkOf(context), fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,

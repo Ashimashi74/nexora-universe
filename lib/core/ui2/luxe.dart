@@ -19,12 +19,34 @@ class Luxe {
   static const Color line = Color(0x33D9B872);
   static const Color panel = Color(0xFF14130F);
 
+  static const Color dayBg = Color(0xFFF6F1E6);
+  static const Color dayInk = Color(0xFF1C170F);
+  static const Color dayMute = Color(0xAD4A3E2A);
+  static const Color dayGold = Color(0xFFB38428);
+  static const Color dayGold2 = Color(0xFFD1A447);
+  static const Color dayLine = Color(0x45B38428);
+  static const Color dayPanel = Color(0xFFFFFCF6);
+
+  static bool isLight(BuildContext context) => Theme.of(context).brightness == Brightness.light;
+  static Color bgOf(BuildContext context) => isLight(context) ? dayBg : bg;
+  static Color inkOf(BuildContext context) => isLight(context) ? dayInk : ink;
+  static Color muteOf(BuildContext context) => isLight(context) ? dayMute : mute;
+  static Color goldOf(BuildContext context) => isLight(context) ? dayGold : gold;
+  static Color lineOf(BuildContext context) => isLight(context) ? dayLine : line;
+  static Color panelOf(BuildContext context) => isLight(context) ? dayPanel : panel;
+
   static const LinearGradient goldGrad =
       LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: <Color>[gold2, gold]);
+  static const LinearGradient dayGoldGrad =
+      LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: <Color>[dayGold2, dayGold]);
   static const LinearGradient glass = LinearGradient(
       begin: Alignment(-0.6, -1),
       end: Alignment(0.6, 1),
       colors: <Color>[Color(0x13FFFFFF), Color(0x04FFFFFF)]);
+  static const LinearGradient dayGlass = LinearGradient(
+      begin: Alignment(-0.6, -1),
+      end: Alignment(0.6, 1),
+      colors: <Color>[Color(0xE8FFFDFA), Color(0xCCF7F0E2)]);
   static const Curve ease = Cubic(.22, .8, .2, 1);
 
   static const String hubBg = 'assets/luxe/hub.webp';
@@ -58,13 +80,16 @@ class LuxeGlass extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool light = Luxe.isLight(context);
     final BorderRadius r = BorderRadius.circular(radius);
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: r,
-        boxShadow: glow == null
-            ? const <BoxShadow>[]
-            : <BoxShadow>[BoxShadow(color: glow!.withValues(alpha: 0.35), blurRadius: 28, spreadRadius: -8)],
+        boxShadow: glow != null
+            ? <BoxShadow>[BoxShadow(color: glow!.withValues(alpha: light ? 0.24 : 0.35), blurRadius: 28, spreadRadius: -8)]
+            : (light
+                ? const <BoxShadow>[BoxShadow(color: Color(0x186E5320), blurRadius: 18, offset: Offset(0, 6))]
+                : const <BoxShadow>[]),
       ),
       child: ClipRRect(
         borderRadius: r,
@@ -75,10 +100,16 @@ class LuxeGlass extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: r,
               color: color,
-              gradient: color == null ? Luxe.glass : null,
-              border: Border.all(color: Luxe.line),
+              gradient: color == null ? (light ? Luxe.dayGlass : Luxe.glass) : null,
+              border: Border.all(color: Luxe.lineOf(context)),
             ),
-            child: child,
+            child: DefaultTextStyle.merge(
+              style: TextStyle(color: Luxe.inkOf(context)),
+              child: IconTheme.merge(
+                data: IconThemeData(color: Luxe.inkOf(context)),
+                child: child,
+              ),
+            ),
           ),
         ),
       ),
@@ -135,25 +166,29 @@ class LuxeScene extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool light = Luxe.isLight(context);
+    final double effOpacity = light ? (artOpacity * 0.22).clamp(0.0, 0.3) : artOpacity;
     return Stack(fit: StackFit.expand, children: <Widget>[
-      const DecoratedBox(
+      DecoratedBox(
         decoration: BoxDecoration(
-          color: Luxe.bg,
+          color: Luxe.bgOf(context),
           gradient: RadialGradient(
-            center: Alignment(0, -1.15),
+            center: const Alignment(0, -1.15),
             radius: 1.2,
-            colors: <Color>[Color(0xFF22201A), Luxe.bg],
+            colors: light
+                ? const <Color>[Color(0xFFFFFDF8), Luxe.dayBg]
+                : const <Color>[Color(0xFF22201A), Luxe.bg],
           ),
         ),
       ),
       if (stationScene)
         Opacity(
-          opacity: artOpacity,
+          opacity: effOpacity,
           child: const NexoraStationScene(),
         )
       else
         Opacity(
-          opacity: artOpacity,
+          opacity: effOpacity,
           child: Image.asset(Luxe.hubBg,
               fit: BoxFit.cover, cacheWidth: 900, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
         ),
@@ -163,11 +198,17 @@ class LuxeScene extends StatelessWidget {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             stops: const <double>[0, 0.4, 1],
-            colors: <Color>[
-              const Color(0x9907080C),
-              (tint ?? const Color(0x2607080C)).withValues(alpha: tint == null ? 0.15 : 0.22),
-              const Color(0xEB07080C),
-            ],
+            colors: light
+                ? <Color>[
+                    const Color(0xDCFBF7EE),
+                    (tint ?? const Color(0xFFD9B872)).withValues(alpha: tint == null ? 0.08 : 0.14),
+                    const Color(0xF0F4ECDC),
+                  ]
+                : <Color>[
+                    const Color(0x9907080C),
+                    (tint ?? const Color(0x2607080C)).withValues(alpha: tint == null ? 0.15 : 0.22),
+                    const Color(0xEB07080C),
+                  ],
           ),
         ),
       ),
@@ -261,7 +302,7 @@ class LuxeChip extends StatelessWidget {
           radius: 99,
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           child: DefaultTextStyle.merge(
-            style: const TextStyle(fontSize: 12, color: Luxe.ink, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: 12, color: Luxe.inkOf(context), fontWeight: FontWeight.w600),
             child: child,
           ),
         ),
@@ -354,7 +395,7 @@ class LuxeBar extends StatelessWidget {
       );
 }
 
-/// Bottom sheet chrome used across ANIX PRO (grab handle, dark gold panel).
+/// Bottom sheet chrome used across ANIX PRO (grab handle, adaptive Day/Night panel).
 Future<T?> showLuxeSheet<T>(BuildContext context, {required WidgetBuilder builder}) {
   return showModalBottomSheet<T>(
     context: context,
@@ -362,23 +403,33 @@ Future<T?> showLuxeSheet<T>(BuildContext context, {required WidgetBuilder builde
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     barrierColor: const Color(0x8C030306),
-    builder: (BuildContext ctx) => Container(
-      padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.paddingOf(ctx).bottom + 22),
-      decoration: const BoxDecoration(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-        gradient: LinearGradient(
-            begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: <Color>[Color(0xFF14130F), Color(0xFF0A0A0D)]),
-        border: Border(top: BorderSide(color: Luxe.line)),
-      ),
-      child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-        Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.only(bottom: 14),
-            decoration: BoxDecoration(color: const Color(0x40F6E7BD), borderRadius: BorderRadius.circular(4))),
-        Flexible(child: builder(ctx)),
-      ]),
-    ),
+    builder: (BuildContext ctx) {
+      final bool light = Luxe.isLight(ctx);
+      return Container(
+        padding: EdgeInsets.fromLTRB(20, 12, 20, MediaQuery.paddingOf(ctx).bottom + 22),
+        decoration: BoxDecoration(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: light
+                ? const <Color>[Color(0xFFFFFDF8), Color(0xFFF3EBDC)]
+                : const <Color>[Color(0xFF14130F), Color(0xFF0A0A0D)],
+          ),
+          border: Border(top: BorderSide(color: Luxe.lineOf(ctx))),
+        ),
+        child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+          Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 14),
+              decoration: BoxDecoration(
+                  color: light ? const Color(0x458A6A2C) : const Color(0x40F6E7BD),
+                  borderRadius: BorderRadius.circular(4))),
+          Flexible(child: builder(ctx)),
+        ]),
+      );
+    },
   );
 }
 
@@ -404,7 +455,7 @@ class LuxeOption extends StatelessWidget {
                 Image.asset(Luxe.icon(icon!), width: 32, height: 32, cacheWidth: 96,
                     errorBuilder: (_, __, ___) => const SizedBox(width: 32)),
               if (icon != null) const SizedBox(width: 12),
-              Expanded(child: Text(label, style: const TextStyle(fontSize: 14, color: Luxe.ink))),
+              Expanded(child: Text(label, style: TextStyle(fontSize: 14, color: Luxe.inkOf(context)))),
               if (trailing != null) trailing!,
             ]),
           ),
@@ -465,26 +516,43 @@ class LuxeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool light = Luxe.isLight(context);
     final BorderRadius r = BorderRadius.circular(radius);
     final Widget panel = DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: r,
-        border: Border.all(color: borderColor ?? (glow ?? Luxe.gold).withValues(alpha: 0.28)),
+        border: Border.all(color: borderColor ?? (glow ?? Luxe.goldOf(context)).withValues(alpha: light ? 0.34 : 0.28)),
         gradient: tint == null
-            ? const LinearGradient(
-                begin: Alignment(-0.6, -1),
-                end: Alignment(0.6, 1),
-                colors: <Color>[Color(0x14FFFFFF), Color(0x05FFFFFF)])
-            : LinearGradient(colors: <Color>[tint!.withValues(alpha: 0.18), const Color(0x0AFFFFFF)]),
+            ? (light
+                ? Luxe.dayGlass
+                : const LinearGradient(
+                    begin: Alignment(-0.6, -1),
+                    end: Alignment(0.6, 1),
+                    colors: <Color>[Color(0x14FFFFFF), Color(0x05FFFFFF)]))
+            : LinearGradient(colors: <Color>[
+                tint!.withValues(alpha: light ? 0.14 : 0.18),
+                light ? const Color(0xDAFFFDFA) : const Color(0x0AFFFFFF),
+              ]),
         boxShadow: <BoxShadow>[
-          BoxShadow(color: (glow ?? Luxe.gold).withValues(alpha: 0.10), blurRadius: 22, spreadRadius: -10),
+          BoxShadow(
+              color: light
+                  ? (glow ?? const Color(0xFF7B5D24)).withValues(alpha: 0.10)
+                  : (glow ?? Luxe.gold).withValues(alpha: 0.10),
+              blurRadius: 22,
+              spreadRadius: -10),
         ],
       ),
       child: ClipRRect(
         borderRadius: r,
         child: BackdropFilter(
           filter: ui.ImageFilter.blur(sigmaX: blur, sigmaY: blur),
-          child: Padding(padding: padding, child: child),
+          child: Padding(
+            padding: padding,
+            child: DefaultTextStyle.merge(
+              style: TextStyle(color: Luxe.inkOf(context)),
+              child: child,
+            ),
+          ),
         ),
       ),
     );
@@ -534,7 +602,7 @@ class LuxeButton extends StatelessWidget {
     final bool enabled = onTap != null && !loading;
     final Color fg = switch (kind) {
       LuxeButtonKind.primary => const Color(0xFF14120C),
-      LuxeButtonKind.ghost => Luxe.ink,
+      LuxeButtonKind.ghost => Luxe.inkOf(context),
       LuxeButtonKind.danger => const Color(0xFFFFE9EC),
     };
     final Gradient? fill = switch (kind) {
@@ -546,7 +614,7 @@ class LuxeButton extends StatelessWidget {
     };
     final Border? border = switch (kind) {
       LuxeButtonKind.primary => null,
-      LuxeButtonKind.ghost => Border.all(color: enabled ? Luxe.line : const Color(0x1AFFFFFF)),
+      LuxeButtonKind.ghost => Border.all(color: enabled ? Luxe.lineOf(context) : const Color(0x1AFFFFFF)),
       LuxeButtonKind.danger => Border.all(color: const Color(0x66FF8A9A)),
     };
     final Widget content = loading
@@ -609,6 +677,7 @@ class LuxeIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool light = Luxe.isLight(context);
     final Widget button = LuxePress(
       onTap: onTap,
       semantics: tooltip,
@@ -618,10 +687,10 @@ class LuxeIconButton extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: const Color(0x0FFFFFFF),
-            border: Border.all(color: Luxe.line),
+            color: light ? const Color(0xCCFFFDFA) : const Color(0x0FFFFFFF),
+            border: Border.all(color: Luxe.lineOf(context)),
           ),
-          child: Icon(icon, size: size * 0.45, color: color ?? Luxe.ink),
+          child: Icon(icon, size: size * 0.45, color: color ?? Luxe.inkOf(context)),
         ),
       ),
     );
@@ -646,12 +715,12 @@ class LuxeSection extends StatelessWidget {
             Expanded(
               child: Text(
                 title.toUpperCase(),
-                style: const TextStyle(
+                style: TextStyle(
                   fontFamily: 'ChakraPetch',
                   letterSpacing: 2.0,
                   fontWeight: FontWeight.w600,
                   fontSize: 11,
-                  color: Luxe.gold,
+                  color: Luxe.goldOf(context),
                 ),
               ),
             ),
@@ -672,7 +741,7 @@ class LuxeStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color c = color ?? Luxe.gold;
+    final Color c = color ?? Luxe.goldOf(context);
     return LuxePress(
       onTap: onTap,
       semantics: label,
@@ -686,7 +755,7 @@ class LuxeStat extends StatelessWidget {
         child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
           if (icon != null) ...<Widget>[Icon(icon, size: 13, color: c), const SizedBox(width: 5)],
           Text(label,
-              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color.lerp(c, Luxe.ink, 0.45))),
+              style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: Color.lerp(c, Luxe.inkOf(context), 0.45))),
         ]),
       ),
     );
@@ -722,8 +791,8 @@ class LuxeListRow extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           onTap: onTap,
           semantics: title,
-          glow: selected ? (tint ?? Luxe.gold) : null,
-          borderColor: selected ? (tint ?? Luxe.gold).withValues(alpha: 0.7) : null,
+          glow: selected ? (tint ?? Luxe.goldOf(context)) : null,
+          borderColor: selected ? (tint ?? Luxe.goldOf(context)).withValues(alpha: 0.7) : null,
           child: Row(children: <Widget>[
             if (leading != null) ...<Widget>[leading!, const SizedBox(width: 12)],
             Expanded(
@@ -731,14 +800,14 @@ class LuxeListRow extends StatelessWidget {
                 Text(title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Luxe.ink)),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Luxe.inkOf(context))),
                 if (subtitle != null && subtitle!.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
                     child: Text(subtitle!,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 11.5, color: Luxe.mute, height: 1.35)),
+                        style: TextStyle(fontSize: 11.5, color: Luxe.muteOf(context), height: 1.35)),
                   ),
               ]),
             ),
@@ -754,7 +823,7 @@ class LuxeDivider extends StatelessWidget {
   final double vertical;
   @override
   Widget build(BuildContext context) =>
-      Padding(padding: EdgeInsets.symmetric(vertical: vertical), child: const Divider(height: 1, color: Luxe.line));
+      Padding(padding: EdgeInsets.symmetric(vertical: vertical), child: Divider(height: 1, color: Luxe.lineOf(context)));
 }
 
 /// Empty state used by lists, rooms, lobbies and record tabs.
@@ -775,20 +844,20 @@ class LuxeEmpty extends StatelessWidget {
             height: 56,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: Luxe.line),
-              gradient: RadialGradient(colors: <Color>[Luxe.gold.withValues(alpha: 0.18), Colors.transparent]),
+              border: Border.all(color: Luxe.lineOf(context)),
+              gradient: RadialGradient(colors: <Color>[Luxe.goldOf(context).withValues(alpha: 0.18), Colors.transparent]),
             ),
-            child: Icon(icon, color: Luxe.gold, size: 24),
+            child: Icon(icon, color: Luxe.goldOf(context), size: 24),
           ),
           const SizedBox(height: 12),
           Text(title,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Luxe.ink)),
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Luxe.inkOf(context))),
           if (message != null) ...<Widget>[
             const SizedBox(height: 6),
             Text(message!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 12, height: 1.5, color: Luxe.mute)),
+                style: TextStyle(fontSize: 12, height: 1.5, color: Luxe.muteOf(context))),
           ],
           if (action != null) ...<Widget>[const SizedBox(height: 14), action!],
         ]),
@@ -806,14 +875,14 @@ class LuxeLoading extends StatelessWidget {
         height: height,
         child: Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-            const SizedBox(
+            SizedBox(
               width: 26,
               height: 26,
-              child: CircularProgressIndicator(strokeWidth: 2, color: Luxe.gold),
+              child: CircularProgressIndicator(strokeWidth: 2, color: Luxe.goldOf(context)),
             ),
             if (label != null) ...<Widget>[
               const SizedBox(height: 10),
-              Text(label!, style: const TextStyle(fontSize: 12, color: Luxe.mute)),
+              Text(label!, style: TextStyle(fontSize: 12, color: Luxe.muteOf(context))),
             ],
           ]),
         ),
@@ -856,8 +925,9 @@ class LuxeHeader extends StatelessWidget {
             Text(title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Luxe.ink, letterSpacing: 0.4)),
-            if (subtitle != null && subtitle!.isNotEmpty) Text(subtitle!, style: Luxe.latin),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Luxe.inkOf(context), letterSpacing: 0.4)),
+            if (subtitle != null && subtitle!.isNotEmpty)
+              Text(subtitle!, style: Luxe.latin.copyWith(color: Luxe.goldOf(context))),
           ]),
         ),
         ...trailing,
@@ -871,25 +941,34 @@ Future<T?> showLuxeDialog<T>(BuildContext context, {required Widget child}) {
   return showDialog<T>(
     context: context,
     barrierColor: const Color(0x99030306),
-    builder: (BuildContext ctx) => Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(LuxeRadius.lg),
-            gradient: const LinearGradient(
-                begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                colors: <Color>[Color(0xFF16140F), Color(0xFF0A0A0D)]),
-            border: Border.all(color: Luxe.line),
-            boxShadow: <BoxShadow>[BoxShadow(color: Luxe.gold.withValues(alpha: 0.12), blurRadius: 34, spreadRadius: -12)],
+    builder: (BuildContext ctx) {
+      final bool light = Luxe.isLight(ctx);
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(LuxeRadius.lg),
+              gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: light
+                      ? const <Color>[Color(0xFFFFFDF8), Color(0xFFF3EBDC)]
+                      : const <Color>[Color(0xFF16140F), Color(0xFF0A0A0D)]),
+              border: Border.all(color: Luxe.lineOf(ctx)),
+              boxShadow: <BoxShadow>[BoxShadow(color: Luxe.goldOf(ctx).withValues(alpha: 0.14), blurRadius: 34, spreadRadius: -12)],
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+            child: DefaultTextStyle.merge(
+              style: TextStyle(color: Luxe.inkOf(ctx)),
+              child: child,
+            ),
           ),
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
-          child: child,
         ),
-      ),
-    ),
+      );
+    },
   );
 }
 
@@ -904,35 +983,37 @@ Future<bool?> showLuxeConfirm(
 }) {
   return showLuxeDialog<bool>(
     context,
-    child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-      Text(title, style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700, color: Luxe.ink)),
-      if (message != null) ...<Widget>[
-        const SizedBox(height: 8),
-        Text(message, style: const TextStyle(fontSize: 12.5, height: 1.55, color: Luxe.mute)),
-      ],
-      const SizedBox(height: 18),
-      Row(children: <Widget>[
-        Expanded(
-          child: LuxeButton(
-            label: cancel ?? (Localizations.localeOf(context).languageCode == 'fa' ? 'انصراف' : 'Cancel'),
-            kind: LuxeButtonKind.ghost,
-            height: 46,
-            expand: true,
-            onTap: () => Navigator.of(context).pop(false),
+    child: Builder(
+      builder: (BuildContext ctx) => Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+        Text(title, style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700, color: Luxe.inkOf(ctx))),
+        if (message != null) ...<Widget>[
+          const SizedBox(height: 8),
+          Text(message, style: TextStyle(fontSize: 12.5, height: 1.55, color: Luxe.muteOf(ctx))),
+        ],
+        const SizedBox(height: 18),
+        Row(children: <Widget>[
+          Expanded(
+            child: LuxeButton(
+              label: cancel ?? (Localizations.localeOf(ctx).languageCode == 'fa' ? 'انصراف' : 'Cancel'),
+              kind: LuxeButtonKind.ghost,
+              height: 46,
+              expand: true,
+              onTap: () => Navigator.of(ctx).pop(false),
+            ),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: LuxeButton(
-            label: confirm,
-            kind: danger ? LuxeButtonKind.danger : LuxeButtonKind.primary,
-            height: 46,
-            expand: true,
-            onTap: () => Navigator.of(context).pop(true),
+          const SizedBox(width: 10),
+          Expanded(
+            child: LuxeButton(
+              label: confirm,
+              kind: danger ? LuxeButtonKind.danger : LuxeButtonKind.primary,
+              height: 46,
+              expand: true,
+              onTap: () => Navigator.of(ctx).pop(true),
+            ),
           ),
-        ),
+        ]),
       ]),
-    ]),
+    ),
   );
 }
 
@@ -949,41 +1030,43 @@ Future<String?> showLuxePrompt(
   final TextEditingController controller = TextEditingController(text: initial);
   return showLuxeDialog<String>(
     context,
-    child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-      Text(title, style: const TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700, color: Luxe.ink)),
-      if (message != null) ...<Widget>[
+    child: Builder(
+      builder: (BuildContext ctx) => Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+        Text(title, style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700, color: Luxe.inkOf(ctx))),
+        if (message != null) ...<Widget>[
+          const SizedBox(height: 6),
+          Text(message, style: TextStyle(fontSize: 12, color: Luxe.muteOf(ctx))),
+        ],
+        const SizedBox(height: 12),
+        TextField(
+          controller: controller,
+          autofocus: true,
+          maxLength: maxLength,
+          style: TextStyle(color: Luxe.inkOf(ctx), fontSize: 14),
+          decoration: InputDecoration(hintText: hint, counterStyle: TextStyle(fontSize: 10, color: Luxe.muteOf(ctx))),
+          onSubmitted: (String v) => Navigator.of(ctx).pop(v.trim()),
+        ),
         const SizedBox(height: 6),
-        Text(message, style: const TextStyle(fontSize: 12, color: Luxe.mute)),
-      ],
-      const SizedBox(height: 12),
-      TextField(
-        controller: controller,
-        autofocus: true,
-        maxLength: maxLength,
-        style: const TextStyle(color: Luxe.ink, fontSize: 14),
-        decoration: InputDecoration(hintText: hint, counterStyle: const TextStyle(fontSize: 10, color: Luxe.mute)),
-        onSubmitted: (String v) => Navigator.of(context).pop(v.trim()),
-      ),
-      const SizedBox(height: 6),
-      Row(children: <Widget>[
-        Expanded(
-          child: LuxeButton(
-            label: Localizations.localeOf(context).languageCode == 'fa' ? 'انصراف' : 'Cancel',
-            kind: LuxeButtonKind.ghost,
-            height: 46,
-            onTap: () => Navigator.of(context).pop(),
+        Row(children: <Widget>[
+          Expanded(
+            child: LuxeButton(
+              label: Localizations.localeOf(ctx).languageCode == 'fa' ? 'انصراف' : 'Cancel',
+              kind: LuxeButtonKind.ghost,
+              height: 46,
+              onTap: () => Navigator.of(ctx).pop(),
+            ),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: LuxeButton(
-            label: confirm,
-            height: 46,
-            onTap: () => Navigator.of(context).pop(controller.text.trim()),
+          const SizedBox(width: 10),
+          Expanded(
+            child: LuxeButton(
+              label: confirm,
+              height: 46,
+              onTap: () => Navigator.of(ctx).pop(controller.text.trim()),
+            ),
           ),
-        ),
+        ]),
       ]),
-    ]),
+    ),
   );
 }
 

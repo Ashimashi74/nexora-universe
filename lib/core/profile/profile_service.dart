@@ -238,7 +238,14 @@ class ProfileService extends ChangeNotifier {
       };
 
   /// Apply a server blob. [replace] = another account signed in on this phone.
-  void applyCloudBlob(Map<String, dynamic> j, {required bool replace, String? serverName, String? avatar}) {
+  /// [serverAuthoritativeName] = server profile carries a real username that must win over any local guest name.
+  void applyCloudBlob(
+    Map<String, dynamic> j, {
+    required bool replace,
+    String? serverName,
+    String? avatar,
+    bool serverAuthoritativeName = false,
+  }) {
     if (replace) {
       equipped.clear();
       inventory.clear();
@@ -262,7 +269,9 @@ class ProfileService extends ChangeNotifier {
       final String cd = j['claimedDaily'] as String? ?? '';
       if (cd.compareTo(claimedDaily) > 0) claimedDaily = cd;
     }
-    if (serverName != null && serverName.isNotEmpty && (replace || username.isEmpty)) username = serverName;
+    if (serverName != null && serverName.isNotEmpty && (replace || serverAuthoritativeName || username.isEmpty)) {
+      username = serverName;
+    }
     if (username.isEmpty && j['username'] is String && (j['username'] as String).isNotEmpty) {
       username = j['username'] as String;
     }
@@ -417,6 +426,18 @@ class ProfileService extends ChangeNotifier {
     onNameChanged?.call(username);
     _log('identity', 'هویت دیجیتال ساخته شد: $username', 'Digital identity created: $username');
     await _save();
+    notifyListeners();
+  }
+
+  static final RegExp realUsernamePattern = RegExp(r'^[A-Za-z0-9_.]{3,20}$');
+
+  static bool isValidRealUsername(String value) => realUsernamePattern.hasMatch(value.trim());
+
+  Future<void> setConfirmedUsername(String name) async {
+    final String clean = name.trim();
+    if (clean.isEmpty || clean == username) return;
+    username = clean;
+    await _saveLocal();
     notifyListeners();
   }
 

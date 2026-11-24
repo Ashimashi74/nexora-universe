@@ -22,6 +22,15 @@ Future<void> initOnline() async {
         accessToken: () async => Supabase.instance.client.auth.currentSession?.accessToken,
       );
     }
+    // Dedicated client for the social media project (when hosted on a distinct project URL; if pointed at the same
+    // URL as core auth, reuse the primary client so Realtime shares a single socket).
+    if (OnlineConfig.socialEnabled && OnlineConfig.socialUrl != OnlineConfig.supabaseUrl) {
+      OnlineService._social = SupabaseClient(
+        OnlineConfig.socialUrl,
+        OnlineConfig.socialAnonKey,
+        accessToken: () async => Supabase.instance.client.auth.currentSession?.accessToken,
+      );
+    }
   } catch (e) {
     debugPrint('ANIX online init failed: $e');
   }
@@ -43,6 +52,7 @@ class OnlineService extends ChangeNotifier {
       _status = s.session != null ? BackendStatus.online : BackendStatus.offline;
       final String? tok = s.session?.accessToken;
       if (_games != null) unawaited(_games!.realtime.setAuth(tok));
+      if (_social != null) unawaited(_social!.realtime.setAuth(tok));
       if (s.session != null &&
           (s.event == AuthChangeEvent.signedIn || s.event == AuthChangeEvent.initialSession ||
               s.event == AuthChangeEvent.userUpdated)) {
@@ -55,11 +65,16 @@ class OnlineService extends ChangeNotifier {
 
   static bool _ready = false;
   static SupabaseClient? _games;
+  static SupabaseClient? _social;
   String? _helloFor;
 
   /// Games project client (rooms, matches, matchmaking, tournaments, leaderboards). Falls back to the auth client
   /// in builds without the games config so offline/dev builds keep working.
   SupabaseClient? get games => _ready ? (_games ?? Supabase.instance.client) : null;
+
+  /// Social Media project client (Nova Gallery, Orbit Network DMs & calls, Social Station, follows & user directory).
+  /// Isolated from the Games project (`games`) and falls back to the primary client when sharing the auth endpoint.
+  SupabaseClient? get social => _ready ? (_social ?? Supabase.instance.client) : null;
 
   /// Registers this player on the games project (creates the profile mirror row, asks for a fresh wallet snapshot).
   /// Every games RPC needs the mirror row; called after each sign-in and before entering lobbies/tournaments.

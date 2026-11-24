@@ -187,6 +187,69 @@ class _AccountPageState extends ConsumerState<AccountPage> {
     }
   }
 
+  Future<void> _editUsernameDialog(ProfileService p) async {
+    final TextEditingController ctrl = TextEditingController(text: p.username);
+    String? err;
+    bool saving = false;
+    await showDialog<void>(
+      context: context,
+      builder: (BuildContext ctx) => StatefulBuilder(
+        builder: (BuildContext ctx, StateSetter setModal) => AnixDialog(
+          title: Text(ctx.tx('تغییر نام کاربری', 'Change username')),
+          content: TextField(
+            controller: ctrl,
+            maxLength: 20,
+            autofocus: true,
+            textDirection: TextDirection.ltr,
+            decoration: InputDecoration(
+              labelText: ctx.tx('نام کاربری واقعی', 'Real username'),
+              helperText: ctx.tx('۳ تا ۲۰ کاراکتر: حروف انگلیسی، عدد، . یا _', '3–20 chars: a-z, 0-9, . or _'),
+              prefixText: '@',
+              errorText: err,
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: saving ? null : () => Navigator.pop(ctx),
+              child: Text(ctx.tx('انصراف', 'Cancel')),
+            ),
+            FilledButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      setModal(() {
+                        saving = true;
+                        err = null;
+                      });
+                      final String status = await ref.read(cloudSyncProvider).setUsername(ctrl.text);
+                      if (status != 'ok') {
+                        setModal(() {
+                          saving = false;
+                          err = switch (status) {
+                            'taken' => ctx.tx('این نام کاربری قبلاً ثبت شده است.', 'This username is already taken.'),
+                            'bad_length' => ctx.tx('بین ۳ تا ۲۰ کاراکتر وارد کن.', 'Must be 3–20 characters.'),
+                            'bad_chars' => ctx.tx('فقط حروف انگلیسی، عدد، . و _ مجاز است.', 'Only English letters, digits, . and _ allowed.'),
+                            _ => ctx.tx('اتصال به سرور برقرار نشد.', 'Could not save to server.'),
+                          };
+                        });
+                        return;
+                      }
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (mounted) {
+                        setState(() => _info = context.tx('نام کاربری ذخیره شد ✓', 'Username saved ✓'));
+                      }
+                    },
+              child: saving
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : Text(ctx.tx('ذخیره', 'Save')),
+            ),
+          ],
+        ),
+      ),
+    );
+    ctrl.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final OnlineService o = ref.watch(onlineProvider);
@@ -235,6 +298,11 @@ class _AccountPageState extends ConsumerState<AccountPage> {
                               style:
                                   TextStyle(color: visual.muted, fontSize: 12)),
                         ])),
+                    IconButton(
+                      tooltip: context.tx('تغییر نام کاربری', 'Change username'),
+                      onPressed: () => _editUsernameDialog(p),
+                      icon: Icon(Icons.edit_rounded, color: visual.accent),
+                    ),
                   ]),
                   const SizedBox(height: 4),
                   if (o.uid != null)

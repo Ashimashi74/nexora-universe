@@ -391,14 +391,25 @@ class _TalkRoomPageState extends ConsumerState<TalkRoomPage> {
     _inMatch = true;
     NxSfx.instance.play('ready');
     _lastMatch = matchId;
+    final bool wasInRoomVoice = _voice != null;
     final bool micWas = _mic;
-    if (micWas) await _setMic(false);
+    if (wasInRoomVoice) {
+      await _leaveVoice();
+      GameVoice.instance.mic = micWas;
+      unawaited(GameVoice.instance.join(matchId, match: true));
+    }
     if (!mounted) return;
     await Navigator.of(context).push(MaterialPageRoute<void>(
       builder: (_) => OnlineMatchPage(matchId: matchId, gameId: _game),
     ));
     _inMatch = false;
-    if (micWas) await _setMic(true);
+    if (wasInRoomVoice) {
+      await GameVoice.instance.leave();
+      if (mounted) {
+        await _joinVoice();
+        if (micWas && _canPublish) await _setMic(true);
+      }
+    }
     if (mounted) await _refresh();
   }
 

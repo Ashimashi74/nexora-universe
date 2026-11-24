@@ -7,6 +7,7 @@ import '../../../core/profile/profile_service.dart';
 import '../../../core/settings/app_settings.dart';
 import '../../../core/theme/nx_theme.dart';
 import '../../../core/widgets/nx_widgets.dart';
+import '../../../core/widgets/user_profile_preview.dart';
 import '../models/nova_models.dart';
 import '../state/nova_controller.dart';
 import 'nova_composer.dart';
@@ -32,6 +33,17 @@ class NovaPostCard extends ConsumerWidget {
     final bool saved = ctrl.saved.contains(post.id);
     final String text = post.textFor(context.isFa);
 
+    final String? authorAvatar = mine ? profile.avatarUrl : ctrl.online?.avatarOf(post.authorId);
+    final String? remoteUid = ctrl.online?.uidOf(post.authorId);
+    final VoidCallback? openAuthor = (!mine && !post.official && remoteUid != null)
+        ? () => showUserProfilePreview(
+              context,
+              userId: remoteUid,
+              username: post.authorName,
+              avatarUrl: authorAvatar,
+            )
+        : null;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: NxSpace.md, vertical: NxSpace.sm),
       child: GlassPanel(
@@ -40,29 +52,37 @@ class NovaPostCard extends ConsumerWidget {
         borderColor: post.official ? NxColors.gold.withValues(alpha: 0.5) : null,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
           Row(children: <Widget>[
-            NovaAvatar(name: post.authorName, official: post.official, size: 40),
-            const SizedBox(width: 10),
             Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-                Row(children: <Widget>[
-                  Flexible(
-                    child: Text(post.authorName,
-                        overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: openAuthor,
+                child: Row(children: <Widget>[
+                  NovaAvatar(name: post.authorName, avatarUrl: authorAvatar, official: post.official, size: 40),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+                      Row(children: <Widget>[
+                        Flexible(
+                          child: Text(post.authorName,
+                              overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w800)),
+                        ),
+                        if (post.official) ...<Widget>[
+                          const SizedBox(width: 4),
+                          const Icon(Icons.verified_rounded, size: 16, color: NxColors.gold),
+                        ],
+                      ]),
+                      Text(
+                        [
+                          novaAgo(context, post.createdAt),
+                          if (post.editedAt != null) context.tx('ویرایش‌شده', 'edited'),
+                          if (post.motion) context.tx('حرکتی', 'motion'),
+                        ].join(' · '),
+                        style: const TextStyle(color: NxColors.textDim, fontSize: 12),
+                      ),
+                    ]),
                   ),
-                  if (post.official) ...<Widget>[
-                    const SizedBox(width: 4),
-                    const Icon(Icons.verified_rounded, size: 16, color: NxColors.gold),
-                  ],
                 ]),
-                Text(
-                  [
-                    novaAgo(context, post.createdAt),
-                    if (post.editedAt != null) context.tx('ویرایش‌شده', 'edited'),
-                    if (post.motion) context.tx('حرکتی', 'motion'),
-                  ].join(' · '),
-                  style: const TextStyle(color: NxColors.textDim, fontSize: 12),
-                ),
-              ]),
+              ),
             ),
             if (post.official) NxPill(label: context.tx('رسمی', 'Official'), color: NxColors.gold),
             PopupMenuButton<String>(

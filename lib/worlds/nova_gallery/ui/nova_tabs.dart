@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/online/social_api.dart';
 import '../../../core/profile/profile_service.dart';
 import '../../../core/settings/app_settings.dart';
 import '../../../core/theme/nx_theme.dart';
 import '../../../core/widgets/nx_widgets.dart';
+import '../../../core/widgets/user_profile_preview.dart';
 import '../models/nova_models.dart';
 import '../state/nova_controller.dart';
 import 'nova_composer.dart';
@@ -312,6 +314,7 @@ class NovaExploreTab extends ConsumerStatefulWidget {
 class _NovaExploreTabState extends ConsumerState<NovaExploreTab> {
   late final TextEditingController _q = TextEditingController(text: widget.query);
   List<NovaPost> _results = <NovaPost>[];
+  List<NxUser> _people = <NxUser>[];
   bool _searching = false;
 
   @override
@@ -339,10 +342,20 @@ class _NovaExploreTabState extends ConsumerState<NovaExploreTab> {
 
   Future<void> _run(String q, {bool initial = false}) async {
     if (!initial) setState(() => _searching = true);
-    final r = await ref.read(novaControllerProvider).search(q);
+    final NovaController ctrl = ref.read(novaControllerProvider);
+    final Future<List<NovaPost>> postsFut = ctrl.search(q);
+    List<NxUser> people = <NxUser>[];
+    final onlineRepo = ctrl.online;
+    if (onlineRepo != null && !q.trim().startsWith('#')) {
+      try {
+        people = await SocialApi(onlineRepo.c, userId: onlineRepo.me).directory(q, 20);
+      } catch (_) {}
+    }
+    final List<NovaPost> r = await postsFut;
     if (!mounted) return;
     setState(() {
       _results = r;
+      _people = people;
       _searching = false;
     });
   }
@@ -407,6 +420,70 @@ class _NovaExploreTabState extends ConsumerState<NovaExploreTab> {
           ]),
         ),
       ),
+      if (_people.isNotEmpty)
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(NxSpace.md, 0, NxSpace.md, NxSpace.md),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+              Row(children: <Widget>[
+                const Icon(Icons.people_alt_rounded, color: NxColors.gold, size: 18),
+                const SizedBox(width: 6),
+                Text(context.tx('کاوشگران', 'Explorers'), style: const TextStyle(fontWeight: FontWeight.w800)),
+              ]),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 112,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _people.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 10),
+                  itemBuilder: (BuildContext ctx, int idx) {
+                    final NxUser u = _people[idx];
+                    return SizedBox(
+                      width: 104,
+                      child: GlassPanel(
+                        blur: false,
+                        padding: const EdgeInsets.all(8),
+                        onTap: () async {
+                          await showUserProfilePreview(
+                            ctx,
+                            userId: u.id,
+                            username: u.username,
+                            avatarUrl: u.avatarUrl,
+                          );
+                          if (mounted) unawaited(_run(_q.text));
+                        },
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            NovaAvatar(name: u.username, avatarUrl: u.avatarUrl, size: 42, ring: u.isOnlineNow),
+                            const SizedBox(height: 6),
+                            Text(
+                              u.username,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
+                            ),
+                            Text(
+                              u.isFollowing
+                                  ? ctx.tx('دنبال شده', 'Following')
+                                  : 'Lv ${u.level}',
+                              maxLines: 1,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                color: u.isFollowing ? NxColors.gold : NxColors.textDim,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ]),
+          ),
+        ),
       if (_searching)
         const SliverToBoxAdapter(child: Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator())))
       else if (_results.isEmpty)

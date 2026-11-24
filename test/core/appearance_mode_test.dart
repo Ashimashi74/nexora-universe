@@ -3,10 +3,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:nexora/core/ui2/anix_kit.dart';
 import 'package:nexora/core/settings/app_settings.dart';
 import 'package:nexora/core/storage/local_store.dart';
 import 'package:nexora/core/theme/nx_theme.dart';
+import 'package:nexora/core/ui2/luxe.dart';
 import 'package:nexora/worlds/settings/settings_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -35,7 +35,7 @@ void main() {
     expect(notifications, 1);
   });
 
-  test('light and dark modes create matching Material themes', () {
+  test('light and dark modes create matching Material themes and Luxe surface tokens', () {
     final light = buildNxTheme(NxVisualTheme.neon, NxAppearanceMode.light);
     final dark = buildNxTheme(NxVisualTheme.neon, NxAppearanceMode.dark);
 
@@ -50,7 +50,7 @@ void main() {
     expect(light.colorScheme.onPrimary, Colors.white);
   });
 
-  testWidgets('settings UI switches the actual app appearance',
+  testWidgets('settings UI switches Day/Night mode and omits removed menu music toggle',
       (WidgetTester tester) async {
     final container = ProviderContainer();
     final router = GoRouter(
@@ -76,17 +76,25 @@ void main() {
     expect(
         container.read(settingsProvider).appearanceMode, NxAppearanceMode.dark);
     expect(Theme.of(tester.element(settingsPage)).brightness, Brightness.dark);
+    expect(Luxe.isLight(tester.element(settingsPage)), isFalse);
+    expect(Luxe.bgOf(tester.element(settingsPage)), Luxe.bg);
 
-    final lightModeTile =
-        find.widgetWithText(AnixSwitchTile, 'Light appearance');
-    await tester.ensureVisible(lightModeTile);
+    // Menu music toggle was removed while game sound effects remain.
+    expect(find.text('Menu music'), findsNothing);
+    expect(find.text('Game & UI sound effects'), findsOneWidget);
+
+    final daySegment = find.text('Day mode');
+    await tester.ensureVisible(daySegment);
     await tester.pumpAndSettle();
-    await tester.tap(lightModeTile);
+    await tester.tap(daySegment);
     await tester.pumpAndSettle();
 
     expect(container.read(settingsProvider).appearanceMode,
         NxAppearanceMode.light);
     expect(Theme.of(tester.element(settingsPage)).brightness, Brightness.light);
+    expect(Luxe.isLight(tester.element(settingsPage)), isTrue);
+    expect(Luxe.bgOf(tester.element(settingsPage)), Luxe.dayBg);
+    expect(Luxe.inkOf(tester.element(settingsPage)), Luxe.dayInk);
     expect(
       NxThemeColors.of(tester.element(settingsPage)).background,
       NxThemeColors.goldLight.background,

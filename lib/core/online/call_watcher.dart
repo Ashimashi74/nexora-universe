@@ -31,7 +31,7 @@ class CallWatcher {
     if (uid == _uid) return;
     _detach();
     _uid = uid;
-    final SupabaseClient? c = o.client;
+    final SupabaseClient? c = o.social;
     if (uid == null || c == null) return;
     _ch = c
         .channel('nxcall:$uid')

@@ -67,9 +67,9 @@ class _OrbitNetworkPageState extends ConsumerState<OrbitNetworkPage>
           ListTile(
             leading: const Icon(Icons.person_add_alt_1_rounded,
                 color: NxColors.textDim),
-            title: Text(c.tx('چت خصوصی با دوست', 'Private chat with a friend')),
+            title: Text(c.tx('پیام خصوصی به کاربر', 'Direct message a user')),
             subtitle: Text(ref.read(orbitControllerProvider).isOnline
-                ? c.tx('از میان دوستانت', 'Pick one of your friends')
+                ? c.tx('انتخاب یا جستجوی هر کاربر نکسورا', 'Search or pick any Nexora explorer')
                 : c.tx('بعد از اتصال آنلاین', 'Once online')),
             onTap: () => Navigator.pop(c, 'dm'),
           ),

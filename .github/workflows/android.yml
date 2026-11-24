@@ -37,6 +37,9 @@ env:
   # Second Supabase project (games, rooms, matchmaking, tournaments, realtime match state).
   GAMES_SUPABASE_URL: https://eyzafhrefnqlwcjpcdyg.supabase.co
   GAMES_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5emFmaHJlZm5xbHdjanBjZHlnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQ4OTUzNjcsImV4cCI6MjExMDQ3MTM2N30.YfdEhbEbvbQ738snwc5C47LYx-NYRXywX66dgMEZh-M
+  # Dedicated Social Media Supabase project configuration (Nova, Orbit DMs/calls, Social Station, follows & profiles).
+  SOCIAL_SUPABASE_URL: https://eisstodgncimypdawisy.supabase.co
+  SOCIAL_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVpc3N0b2RnbmNpbXlwZGF3aXN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQyMjkwMTAsImV4cCI6MjEwOTgwNTAxMH0.uEPldAQjJdRyZTGXaz_OpFR7WpFXMiPXlW1S34cR3p8
 
 jobs:
   build:
@@ -309,6 +312,8 @@ jobs:
             --dart-define=APP_VC=$((300 + ${{ github.run_number }})) \
             --dart-define=GAMES_SUPABASE_URL=$GAMES_SUPABASE_URL \
             --dart-define=GAMES_SUPABASE_ANON_KEY=$GAMES_SUPABASE_ANON_KEY \
+            --dart-define=SOCIAL_SUPABASE_URL=$SOCIAL_SUPABASE_URL \
+            --dart-define=SOCIAL_SUPABASE_ANON_KEY=$SOCIAL_SUPABASE_ANON_KEY \
             --dart-define=SUPABASE_URL=$SUPABASE_URL \
             --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY \
             --dart-define=LIVEKIT_URL=$LIVEKIT_URL 2>&1 | tee build-apk.txt
@@ -323,6 +328,8 @@ jobs:
             --dart-define=APP_VC=$((300 + ${{ github.run_number }})) \
             --dart-define=GAMES_SUPABASE_URL=$GAMES_SUPABASE_URL \
             --dart-define=GAMES_SUPABASE_ANON_KEY=$GAMES_SUPABASE_ANON_KEY \
+            --dart-define=SOCIAL_SUPABASE_URL=$SOCIAL_SUPABASE_URL \
+            --dart-define=SOCIAL_SUPABASE_ANON_KEY=$SOCIAL_SUPABASE_ANON_KEY \
             --dart-define=SUPABASE_URL=$SUPABASE_URL \
             --dart-define=SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY \
             --dart-define=LIVEKIT_URL=$LIVEKIT_URL 2>&1 | tee -a build-apk.txt

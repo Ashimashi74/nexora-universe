@@ -51,15 +51,16 @@ class OrbitMember {
 /// Offline fallback: when the network fails, the last server copy stays visible and outgoing messages are
 /// kept in a local queue (shown as queued) that is flushed on the next successful refresh.
 class SupabaseOrbitRepository implements OrbitRepository {
-  SupabaseOrbitRepository(this.c, this.local, {required this.explorerId});
+  SupabaseOrbitRepository(this.c, this.local, {required this.explorerId, String? userId}) : _uid = userId;
 
   final SupabaseClient c;
   final LocalOrbitRepository local;
 
   /// The offline identity used for Saved Orbit messages written before signing in.
   final String explorerId;
+  final String? _uid;
 
-  String get me => c.auth.currentUser!.id;
+  String get me => _uid ?? c.auth.currentUser!.id;
 
   static const String kPending = 'orbit.pending.v1';
   static const String bucket = 'nx-chat-media';
@@ -73,7 +74,8 @@ class SupabaseOrbitRepository implements OrbitRepository {
   RealtimeChannel? _ch;
 
   bool _isLocal(String chatId) => chatId == kSavedOrbitId || !_chats.containsKey(chatId) && !_looksRemote(chatId);
-  static final RegExp _uuid = RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$');
+  static final RegExp _uuid =
+      RegExp(r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$', caseSensitive: false);
   bool _looksRemote(String id) => _uuid.hasMatch(id);
 
   // ------------------------------------------------------------------ mapping
@@ -415,13 +417,14 @@ class SupabaseOrbitRepository implements OrbitRepository {
         replyToId: replyToId,
       ));
     }
+    final String? safeReply = (replyToId != null && _looksRemote(replyToId)) ? replyToId : null;
     try {
       final dynamic r = await c.rpc('nx_send_message', params: <String, dynamic>{
         'p_chat': chatId,
         'p_kind': kind.name,
         'p_text': text,
         'p_payload': payload ?? <String, dynamic>{},
-        'p_reply_to': replyToId,
+        'p_reply_to': safeReply,
       });
       final OrbitMessage m = _msg(Map<String, dynamic>.from(r as Map))..delivery = OrbitDelivery.sent;
       _msgs[chatId] = <OrbitMessage>[...?_msgs[chatId], m];

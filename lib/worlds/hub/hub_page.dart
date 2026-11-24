@@ -98,7 +98,7 @@ class _HubPageState extends ConsumerState<HubPage> with SingleTickerProviderStat
     final LuxeWorld cur = _worlds[_idx];
     final bool fa = context.isFa;
     return Scaffold(
-      backgroundColor: Luxe.bg,
+      backgroundColor: Luxe.bgOf(context),
       extendBody: true,
       bottomNavigationBar: const Nx2Dock(current: Nx2Tab.home),
       body: LuxeScene(
@@ -159,13 +159,13 @@ class _HubPageState extends ConsumerState<HubPage> with SingleTickerProviderStat
                   key: ValueKey<String>(cur.k),
                   padding: const EdgeInsets.symmetric(horizontal: 28),
                   child: Column(children: <Widget>[
-                    Text(cur.en, style: Luxe.latin),
+                    Text(cur.en, style: Luxe.latin.copyWith(color: Luxe.goldOf(context))),
                     const SizedBox(height: 4),
                     Text(fa ? cur.fa : cur.en,
-                        style: const TextStyle(fontSize: 26, color: Luxe.ink, fontWeight: FontWeight.w400)),
+                        style: TextStyle(fontSize: 26, color: Luxe.inkOf(context), fontWeight: FontWeight.w400)),
                     const SizedBox(height: 4),
                     Text(fa ? cur.tagFa : cur.tagEn,
-                        textAlign: TextAlign.center, style: const TextStyle(fontSize: 12.5, color: Luxe.mute)),
+                        textAlign: TextAlign.center, style: TextStyle(fontSize: 12.5, color: Luxe.muteOf(context))),
                   ]),
                 ),
               ),
@@ -181,7 +181,10 @@ class _HubPageState extends ConsumerState<HubPage> with SingleTickerProviderStat
                     width: on ? 22 : 6,
                     height: 6,
                     decoration: BoxDecoration(
-                        color: on ? Luxe.gold : const Color(0x40F6E7BD), borderRadius: BorderRadius.circular(9)),
+                        color: on
+                            ? Luxe.goldOf(context)
+                            : (Luxe.isLight(context) ? const Color(0x388A6A2C) : const Color(0x40F6E7BD)),
+                        borderRadius: BorderRadius.circular(9)),
                   );
                 }),
               ),
@@ -198,27 +201,30 @@ class _Brand extends StatelessWidget {
   const _Brand();
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-        height: 92,
-        child: Column(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
-          const Text(
-            'YOUR UNIVERSE',
-            style: TextStyle(color: Color(0xFFD9B872), fontSize: 10, letterSpacing: 3.0, fontWeight: FontWeight.w600),
+  Widget build(BuildContext context) {
+    final bool light = Luxe.isLight(context);
+    return SizedBox(
+      height: 92,
+      child: Column(mainAxisSize: MainAxisSize.min, mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
+        Text(
+          'YOUR UNIVERSE',
+          style: TextStyle(color: Luxe.goldOf(context), fontSize: 10, letterSpacing: 3.0, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 4),
+        ShaderMask(
+          shaderCallback: (Rect r) => (light ? Luxe.dayGoldGrad : Luxe.goldGrad).createShader(r),
+          child: const Text(
+            'NEXORA.',
+            style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 2.0),
           ),
-          const SizedBox(height: 4),
-          ShaderMask(
-            shaderCallback: (Rect r) => Luxe.goldGrad.createShader(r),
-            child: const Text(
-              'NEXORA.',
-              style: TextStyle(fontSize: 34, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: 2.0),
-            ),
-          ),
-          const Text(
-            'A universe beyond play.',
-            style: TextStyle(color: Colors.white54, fontSize: 11, letterSpacing: 1.0),
-          ),
-        ]),
-      );
+        ),
+        Text(
+          'A universe beyond play.',
+          style: TextStyle(color: Luxe.muteOf(context), fontSize: 11, letterSpacing: 1.0),
+        ),
+      ]),
+    );
+  }
 }
 
 class _WorldCard extends StatelessWidget {
@@ -345,6 +351,8 @@ class _Hud extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final AppSettings settings = ref.watch(settingsProvider);
+    final bool light = settings.appearanceMode == NxAppearanceMode.light;
     final String name = profile.username.isEmpty ? context.tx('کاوشگر', 'Explorer') : profile.username;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
@@ -387,9 +395,9 @@ class _Hud extends ConsumerWidget {
             Text(name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 14, color: Luxe.ink, fontWeight: FontWeight.w600)),
+                style: TextStyle(fontSize: 14, color: Luxe.inkOf(context), fontWeight: FontWeight.w600)),
             Text(context.tx(profile.rankTitleFa, profile.rankTitleEn),
-                maxLines: 1, style: const TextStyle(fontSize: 11, color: Luxe.mute)),
+                maxLines: 1, style: TextStyle(fontSize: 11, color: Luxe.muteOf(context))),
           ]),
         ),
         LuxeChip(
@@ -421,7 +429,7 @@ class _Hud extends ConsumerWidget {
                 height: 6,
                 decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: liveRooms == null ? Luxe.mute : const Color(0xFF7BE0A1),
+                    color: liveRooms == null ? Luxe.muteOf(context) : const Color(0xFF2EAD63),
                     boxShadow: liveRooms == null
                         ? null
                         : const <BoxShadow>[BoxShadow(color: Color(0xFF7BE0A1), blurRadius: 6)])),
@@ -431,10 +439,24 @@ class _Hud extends ConsumerWidget {
         ),
         const SizedBox(width: 6),
         LuxePress(
+          semantics: light ? context.tx('حالت شب', 'Night mode') : context.tx('حالت روز', 'Day mode'),
+          onTap: () => settings.appearanceMode = light ? NxAppearanceMode.dark : NxAppearanceMode.light,
+          child: LuxeGlass(
+            radius: 99,
+            padding: const EdgeInsets.all(8),
+            child: Icon(
+              light ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+              size: 17,
+              color: Luxe.goldOf(context),
+            ),
+          ),
+        ),
+        const SizedBox(width: 6),
+        LuxePress(
           semantics: context.tx('جستجو', 'Search'),
           onTap: () => showSearch<void>(context: context, delegate: HubSearchDelegate(isFa: context.isFa)),
-          child: const LuxeGlass(
-              radius: 99, padding: EdgeInsets.all(8), child: Icon(Icons.search_rounded, size: 17, color: Luxe.ink)),
+          child: LuxeGlass(
+              radius: 99, padding: const EdgeInsets.all(8), child: Icon(Icons.search_rounded, size: 17, color: Luxe.inkOf(context))),
         ),
       ]),
     );
@@ -459,23 +481,23 @@ class _Hud extends ConsumerWidget {
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
                   Text(p.username.isEmpty ? ctx.tx('کاوشگر', 'Explorer') : p.username,
-                      style: const TextStyle(fontSize: 17, color: Luxe.ink, fontWeight: FontWeight.w600)),
+                      style: TextStyle(fontSize: 17, color: Luxe.inkOf(ctx), fontWeight: FontWeight.w600)),
                   Text('${ctx.tx('سطح', 'Level')} ${p.level} · ${ctx.tx(p.rankTitleFa, p.rankTitleEn)}',
-                      style: const TextStyle(fontSize: 12, color: Luxe.mute)),
+                      style: TextStyle(fontSize: 12, color: Luxe.muteOf(ctx))),
                 ]),
               ),
             ]),
             const SizedBox(height: 14),
             LuxeBar(value: p.levelProgress, height: 7),
             const SizedBox(height: 6),
-            Text('XP ${p.xpIntoLevel}', style: const TextStyle(fontSize: 11, color: Luxe.mute)),
+            Text('XP ${p.xpIntoLevel}', style: TextStyle(fontSize: 11, color: Luxe.muteOf(ctx))),
             const SizedBox(height: 6),
             LuxeOption(
                 label: ctx.tx('سکه', 'Coins'),
                 trailing: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
                   const LuxeCoin(),
                   const SizedBox(width: 6),
-                  Text('${p.coins}', style: const TextStyle(color: Luxe.gold2, fontWeight: FontWeight.w700)),
+                  Text('${p.coins}', style: TextStyle(color: Luxe.goldOf(ctx), fontWeight: FontWeight.w700)),
                 ]),
                 onTap: () {
                   Navigator.of(ctx).pop();
@@ -486,7 +508,7 @@ class _Hud extends ConsumerWidget {
                 trailing: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
                   const LuxeGem(),
                   const SizedBox(width: 6),
-                  Text('${p.gems}', style: const TextStyle(color: Luxe.gold2, fontWeight: FontWeight.w700)),
+                  Text('${p.gems}', style: TextStyle(color: Luxe.goldOf(ctx), fontWeight: FontWeight.w700)),
                 ]),
                 onTap: () {
                   Navigator.of(ctx).pop();

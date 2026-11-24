@@ -20,6 +20,12 @@ class OnlineConfig {
   static const String gamesUrl = String.fromEnvironment('GAMES_SUPABASE_URL');
   static const String gamesAnonKey = String.fromEnvironment('GAMES_SUPABASE_ANON_KEY');
 
+  /// Dedicated Social Media project (profiles directory, follows, Nova Gallery feed/stories, Orbit Network DMs/calls,
+  /// Social Station communities). Shares the same signed-in user JWT across projects under the organization.
+  static const String socialUrl = String.fromEnvironment('SOCIAL_SUPABASE_URL');
+  static const String socialAnonKey = String.fromEnvironment('SOCIAL_SUPABASE_ANON_KEY');
+
   static bool get enabled => supabaseUrl.isNotEmpty && supabaseAnonKey.isNotEmpty;
   static bool get gamesEnabled => gamesUrl.isNotEmpty && gamesAnonKey.isNotEmpty;
+  static bool get socialEnabled => socialUrl.isNotEmpty && socialAnonKey.isNotEmpty;
 }

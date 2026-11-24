@@ -16,13 +16,14 @@ import 'social_repository.dart';
 /// The UI identifies "me" by the explorer id, so my auth uid is swapped for [explorerId] on the way out and back on
 /// the way in. Communities that were created offline on this device stay in [local] and keep working there.
 class SupabaseSocialRepository implements SocialRepository {
-  SupabaseSocialRepository(this.c, this.local, {required this.explorerId});
+  SupabaseSocialRepository(this.c, this.local, {required this.explorerId, String? userId}) : _uid = userId;
 
   final SupabaseClient c;
   final LocalSocialRepository local;
   final String explorerId;
+  final String? _uid;
 
-  String get me => c.auth.currentUser!.id;
+  String get me => _uid ?? c.auth.currentUser!.id;
 
   final Map<String, int> _versions = <String, int>{};
   final Map<String, Community> _cache = <String, Community>{};

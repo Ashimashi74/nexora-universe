@@ -12,7 +12,7 @@ import '../core/net_link.dart';
 ///    inputs and broadcasts snapshots; the others send inputs and render snapshots. The authority posts the result
 ///    as a logged move ('end') which every phone applies.
 class ArcadeRt {
-  ArcadeRt(this.net, {this.hz = 10});
+  ArcadeRt(this.net, {this.hz = 16});
   final NetLink net;
   final double hz;
 
@@ -101,7 +101,7 @@ class ArcadeRt {
 }
 
 /// Smooths a remote value toward its latest network sample.
-double rtLerp(double cur, double target, double dt, [double rate = 12]) {
+double rtLerp(double cur, double target, double dt, [double rate = 16]) {
   final double k = (dt * rate).clamp(0.0, 1.0);
   return cur + (target - cur) * k;
 }

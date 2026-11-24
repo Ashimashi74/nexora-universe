@@ -24,42 +24,85 @@ class IdentityTab extends ConsumerWidget {
   Future<void> _editProfile(BuildContext context, ProfileService p) async {
     final TextEditingController name = TextEditingController(text: p.username);
     final TextEditingController bio = TextEditingController(text: p.bio);
-    final bool? ok = await showDialog<bool>(
+    String? err;
+    bool saving = false;
+    await showDialog<void>(
       context: context,
-      builder: (BuildContext ctx) => AnixDialog(
-        title: Text(ctx.tx('ویرایش پروفایل', 'Edit profile')),
-        content: SizedBox(
-          width: 360,
-          child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-            TextField(
-              controller: name,
-              maxLength: 24,
-              decoration:
-                  InputDecoration(labelText: ctx.tx('نام کاربری', 'Username')),
+      builder: (BuildContext ctx) => StatefulBuilder(
+        builder: (BuildContext ctx, StateSetter setModal) => AnixDialog(
+          title: Text(ctx.tx('ویرایش پروفایل و نام کاربری', 'Edit profile & username')),
+          content: SizedBox(
+            width: 360,
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
+              TextField(
+                controller: name,
+                maxLength: 20,
+                textDirection: TextDirection.ltr,
+                decoration: InputDecoration(
+                  labelText: ctx.tx('نام کاربری (انگلیسی ۳ تا ۲۰ حرف)', 'Username (3–20 letters, digits, _ or .)'),
+                  prefixText: '@',
+                  errorText: err,
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: bio,
+                maxLength: 160,
+                maxLines: 3,
+                decoration: InputDecoration(labelText: ctx.tx('درباره‌ی من', 'Bio')),
+              ),
+            ]),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: saving ? null : () => Navigator.pop(ctx),
+              child: Text(ctx.tx('انصراف', 'Cancel')),
             ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: bio,
-              maxLength: 160,
-              maxLines: 3,
-              decoration:
-                  InputDecoration(labelText: ctx.tx('درباره‌ی من', 'Bio')),
+            FilledButton(
+              onPressed: saving
+                  ? null
+                  : () async {
+                      final String candidate = name.text.trim().replaceFirst(RegExp(r'^@+'), '');
+                      setModal(() {
+                        saving = true;
+                        err = null;
+                      });
+                      if (candidate != p.username) {
+                        final CloudProfileSync? sync = CloudProfileSync.current;
+                        final String status = sync != null
+                            ? await sync.setUsername(candidate)
+                            : (ProfileService.isValidRealUsername(candidate) ? 'ok' : 'bad_chars');
+                        if (status != 'ok') {
+                          setModal(() {
+                            saving = false;
+                            err = switch (status) {
+                              'taken' => ctx.tx('این نام کاربری قبلاً انتخاب شده است.', 'This username is already taken.'),
+                              'bad_length' => ctx.tx('نام کاربری باید بین ۳ تا ۲۰ کاراکتر باشد.', 'Username must be 3–20 characters.'),
+                              'bad_chars' => ctx.tx('فقط حروف انگلیسی، عدد، نقطه (.) و زیرخط (_) مجاز است.',
+                                  'Use only English letters, numbers, . and _.'),
+                              _ => ctx.tx('ذخیره روی سرور ممکن نشد؛ اینترنتت را بررسی کن.', 'Could not save to server; check connection.'),
+                            };
+                          });
+                          return;
+                        }
+                        if (sync == null) {
+                          await p.setConfirmedUsername(candidate);
+                        }
+                      }
+                      await p.updateProfile(newBio: bio.text.trim());
+                      if (ctx.mounted) Navigator.pop(ctx);
+                      if (context.mounted) {
+                        luxeToast(context, context.tx('پروفایل ذخیره شد ✓', 'Profile saved ✓'));
+                      }
+                    },
+              child: saving
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : Text(ctx.tx('ذخیره', 'Save')),
             ),
-          ]),
+          ],
         ),
-        actions: <Widget>[
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(ctx.tx('انصراف', 'Cancel'))),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(ctx.tx('ذخیره', 'Save'))),
-        ],
       ),
     );
-    if (ok == true) {
-      await p.updateProfile(name: name.text, newBio: bio.text.trim());
-    }
     name.dispose();
     bio.dispose();
   }

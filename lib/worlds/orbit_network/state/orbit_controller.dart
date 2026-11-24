@@ -15,9 +15,9 @@ import '../models/orbit_models.dart';
 final orbitRepositoryProvider = Provider<OrbitRepository>((ref) {
   final OnlineService o = ref.watch(onlineProvider);
   final LocalOrbitRepository local = LocalOrbitRepository(LocalStore.instance);
-  final client = o.client;
-  if (o.isOnline && client != null) {
-    return SupabaseOrbitRepository(client, local, explorerId: ref.read(profileProvider).explorerId);
+  final client = o.social;
+  if (o.isOnline && client != null && o.uid != null) {
+    return SupabaseOrbitRepository(client, local, explorerId: ref.read(profileProvider).explorerId, userId: o.uid);
   }
   return local;
 });

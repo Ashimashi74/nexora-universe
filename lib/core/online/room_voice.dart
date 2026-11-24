@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart' as lk;
 
+import '../backend/supabase_backend.dart';
 import '../settings/app_settings.dart' show NxTx;
 import '../ui2/nx2_widgets.dart' show Nx2;
 import 'online_config.dart';
+import 'online_service.dart';
 import 'voice_connect.dart';
 
 /// Turns every incoming (remote) audio track of [room] on or off: the room's "speaker" switch.
@@ -29,20 +31,26 @@ Future<void> setRoomIncomingAudio(lk.Room room, bool on) async {
   } catch (_) {}
 }
 
-/// Voice for an online GAME room: the lobby and the match it starts share one LiveKit room, so the conversation keeps
-/// going when the match opens. One instance for the whole app ([GameVoice.instance]).
-///
-/// * [join] asks `nx-call-token` (kind 'game') for a grant: only seated players / the match's players get one.
-/// * [mic] publishes the microphone (mute / unmute), [speaker] plays the others (on / off).
-/// * Pages [acquire] the room while visible and [release] it when they close; a release is delayed a few seconds so
-///   going from the lobby to the match does not drop the call.
+/// Voice for an online GAME room: the lobby and the match it starts share one LiveKit room (`nxg-game-<roomId>`),
+/// so the conversation keeps going seamlessly when the match opens. One instance for the whole app ([GameVoice.instance]).
 class GameVoice extends ChangeNotifier {
   GameVoice._();
   static final GameVoice instance = GameVoice._();
 
-  /// Grant provider (set by the app: SupabaseBackend.liveKitGameGrant). Returns {url, token, room} or {error}.
-  /// It caches grants (15 min tokens) per user; `fresh: true` skips the cache.
+  /// Grant provider (set by `backendProvider`: [SupabaseBackend.liveKitGameGrant]), with automatic fallback to
+  /// [OnlineService.current] so `grant` is never null even if a game page mounts before `backendProvider` is read.
   Future<Map<String, dynamic>?> Function(String id, {bool match, bool fresh})? grant;
+
+  Future<Map<String, dynamic>?> Function(String id, {bool match, bool fresh})? get _grantFn {
+    if (grant != null) return grant;
+    final OnlineService? online = OnlineService.current;
+    if (online != null && online.configured) {
+      final SupabaseBackend be = SupabaseBackend(online);
+      grant = be.liveKitGameGrant;
+      return grant;
+    }
+    return null;
+  }
 
   lk.Room? _room;
   lk.EventsListener<lk.RoomEvent>? _events;
@@ -53,7 +61,7 @@ class GameVoice extends ChangeNotifier {
   bool speaker = true;
   String? error;
   Timer? _release;
-  int _holders = 0;
+  final Set<String> _holders = <String>{};
 
   bool get connected => _room != null;
   String? get key => _key;
@@ -69,57 +77,72 @@ class GameVoice extends ChangeNotifier {
     return false;
   }
 
-  /// Fetches (or reuses) the grant for this room in the background and warms the LiveKit connection, so the
-  /// "join voice" tap only has to do the WebRTC handshake. Called when a lobby / match page opens.
+  /// Fetches (or reuses) the grant in the background; if already connected (e.g. transitioning from Lobby `r:<roomId>`
+  /// to Match `m:<matchId>`), verifies whether the target shares the same LiveKit room (`nxg-game-<roomId>`), keeping
+  /// the live call uninterrupted when they match and switching rooms only when entering an unrelated lobby/match.
   void prefetch(String id, {bool match = false}) {
-    final Future<Map<String, dynamic>?> Function(String id, {bool match, bool fresh})? g = grant;
-    if (g == null || _room != null) return;
-    unawaited(g(id, match: match).then((_) {}, onError: (Object _) {}));
+    final Future<Map<String, dynamic>?> Function(String id, {bool match, bool fresh})? g = _grantFn;
+    if (g == null) return;
+    unawaited(g(id, match: match).then((Map<String, dynamic>? r) {
+      final String? targetRoom = r?['room'] as String?;
+      if (_room != null && targetRoom != null && targetRoom.isNotEmpty && _lkName != null && targetRoom != _lkName) {
+        // User entered a completely different room/match while still connected to an older room: switch cleanly.
+        unawaited(join(id, match: match));
+      }
+    }, onError: (Object _) {}));
   }
 
   void acquire(String key) {
     _release?.cancel();
-    _holders++;
-    if (_key != null && _key != key && connected) {
-      // A different room: the old call ends.
-      unawaited(leave());
-    }
+    _holders.add(key);
     _key = key;
   }
 
   void release(String key) {
-    _holders = (_holders - 1).clamp(0, 1 << 20);
-    if (_holders > 0) return;
+    _holders.remove(key);
+    if (_holders.isNotEmpty) return;
     _release?.cancel();
     _release = Timer(const Duration(seconds: 4), () {
-      if (_holders == 0) unawaited(leave());
+      if (_holders.isEmpty) unawaited(leave());
     });
   }
 
   Future<void> join(String id, {bool match = false}) async {
-    final Future<Map<String, dynamic>?> Function(String id, {bool match, bool fresh})? g = grant;
-    if (busy || g == null) return;
+    final Future<Map<String, dynamic>?> Function(String id, {bool match, bool fresh})? g = _grantFn;
+    if (busy) return;
+    if (g == null) {
+      error = 'offline';
+      notifyListeners();
+      return;
+    }
     busy = true;
     error = null;
     notifyListeners();
     lk.Room? room;
     lk.EventsListener<lk.RoomEvent>? ev;
-    // Open the mic in parallel with the grant fetch + handshake (only when the user wants to talk).
     final Future<lk.LocalAudioTrack?>? micF = mic && _room == null ? openMic() : null;
     lk.LocalAudioTrack? micTrack;
     try {
-      // Warm DNS/TLS to LiveKit while the grant is fetched (no-op cost if the grant is cached).
       room = lk.Room(roomOptions: voiceRoomOptions());
       warmVoice(room, OnlineConfig.liveKitUrl);
-      final Map<String, dynamic>? r = await g(id, match: match);
-      final String? token = r?['token'] as String?;
+      Map<String, dynamic>? r = await g(id, match: match);
+      String? token = r?['token'] as String?;
+      if (token == null) {
+        // Retry once bypassing any stale cached failure.
+        r = await g(id, match: match, fresh: true);
+        token = r?['token'] as String?;
+      }
       if (token == null) throw StateError('${r?['error'] ?? 'no_token'}');
       final String name = '${r?['room'] ?? ''}';
       if (_room != null && name == _lkName) {
-        // already in this call (lobby -> match)
         if (micF != null) unawaited(micF.then(dropMic));
         await disposeVoice(room);
         room = null;
+        if (mic) {
+          try {
+            await _room!.localParticipant?.setMicrophoneEnabled(true);
+          } catch (_) {}
+        }
         return;
       }
       await leave(keepKey: true);
@@ -132,8 +155,6 @@ class GameVoice extends ChangeNotifier {
           _changed();
         })
         ..on<lk.RoomDisconnectedEvent>((lk.RoomDisconnectedEvent e) {
-          // The SDK already retried (resume + full reconnect) before giving up: drop the dead room instead of
-          // looking connected, and do not auto-rejoin (no reconnect loops).
           if (identical(_room, live)) {
             unawaited(leave(keepKey: true));
           }
@@ -141,16 +162,15 @@ class GameVoice extends ChangeNotifier {
       final String url = '${r?['url'] ?? OnlineConfig.liveKitUrl}';
       micTrack = await micF;
       if (micF != null && micTrack == null) {
-        mic = false; // mic unavailable (permission): join listening only
+        mic = false;
       }
       try {
-        await connectVoice(live, url, token, micTrack: micTrack);
+        await connectVoice(live, url, token, mic: mic && micTrack == null, micTrack: micTrack);
       } catch (_) {
-        // Never reuse a grant that failed: the next tap fetches a fresh one. No automatic retry loop.
         unawaited(g(id, match: match, fresh: true).then((_) {}, onError: (Object _) {}));
         rethrow;
       }
-      micTrack = null; // owned by the room now
+      micTrack = null;
       _room = live;
       _events = ev;
       _lkName = name;
@@ -223,7 +243,7 @@ class RoomVoiceBar extends StatefulWidget {
 
 class _RoomVoiceBarState extends State<RoomVoiceBar> {
   final GameVoice v = GameVoice.instance;
-  late final String _k = '${widget.match ? 'm' : 'r'}:${widget.id}';
+  late String _k = '${widget.match ? 'm' : 'r'}:${widget.id}';
 
   @override
   void initState() {
@@ -231,6 +251,18 @@ class _RoomVoiceBarState extends State<RoomVoiceBar> {
     v.acquire(_k);
     v.addListener(_on);
     v.prefetch(widget.id, match: widget.match);
+  }
+
+  @override
+  void didUpdateWidget(covariant RoomVoiceBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final String nextKey = '${widget.match ? 'm' : 'r'}:${widget.id}';
+    if (nextKey != _k) {
+      v.acquire(nextKey);
+      v.release(_k);
+      _k = nextKey;
+      v.prefetch(widget.id, match: widget.match);
+    }
   }
 
   @override
@@ -287,7 +319,9 @@ class _RoomVoiceBarState extends State<RoomVoiceBar> {
             icon: v.mic ? Icons.mic_rounded : Icons.mic_off_rounded,
             color: v.mic ? Nx2.success : Nx2.danger,
             on: v.mic,
-            tip: v.mic ? context.tx('میکروفون روشن (بی‌صدا کن)', 'Mic on (tap to mute)') : context.tx('میکروفون خاموش', 'Mic muted'),
+            tip: v.mic
+                ? context.tx('میکروفون روشن (بی‌صدا کن)', 'Mic on (tap to mute)')
+                : context.tx('میکروفون خاموش', 'Mic muted'),
             onTap: () async {
               await v.setMic(!v.mic);
               if (v.mic && !v.connected && !v.busy) await v.join(widget.id, match: widget.match);
@@ -307,9 +341,15 @@ class _RoomVoiceBarState extends State<RoomVoiceBar> {
             const SizedBox(width: 2),
             Text('${v.peers + 1}', style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
           ],
-          if (!live && v.error != null && !widget.compact) ...<Widget>[
+          if (!live && v.error != null) ...<Widget>[
             const SizedBox(width: 6),
-            Tooltip(message: v.error!, child: const Icon(Icons.error_outline_rounded, size: 16, color: Nx2.danger)),
+            Tooltip(
+              message: v.error!,
+              child: GestureDetector(
+                onTap: () => v.join(widget.id, match: widget.match),
+                child: const Icon(Icons.error_outline_rounded, size: 16, color: Nx2.danger),
+              ),
+            ),
           ],
         ],
       ),

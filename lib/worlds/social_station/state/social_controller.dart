@@ -14,9 +14,9 @@ import '../models/tournament_bracket.dart';
 final socialRepositoryProvider = Provider<SocialRepository>((ref) {
   final OnlineService o = ref.watch(onlineProvider);
   final LocalSocialRepository local = LocalSocialRepository(LocalStore.instance);
-  final client = o.client;
-  if (o.isOnline && client != null) {
-    return SupabaseSocialRepository(client, local, explorerId: ref.read(profileProvider).explorerId);
+  final client = o.social;
+  if (o.isOnline && client != null && o.uid != null) {
+    return SupabaseSocialRepository(client, local, explorerId: ref.read(profileProvider).explorerId, userId: o.uid);
   }
   return local;
 });

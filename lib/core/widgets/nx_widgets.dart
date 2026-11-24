@@ -228,7 +228,7 @@ class NxPageShell extends StatelessWidget {
         ? SafeArea(top: false, bottom: !hasBottom, child: body)
         : body;
     return Scaffold(
-      backgroundColor: backgroundColor ?? Nx2.deep,
+      backgroundColor: backgroundColor ?? Luxe.bgOf(context),
       extendBody: hasBottom,
       // The body starts *below* the bar. This is the one layout contract of the shell: a page
       // supplies a body and never pads for the bar itself. (Pages used to add kToolbarHeight by
@@ -281,15 +281,18 @@ class NxDockBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool light = Luxe.isLight(context);
     return Container(
       height: 66,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: <Color>[Color(0xF20F0E0B), Color(0xFA07080C)],
+          colors: light
+              ? const <Color>[Color(0xF5FFFDFA), Color(0xFAF4ECDC)]
+              : const <Color>[Color(0xF20F0E0B), Color(0xFA07080C)],
         ),
-        border: Border(top: BorderSide(color: Color(0x33D9B872))),
+        border: Border(top: BorderSide(color: Luxe.lineOf(context))),
       ),
       child: SafeArea(
         top: false,
@@ -309,7 +312,7 @@ class NxDockBar extends StatelessWidget implements PreferredSizeWidget {
                         child: Icon(
                           i == index ? (sections[i].activeIcon ?? sections[i].icon) : sections[i].icon,
                           size: 22,
-                          color: i == index ? Luxe.gold : Luxe.mute,
+                          color: i == index ? Luxe.goldOf(context) : Luxe.muteOf(context),
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -320,7 +323,7 @@ class NxDockBar extends StatelessWidget implements PreferredSizeWidget {
                         style: TextStyle(
                           fontSize: 9.5,
                           fontWeight: i == index ? FontWeight.w900 : FontWeight.w600,
-                          color: i == index ? Luxe.gold2 : Luxe.mute,
+                          color: i == index ? (light ? Luxe.dayInk : Luxe.gold2) : Luxe.muteOf(context),
                         ),
                       ),
                     ],
@@ -396,9 +399,13 @@ class NxTopBar extends ConsumerWidget implements PreferredSizeWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: Nx2.title.copyWith(fontSize: 17, shadows: <Shadow>[
-                Shadow(color: tint.withValues(alpha: 0.4), blurRadius: 12),
-              ]),
+              style: Nx2.title.copyWith(
+                fontSize: 17,
+                color: Luxe.inkOf(context),
+                shadows: Luxe.isLight(context)
+                    ? const <Shadow>[]
+                    : <Shadow>[Shadow(color: tint.withValues(alpha: 0.4), blurRadius: 12)],
+              ),
             ),
           ),
           if (search)
@@ -447,6 +454,7 @@ class NxBarButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool light = Luxe.isLight(context);
     final Color c = tint ?? NxThemeColors.of(context).accent;
     final Widget button = Nx2Pressable(
       onTap: onTap,
@@ -458,10 +466,13 @@ class NxBarButton extends StatelessWidget {
           child: CustomPaint(
             painter: Nx2FramePainter(
               cut: 12,
-              glow: 0.22,
+              glow: light ? 0.08 : 0.22,
+              fill: light
+                  ? const LinearGradient(colors: <Color>[Color(0xF5FFFDFA), Color(0xECF5EDE0)])
+                  : null,
               border: LinearGradient(colors: <Color>[c, Color.lerp(c, Nx2.gold, 0.5) ?? c]),
             ),
-            child: Icon(icon, color: color ?? Nx2.text, size: size * 0.5),
+            child: Icon(icon, color: color ?? Luxe.inkOf(context), size: size * 0.5),
           ),
         ),
       ),

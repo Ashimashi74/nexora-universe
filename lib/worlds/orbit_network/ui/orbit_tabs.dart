@@ -8,6 +8,7 @@ import '../../../core/profile/profile_service.dart';
 import '../../../core/settings/app_settings.dart';
 import '../../../core/theme/nx_theme.dart';
 import '../../../core/widgets/nx_widgets.dart';
+import '../../../core/widgets/user_profile_preview.dart';
 import '../models/orbit_models.dart';
 import '../state/orbit_controller.dart';
 import 'orbit_bubbles.dart';
@@ -582,13 +583,14 @@ class OrbitFriendsPanel extends ConsumerStatefulWidget {
 class _OrbitFriendsPanelState extends ConsumerState<OrbitFriendsPanel> {
   List<NxUser>? _friends;
   List<FriendRequest> _requests = <FriendRequest>[];
+  List<NxUser> _directory = <NxUser>[];
   List<NxUser> _found = <NxUser>[];
   String _q = '';
   bool _searching = false;
 
   SocialApi? get _api {
     final SupabaseOrbitRepository? r = ref.read(orbitControllerProvider).online;
-    return r == null ? null : SocialApi(r.c);
+    return r == null ? null : SocialApi(r.c, userId: r.me);
   }
 
   @override
@@ -602,12 +604,16 @@ class _OrbitFriendsPanelState extends ConsumerState<OrbitFriendsPanel> {
     if (api == null) return;
     try {
       unawaited(api.touchPresence().then((_) {}, onError: (Object _) {}));
-      final List<NxUser> f = await api.friends();
-      final List<FriendRequest> r = await api.requests();
+      final results = await Future.wait<dynamic>(<Future<dynamic>>[
+        api.friends(),
+        api.requests(),
+        api.directory('', 30),
+      ]);
       if (mounted) {
         setState(() {
-          _friends = f;
-          _requests = r;
+          _friends = results[0] as List<NxUser>;
+          _requests = results[1] as List<FriendRequest>;
+          _directory = results[2] as List<NxUser>;
         });
       }
     } catch (_) {
@@ -619,7 +625,7 @@ class _OrbitFriendsPanelState extends ConsumerState<OrbitFriendsPanel> {
     _q = q;
     final SocialApi? api = _api;
     if (api == null) return;
-    if (q.trim().length < 2) {
+    if (q.trim().isEmpty) {
       setState(() => _found = <NxUser>[]);
       return;
     }
@@ -634,6 +640,34 @@ class _OrbitFriendsPanelState extends ConsumerState<OrbitFriendsPanel> {
   void _snack(String fa, String en) {
     if (!mounted) return;
     luxeToast(context, context.tx(fa, en));
+  }
+
+  Future<void> _preview(NxUser u) async {
+    await showUserProfilePreview(
+      context,
+      userId: u.id,
+      username: u.username,
+      avatarUrl: u.avatarUrl,
+    );
+    if (mounted) {
+      unawaited(_load());
+      if (_q.trim().isNotEmpty) unawaited(_search(_q));
+    }
+  }
+
+  Future<void> _toggleFollowUser(NxUser u) async {
+    final SocialApi? api = _api;
+    if (api == null) return;
+    final bool wantFollow = !(u.isFollowing || u.isPending);
+    try {
+      await api.toggleFollow(u.id, wantFollow);
+      if (mounted) {
+        await _load();
+        if (_q.trim().isNotEmpty) await _search(_q);
+      }
+    } catch (_) {
+      _snack('عملیات دنبال‌کردن انجام نشد.', 'Could not update follow status.');
+    }
   }
 
   Future<void> _message(NxUser u) async {
@@ -659,10 +693,14 @@ class _OrbitFriendsPanelState extends ConsumerState<OrbitFriendsPanel> {
 
   Widget _userTile(NxUser u, {Widget? trailing}) => ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+        onTap: () => _preview(u),
         leading: Stack(children: <Widget>[
           CircleAvatar(
             backgroundColor: WorldPalette.orbit.primary.withValues(alpha: 0.25),
-            child: Text(u.username.isEmpty ? '?' : u.username.characters.first.toUpperCase()),
+            backgroundImage: (u.avatarUrl != null && u.avatarUrl!.isNotEmpty) ? NetworkImage(u.avatarUrl!) : null,
+            child: (u.avatarUrl == null || u.avatarUrl!.isEmpty)
+                ? Text(u.username.isEmpty ? '?' : u.username.characters.first.toUpperCase())
+                : null,
           ),
           if (u.isOnlineNow)
             const PositionedDirectional(
@@ -672,9 +710,58 @@ class _OrbitFriendsPanelState extends ConsumerState<OrbitFriendsPanel> {
             ),
         ]),
         title: Text(u.username, style: const TextStyle(fontWeight: FontWeight.w800)),
-        subtitle: Text('Lv ${u.level}${u.isOnlineNow ? ' · ${context.tx('آنلاین', 'online')}' : ''}'),
+        subtitle: Text(
+          'Lv ${u.level}${u.isOnlineNow ? ' · ${context.tx('آنلاین', 'online')}' : ''}'
+          '${u.followsMe ? ' · ${context.tx('دنبال‌کننده‌ی تو', 'follows you')}' : ''}',
+        ),
         trailing: trailing,
       );
+
+  Widget _explorerActions(NxUser u, {required Set<String> friendIds, required Set<String> pendingIds}) {
+    final bool followingOrPending = u.isFollowing || u.isPending;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        IconButton(
+          tooltip: context.tx('پیام مستقیم', 'Direct message'),
+          icon: const Icon(Icons.chat_bubble_outline_rounded, size: 20),
+          onPressed: () => _message(u),
+        ),
+        if (followingOrPending)
+          OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+            ),
+            onPressed: () => _toggleFollowUser(u),
+            child: Text(u.isPending ? context.tx('در انتظار', 'Requested') : context.tx('دنبال شده', 'Following')),
+          )
+        else
+          FilledButton.tonal(
+            style: FilledButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+            ),
+            onPressed: () => _toggleFollowUser(u),
+            child: Text(context.tx('دنبال کن', 'Follow')),
+          ),
+        if (!friendIds.contains(u.id) && !pendingIds.contains(u.id))
+          IconButton(
+            tooltip: context.tx('درخواست دوستی', 'Add friend'),
+            icon: const Icon(Icons.person_add_alt_1_rounded, size: 19),
+            onPressed: () async {
+              try {
+                await _api?.sendRequest(u.id);
+                _snack('درخواست دوستی فرستاده شد.', 'Friend request sent.');
+              } catch (_) {
+                _snack('ارسال درخواست ممکن نشد.', 'Could not send the request.');
+              }
+              await _load();
+            },
+          ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -683,6 +770,7 @@ class _OrbitFriendsPanelState extends ConsumerState<OrbitFriendsPanel> {
     final Set<String> pendingIds = _requests.map((FriendRequest r) => r.user.id).toSet();
     final List<FriendRequest> incoming = _requests.where((FriendRequest r) => r.incoming).toList();
     final List<FriendRequest> outgoing = _requests.where((FriendRequest r) => !r.incoming).toList();
+    final List<NxUser> discover = _directory.where((NxUser u) => !friendIds.contains(u.id)).toList();
     return RefreshIndicator(
       onRefresh: _load,
       child: ListView(
@@ -693,7 +781,7 @@ class _OrbitFriendsPanelState extends ConsumerState<OrbitFriendsPanel> {
             textInputAction: TextInputAction.search,
             decoration: InputDecoration(
               prefixIcon: const Icon(Icons.person_search_rounded),
-              hintText: context.tx('جستجوی کاوشگران با نام کاربری…', 'Search explorers by username…'),
+              hintText: context.tx('جستجوی کاربران با نام کاربری یا شناسه…', 'Search users by username or explorer ID…'),
               suffixIcon: _searching
                   ? const Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2))
                   : null,
@@ -705,26 +793,10 @@ class _OrbitFriendsPanelState extends ConsumerState<OrbitFriendsPanel> {
             for (final NxUser u in _found)
               _userTile(
                 u,
-                trailing: friendIds.contains(u.id)
-                    ? IconButton(icon: const Icon(Icons.chat_rounded), onPressed: () => _message(u))
-                    : pendingIds.contains(u.id)
-                        ? Text(context.tx('در انتظار', 'Pending'), style: const TextStyle(color: NxColors.textDim))
-                        : FilledButton.tonalIcon(
-                            onPressed: () async {
-                              try {
-                                await _api?.sendRequest(u.id);
-                                _snack('درخواست دوستی فرستاده شد.', 'Friend request sent.');
-                              } catch (_) {
-                                _snack('ارسال درخواست ممکن نشد.', 'Could not send the request.');
-                              }
-                              await _load();
-                            },
-                            icon: const Icon(Icons.person_add_alt_1_rounded, size: 18),
-                            label: Text(context.tx('دوستی', 'Add')),
-                          ),
+                trailing: _explorerActions(u, friendIds: friendIds, pendingIds: pendingIds),
               ),
             const Divider(),
-          ] else if (_q.trim().length >= 2 && !_searching)
+          ] else if (_q.trim().isNotEmpty && !_searching)
             Padding(
               padding: const EdgeInsets.all(8),
               child: Text(context.tx('کسی پیدا نشد.', 'Nobody found.'), style: const TextStyle(color: NxColors.textDim)),
@@ -802,6 +874,7 @@ class _OrbitFriendsPanelState extends ConsumerState<OrbitFriendsPanel> {
                       onPressed: () => _call(u, false)),
                   PopupMenuButton<String>(
                     onSelected: (String a) async {
+                      if (a == 'profile') await _preview(u);
                       if (a == 'video') await _call(u, true);
                       if (a == 'remove') {
                         await _api?.removeFriend(u.id);
@@ -809,12 +882,30 @@ class _OrbitFriendsPanelState extends ConsumerState<OrbitFriendsPanel> {
                       }
                     },
                     itemBuilder: (BuildContext c) => <PopupMenuEntry<String>>[
+                      PopupMenuItem<String>(value: 'profile', child: Text(c.tx('مشاهده پروفایل', 'View profile'))),
                       PopupMenuItem<String>(value: 'video', child: Text(c.tx('تماس تصویری', 'Video call'))),
                       PopupMenuItem<String>(value: 'remove', child: Text(c.tx('حذف از دوستان', 'Remove friend'))),
                     ],
                   ),
                 ]),
               ),
+          if (discover.isNotEmpty && _q.trim().isEmpty) ...<Widget>[
+            const SizedBox(height: 16),
+            Text('${context.tx('کاوشگران نکسورا', 'Nexora Explorers')} (${discover.length})',
+                style: const TextStyle(fontWeight: FontWeight.w900)),
+            const SizedBox(height: 4),
+            Text(
+              context.tx('روی هر کاربر بزن تا پروفایلش را ببینی، دنبال کنی یا پیام مستقیم بفرستی.',
+                  'Tap any user to preview their profile, follow them, or send a direct message.'),
+              style: const TextStyle(color: NxColors.textDim, fontSize: 12),
+            ),
+            const SizedBox(height: 6),
+            for (final NxUser u in discover)
+              _userTile(
+                u,
+                trailing: _explorerActions(u, friendIds: friendIds, pendingIds: pendingIds),
+              ),
+          ],
         ],
       ),
     );

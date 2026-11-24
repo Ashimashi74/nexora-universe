@@ -24,7 +24,7 @@ const int kMatchMs = int.fromEnvironment('MATCH_MS', defaultValue: 420);
 void main() {
   setUp(() async {
     // ignore: invalid_use_of_visible_for_testing_member
-    SharedPreferences.setMockInitialValues(<String, Object>{'settings.lang': 'en', 'settings.sound': false});
+    SharedPreferences.setMockInitialValues(<String, Object>{'settings.lang': 'fa', 'settings.sound': false});
     await LocalStore.init();
     await loadFonts();
     mockAudio();

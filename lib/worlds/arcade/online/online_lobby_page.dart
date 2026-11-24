@@ -331,6 +331,20 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
               value: roomId),
           callback: (_) => unawaited(_refresh()),
         )
+        .onBroadcast(
+          event: 'sync',
+          callback: (Map<String, dynamic> p) {
+            final dynamic payload = p['payload'] ?? p;
+            if (payload is Map && payload['match_id'] is String) {
+              final String mid = payload['match_id'] as String;
+              if (mid.isNotEmpty && !_inMatch && mid != _lastMatchSeen) {
+                unawaited(_openMatch(mid));
+                return;
+              }
+            }
+            unawaited(_refresh());
+          },
+        )
         .onPresenceSync((_) => _syncPresence())
         .onPresenceJoin((_) => _syncPresence())
         .onPresenceLeave((_) => _syncPresence())
@@ -465,11 +479,23 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
     unawaited(_loadOpen());
   }
 
+  void _broadcastSync([Map<String, dynamic>? extra]) {
+    final RealtimeChannel? ch = _ch;
+    if (ch == null) return;
+    unawaited(ch.sendBroadcastMessage(
+      event: 'sync',
+      payload: <String, dynamic>{'ts': DateTime.now().millisecondsSinceEpoch, ...?extra},
+    ));
+  }
+
   Future<void> _start() => _guard(() async {
         final dynamic r = await _c!.rpc('nx_start_match',
             params: <String, dynamic>{'p_room': _roomId});
         final String? mid = (r as Map)['match_id'] as String?;
-        if (mid != null && !_inMatch) unawaited(_openMatch(mid));
+        if (mid != null) {
+          _broadcastSync(<String, dynamic>{'match_id': mid});
+          if (!_inMatch) unawaited(_openMatch(mid));
+        }
       });
 
   Future<void> _setSeats(int n) => _guard(() async {
@@ -483,12 +509,14 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
             'p_settings': null
           });
         }
+        _broadcastSync();
         await _refresh();
       });
 
   Future<void> _setLocked(bool locked) => _guard(() async {
         await _c!.rpc('nx_room_set_locked',
             params: <String, dynamic>{'p_room': _roomId, 'p_locked': locked});
+        _broadcastSync();
         await _refresh();
       });
 
@@ -507,6 +535,7 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
         await _guard(() async {
           await _c!.rpc('nx_room_kick',
               params: <String, dynamic>{'p_room': _roomId, 'p_user': p.userId});
+          _broadcastSync();
           await _refresh();
         });
       }
@@ -514,6 +543,7 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
   Future<void> _toggleReady(bool v) => _guard(() async {
         await _c!.rpc('nx_set_ready',
             params: <String, dynamic>{'p_room': _roomId, 'p_ready': v});
+        _broadcastSync();
         await _refresh();
       });
 
@@ -522,7 +552,7 @@ class _OnlineLobbyPageState extends ConsumerState<OnlineLobbyPage> {
     if (c == null || _roomId == null) return;
     List<NxUser> friends = <NxUser>[];
     try {
-      final SupabaseClient? a = ref.read(onlineProvider).client;
+      final SupabaseClient? a = ref.read(onlineProvider).social;
       if (a != null) friends = await SocialApi(a).friends();
     } catch (_) {}
     if (!mounted) return;

@@ -53,13 +53,13 @@ void main() {
     expect(kBmLaunch, closeTo(1.97, 1e-9)); // v6: 10/10 recordings (docs/FS_V6_CALIBRATION.md)
     expect(BmEngine.strikeOf(2) / BmEngine.strikeOf(10), closeTo(.40, .01));
     expect(STEP, 1 / 240);
-    expect(kBmFields.length, 5); // v11: only the owner's five pitch arts
-    expect(NB, 4); // v13: the owner's four NX balls
+    expect(kBmFields.length, 11); // v12/v13: all eleven pitch arts
+    expect(NB, 22); // all 22 balls (4 NX + 18 v12)
     expect(kBmBallN.length, NB);
     expect(kBmBallFa.length, NB);
-    final BmFieldS f = kBmFields.firstWhere((BmFieldS x) => x.id == 'nx_checker_silver');
-    expect(f.W, (810 * FS).roundToDouble());
-    expect(f.L, (79 * FS).roundToDouble());
+    final BmFieldS f = kBmFields.firstWhere((BmFieldS x) => x.id == 'tropical');
+    expect(f.W, (1086 * FS).roundToDouble());
+    expect(f.L, (214 * FS).roundToDouble());
     final BmEngine e = BmEngine(_Hooks(), rng: math.Random(1));
     e.startMatch(_cfg());
     expect(e.bodies.length, 11);

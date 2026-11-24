@@ -13,9 +13,9 @@ import '../models/nova_models.dart';
 final novaRepositoryProvider = Provider<NovaRepository>((ref) {
   final OnlineService o = ref.watch(onlineProvider);
   final LocalNovaRepository local = LocalNovaRepository(LocalStore.instance);
-  final client = o.client;
-  if (o.isOnline && client != null) {
-    return SupabaseNovaRepository(client, local, explorerId: ref.read(profileProvider).explorerId);
+  final client = o.social;
+  if (o.isOnline && client != null && o.uid != null) {
+    return SupabaseNovaRepository(client, local, explorerId: ref.read(profileProvider).explorerId, userId: o.uid);
   }
   return local;
 });

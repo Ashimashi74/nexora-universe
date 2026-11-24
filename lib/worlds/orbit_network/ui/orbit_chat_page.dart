@@ -8,6 +8,7 @@ import '../../../core/profile/profile_service.dart';
 import '../../../core/settings/app_settings.dart';
 import '../../../core/theme/nx_theme.dart';
 import '../../../core/widgets/nx_widgets.dart';
+import '../../../core/widgets/user_profile_preview.dart';
 import '../../nova_gallery/models/art_asset.dart';
 import '../../nova_gallery/ui/nova_composer.dart' show showArtAssetPicker;
 import '../models/orbit_models.dart';
@@ -104,12 +105,20 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
       return;
     }
     final String name = orbitMyName(context, ref.read(profileProvider));
+    final OrbitMessage? prevReply = _replyTo;
     final String? replyId = _replyTo?.id;
     _text.clear();
     setState(() => _replyTo = null);
-    await _ctrl.send(widget.chatId,
-        authorName: name, text: t, replyToId: replyId);
-    await _afterSend();
+    try {
+      await _ctrl.send(widget.chatId,
+          authorName: name, text: t, replyToId: replyId);
+      await _afterSend();
+    } catch (_) {
+      if (!mounted) return;
+      _text.text = t;
+      setState(() => _replyTo = prevReply);
+      luxeToast(context, context.tx('ارسال پیام انجام نشد.', 'Could not send message.'));
+    }
   }
 
   Future<void> _attach() async {
@@ -535,6 +544,13 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
                                   ? const Icon(Icons.circle,
                                       size: 10, color: NxColors.success)
                                   : null,
+                              onTap: m.id == ctrl.ownerId
+                                  ? null
+                                  : () => showUserProfilePreview(
+                                        fc,
+                                        userId: m.id,
+                                        username: m.name,
+                                      ),
                               onLongPress: live.role == 'owner' &&
                                       m.role != 'owner' &&
                                       !live.isDirect
@@ -662,7 +678,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
     return Scaffold(
       backgroundColor: visual.background,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF14130F),
+        backgroundColor: visual.surfaceRaised,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         shape: Border(bottom: BorderSide(color: visual.accent.withValues(alpha: 0.22))),
@@ -681,7 +697,17 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
                 onChanged: (String v) => setState(() => _query = v),
               )
             : InkWell(
-                onTap: () => _info(chat),
+                onTap: () {
+                  if (chat.isDirect && chat.peerId != null && chat.peerId!.isNotEmpty) {
+                    showUserProfilePreview(
+                      context,
+                      userId: chat.peerId!,
+                      username: orbitChatTitle(context, chat),
+                    );
+                  } else {
+                    _info(chat);
+                  }
+                },
                 child: Row(children: <Widget>[
                   OrbitChatAvatar(chat: chat, size: 38),
                   const SizedBox(width: 10),

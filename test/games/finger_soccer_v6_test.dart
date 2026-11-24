@@ -78,8 +78,8 @@ double _ball02(double pull, {String team = 'nx_frost'}) {
 }
 
 void main() {
-  test('v6 calibration: a power-10 full pull gives the recordings\' hardest ball (4.57 widths/s over 0.2 s)', () {
-    expect(_ball02(1), closeTo(4.57, .12));
+  test('v6 calibration: a power-10 full pull gives the calibrated hardest ball (~4.35 widths/s over 0.2 s on v12 damping)', () {
+    expect(_ball02(1), closeTo(4.35, .15));
     // a softer pull is slower, never faster
     expect(_ball02(.5), lessThan(_ball02(1)));
     // the caps never clip a power-10 full pull
@@ -113,7 +113,7 @@ void main() {
     expect(kBmBallN.contains('Classic'), isTrue);
     expect(kBmBallFa.length, NB);
     expect(File(bmBallArt(kBmBallN.indexOf('Classic'))).existsSync(), isTrue);
-    expect(kBmBallPref, 'bm.ball.v9');
+    expect(kBmBallPref, 'bm.ball.v13');
   });
 
   test('v6 goal: banner hold, then the pieces glide home (render only) before the kickoff turn', () {

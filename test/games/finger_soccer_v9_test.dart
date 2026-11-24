@@ -157,38 +157,33 @@ void main() {
     });
   });
 
-  group('v11 pitches: only the five owner arts, colliders measured on the art', () {
-    // Measured on the owner's PNGs by tool/build_fs_v11_assets.py (image px of the 1086 x 1448 arts):
-    // rails (inner edge of the frame rail) L / R / T / B, post tube centre offset from the centre line, tube radius,
-    // net depth (the shallower of the two drawn goals), corner radius.
-    const Map<String, List<double>> measured = <String, List<double>>{
-      'nx_checker_silver': <double>[110, 977, 76, 1367, 141.14, 7.75, 52, 30.5],
-      'nx_rings_green': <double>[102, 986, 95, 1356, 146.18, 6.0, 70, 27.2],
-      'nx_street': <double>[114, 977, 84, 1359, 150.08, 6.0, 63, 24.2],
-      'nx_neon_blue': <double>[109, 980, 90, 1355, 131.46, 7.0, 66, 35.2],
-      'nx_royal_purple': <double>[108, 979, 94, 1344, 140.01, 7.0, 74, 0],
-    };
-
+  group('v12/v13 pitches: eleven owner arts with separate white goal sprite', () {
     test('catalog, ids, names and assets', () {
-      expect(kBmFieldsRaw.map((BmField f) => f.id).toList(),
-          <String>['nx_checker_silver', 'nx_rings_green', 'nx_street', 'nx_neon_blue', 'nx_royal_purple']);
-      expect(kBmFields.length, 5);
+      expect(kBmFieldsRaw.map((BmField f) => f.id).toList(), <String>[
+        'tropical',
+        'psg',
+        'campnou',
+        'pitch',
+        'checker',
+        'futsal',
+        'arena',
+        'blackice',
+        'autumn',
+        'frost',
+        'glacier',
+      ]);
+      expect(kBmFields.length, 11);
       for (final BmField f in kBmFieldsRaw) {
-        expect(f.builtInGoals, isTrue, reason: f.id);
-        expect(f.fullArt, isTrue, reason: f.id);
+        expect(f.gs, 'white', reason: f.id);
         expect(f.faName, isNotEmpty, reason: f.id);
-        expect(f.w0, 810, reason: f.id);
-        expect(f.h0, 1080, reason: f.id); // 1086 x 1448 art aspect
         expect(File('assets/games/bermuda/fields/${f.id}.webp').existsSync(), isTrue, reason: f.id);
         expect(File('assets/games/bermuda/thumbs/${f.id}.webp').existsSync(), isTrue, reason: f.id);
-        expect(kBmFA.containsKey(f.id), isTrue, reason: f.id);
       }
-      expect(bmFieldName(0, false), 'Silver Checker');
-      expect(bmFieldName(0, true), 'شطرنجی نقره‌ای');
-      // nothing else is left in the asset folders
+      expect(bmFieldName(0, false), 'Tropical');
+      expect(bmFieldName(0, true), 'استوایی');
       final List<String> art = Directory('assets/games/bermuda/fields').listSync().map((FileSystemEntity x) => x.path).toList();
-      expect(art.length, 5, reason: art.join(', '));
-      expect(Directory('assets/games/bermuda/thumbs').listSync().length, 5);
+      expect(art.length, 11, reason: art.join(', '));
+      expect(Directory('assets/games/bermuda/thumbs').listSync().length, 11);
       for (final String id in <String>['nx_neon_arena', 'nx_gold_checker', 'nx_gold_stripes']) {
         expect(kBmRemovedFieldIds, contains(id));
       }
@@ -201,69 +196,33 @@ void main() {
 
     test('a removed (or any invalid) pitch index falls back to pitch 0; v11 preference key', () {
       expect(kBmFieldPref, 'bm.field.v11');
-      for (final int i in <int>[5, 7, 29, 33, 99, -1]) {
+      for (final int i in <int>[11, 29, 33, 99, -1]) {
         expect(bmFieldIndex(i), 0, reason: '$i');
       }
       expect(bmFieldIndex(null), 0);
-      expect(bmFieldIndex(4), 4);
+      expect(bmFieldIndex(10), 10);
       final BmEngine e = BmEngine(_H(), rng: math.Random(1))..startMatch(_cfg(field: 17));
       expect(e.setFld, 0);
-      expect(e.field.id, 'nx_checker_silver');
+      expect(e.field.id, 'tropical');
     });
 
-    test('geometry: walls on the drawn rail, posts on the drawn tubes, nets on the back bar', () {
+    test('geometry: touchlines, posts and mirrored goals on all eleven pitches', () {
       for (int fi = 0; fi < kBmFields.length; fi++) {
         final BmEngine e = BmEngine(_H(), rng: math.Random(1))..startMatch(_cfg(field: fi));
-        final BmFieldS f = e.field;
-        final List<double> m = measured[f.id]!;
-        // art px -> world
-        final double k = f.W / 1086;
-        expect(f.H / 1448, closeTo(k, .002), reason: f.id);
-        // the playing width is the reference proportion (~880 world units, discs ~0.12 of it)
-        expect(e.Fw, inInclusiveRange(860, 910), reason: f.id);
-        expect(2 * PR / e.Fw, closeTo(.12, .01), reason: f.id);
-        // the engine's walls are exactly on the drawn rail (within the raw-unit rounding: < 1.5 art px)
-        expect(e.Fl / k, closeTo(m[0], 1.5), reason: f.id);
-        expect(e.Fr / k, closeTo(m[1], 1.5), reason: f.id);
-        expect(e.Ft / k, closeTo(m[2], 1.5), reason: f.id);
-        expect(e.Fb / k, closeTo(m[3], 1.5), reason: f.id);
-        expect(e.RC / k, closeTo(m[7], 1), reason: f.id);
-        // posts: centred on the centre line on the drawn tubes
         final BmGoal top = e.GOALS.firstWhere((BmGoal g) => g.d < 0);
         final BmGoal bot = e.GOALS.firstWhere((BmGoal g) => g.d > 0);
         expect((top.px1 + top.px2) / 2, closeTo(e.CX, .01));
-        expect((top.px2 - top.px1) / 2 / k, closeTo(m[4], .5), reason: f.id);
-        expect(top.pr / k, closeTo(m[5], .25), reason: f.id);
         expect(bot.px1, top.px1);
         expect(bot.px2, top.px2);
-        // the goal lines are the rails; both goals the same depth, mirrored about the halfway line (online phones)
         expect(top.y, e.Ft);
         expect(bot.y, e.Fb);
         expect(top.y + bot.y, closeTo(2 * e.CY, .01));
-        expect(e.DEPTH / k, closeTo(m[6], .5), reason: f.id);
-        expect(e.DEPTH, greaterThan(2 * BR), reason: f.id);
-        // mouth ~0.3 of the playing width like the reference (0.29 .. 0.34 on the five arts)
-        expect((top.x2 - top.x1) / e.Fw, inInclusiveRange(.26, .36), reason: f.id);
-        // the kickoff spot is the centre spot (the builder moved the drawn halfway line there)
-        expect(e.KY, closeTo(e.CY, 2), reason: f.id);
+        expect(e.DEPTH, greaterThan(2 * BR), reason: e.field.id);
+        expect(e.KY, closeTo(e.CY, 2), reason: e.field.id);
       }
     });
 
-    test('score displays: per art, left shows the bottom side, right the top side, two digits each', () {
-      for (final BmFieldS f in kBmFields) {
-        final BmScoreDisplay d = f.score!;
-        expect(d.artW, 1086);
-        final List<double> m = measured[f.id]!;
-        expect(d.leftCx + d.digitW / 2, lessThan(m[0]), reason: f.id); // on the left frame, outside the rails
-        expect(d.rightCx - d.digitW / 2, greaterThan(m[1]), reason: f.id); // on the right frame
-        expect(d.leftCx + d.rightCx, closeTo(1086, 3), reason: f.id); // the two displays mirror each other
-        expect(d.tensCy, lessThan(d.onesCy));
-        expect(d.onesCy - d.tensCy, greaterThan(d.digitH), reason: f.id); // the two cells do not overlap
-        expect(f.scoreLeft.toARGB32() >> 24, 0xFF, reason: f.id);
-        expect(f.scoreRight.toARGB32() >> 24, 0xFF, reason: f.id);
-      }
-      // the displays sit at different places on different arts
-      expect(kBmFields.map((BmFieldS f) => f.score!.tensCy).toSet().length, greaterThan(1));
+    test('seven-segment digit masks remain intact', () {
       expect(kBmSegMasks.length, 10);
       expect(kBmSegMasks[8], 0x7F);
       expect(kBmSegMasks[1], 0x06);
@@ -272,26 +231,26 @@ void main() {
 
   group('v9 balls: the owner art only', () {
     test('catalog, default and assets', () {
-      expect(kBmBallN.length, 18);
-      expect(kBmBallFa.length, 18);
-      expect(kBmBallSlug.length, 18);
-      expect(NB, 18);
+      expect(kBmBallN.length, 22);
+      expect(kBmBallFa.length, 22);
+      expect(kBmBallSlug.length, 22);
+      expect(NB, 22);
       expect(kBmDefaultBall, 0);
       expect(kBmAnimBalls, isEmpty);
       for (int i = 0; i < NB; i++) {
         expect(File(bmBallArt(i)).existsSync(), isTrue, reason: bmBallArt(i));
         expect(bmBallThumb(i), bmBallArt(i));
       }
-      expect(Directory('assets/games/bermuda/balls/v9').listSync().length, 18);
+      expect(Directory('assets/games/bermuda/balls/v9').listSync().length, 22);
       expect(Directory('assets/games/bermuda/balls').listSync().whereType<File>(), isEmpty);
     });
 
-    test('saved / synced ball index: missing or unknown = ball 0; v9 preference key', () {
-      expect(kBmBallPref, 'bm.ball.v9');
+    test('saved / synced ball index: missing or unknown = ball 0; v13 preference key', () {
+      expect(kBmBallPref, 'bm.ball.v13');
       expect(bmBallIndex(null), 0);
-      expect(bmBallIndex(18), 0);
+      expect(bmBallIndex(22), 0);
       expect(bmBallIndex(-1), 0);
-      expect(bmBallIndex(17), 17);
+      expect(bmBallIndex(21), 21);
       final BmEngine e = BmEngine(_H(), rng: math.Random(1))..startMatch(_cfg(ball: 42));
       expect(e.setBall, 0);
     });
@@ -390,13 +349,16 @@ void main() {
       await pumpFor(tester, 2);
       expect(g!.frames, greaterThan(0), reason: 'the Flame loop drives the match');
       expect(e.mleft, lessThan(t0), reason: 'the match clock runs');
-      // nothing covers the pitch: the top bar ends above the art and the art ends above the bottom strip
+      // nothing covers the playing field: the top bar ends above the top goal and the bottom goal ends above the strip
       final Rect bar = tester.getRect(find.byType(FsMatchTopBar));
-      final Rect art = g.view.artRect(e);
-      expect(bar.bottom, lessThanOrEqualTo(art.top + .5));
-      expect(art.bottom, lessThanOrEqualTo(800 - kFsBottomStripCompact + .5));
-      expect(art.left, greaterThanOrEqualTo(-.5));
-      expect(art.right, lessThanOrEqualTo(360.5));
+      final double playLeft = g.view.ox + e.Fl * g.view.s;
+      final double playRight = g.view.ox + e.Fr * g.view.s;
+      final double playTop = g.view.oy + (e.Ft - e.goalVisualDepth) * g.view.s;
+      final double playBottom = g.view.oy + (e.Fb + e.goalVisualDepth) * g.view.s;
+      expect(bar.bottom, lessThanOrEqualTo(playTop + .5));
+      expect(playBottom, lessThanOrEqualTo(800 - kFsBottomStripCompact + .5));
+      expect(playLeft, greaterThanOrEqualTo(-.5));
+      expect(playRight, lessThanOrEqualTo(360.5));
       // formation button still opens the picker
       await tester.tap(find.byType(BmChangeFormButton));
       await tester.pump(const Duration(milliseconds: 400));

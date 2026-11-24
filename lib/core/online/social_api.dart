@@ -1,25 +1,79 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-/// A real ANIX user (public profile row).
+import 'online_service.dart';
+
+/// A real ANIX / NEXORA user (public profile row / `_nx_user_card`).
 class NxUser {
-  const NxUser({required this.id, required this.username, this.avatar, this.level = 1, this.onlineAt, this.bio});
+  const NxUser({
+    required this.id,
+    required this.username,
+    this.displayName,
+    this.avatar,
+    this.avatarUrl,
+    this.level = 1,
+    this.xp = 0,
+    this.onlineAt,
+    this.bio,
+    this.isPrivate = false,
+    this.isFollowing = false,
+    this.followsMe = false,
+    this.isPending = false,
+  });
+
   final String id;
   final String username;
+  final String? displayName;
   final String? avatar;
+  final String? avatarUrl;
   final int level;
+  final int xp;
   final DateTime? onlineAt;
   final String? bio;
+  final bool isPrivate;
+  final bool isFollowing;
+  final bool followsMe;
+  final bool isPending;
 
   bool get isOnlineNow => onlineAt != null && DateTime.now().toUtc().difference(onlineAt!.toUtc()).inMinutes < 3;
 
-  static NxUser fromRow(Map<String, dynamic> r) => NxUser(
-        id: '${r['id']}',
-        username: '${r['username'] ?? 'Pilot'}',
-        avatar: r['avatar'] as String?,
-        level: (r['level'] as num?)?.toInt() ?? 1,
-        onlineAt: DateTime.tryParse('${r['online_at'] ?? ''}'),
-        bio: r['bio'] as String?,
+  NxUser copyWith({
+    bool? isFollowing,
+    bool? isPending,
+  }) =>
+      NxUser(
+        id: id,
+        username: username,
+        displayName: displayName,
+        avatar: avatar,
+        avatarUrl: avatarUrl,
+        level: level,
+        xp: xp,
+        onlineAt: onlineAt,
+        bio: bio,
+        isPrivate: isPrivate,
+        isFollowing: isFollowing ?? this.isFollowing,
+        followsMe: followsMe,
+        isPending: isPending ?? this.isPending,
       );
+
+  static NxUser fromRow(Map<String, dynamic> r) {
+    final String? url = r['avatar_url'] as String?;
+    return NxUser(
+      id: '${r['id']}',
+      username: '${r['username'] ?? 'Pilot'}',
+      displayName: r['display_name'] as String?,
+      avatar: r['avatar'] as String?,
+      avatarUrl: (url != null && url.isNotEmpty) ? url : null,
+      level: (r['level'] as num?)?.toInt() ?? 1,
+      xp: (r['xp'] as num?)?.toInt() ?? 0,
+      onlineAt: DateTime.tryParse('${r['online_at'] ?? r['last_active'] ?? ''}'),
+      bio: r['bio'] as String?,
+      isPrivate: r['is_private'] == true,
+      isFollowing: r['is_following'] == true,
+      followsMe: r['follows_me'] == true,
+      isPending: r['is_pending'] == true,
+    );
+  }
 }
 
 class FriendRequest {
@@ -30,15 +84,15 @@ class FriendRequest {
   final bool incoming;
 }
 
-/// Friends / requests / search on the shared tables (follows + friend_requests), via the
-/// same RPCs the other ANIX app uses, so a friendship is the same in both apps.
+/// Friends, follows, profile previews, and explorer directory on the Social Supabase project.
 class SocialApi {
-  SocialApi(this.c);
+  SocialApi(this.c, {String? userId}) : _uid = userId;
   final SupabaseClient c;
+  final String? _uid;
 
-  String get me => c.auth.currentUser!.id;
+  String get me => _uid ?? OnlineService.current?.uid ?? c.auth.currentUser!.id;
 
-  static const String _cols = 'id, username, avatar, level, online_at, bio';
+  static const String _cols = 'id, username, display_name, avatar, avatar_url, level, xp, online_at, bio, is_private';
 
   Future<List<NxUser>> friends() async {
     final List<dynamic> mine = await c.from('follows').select('followee').eq('follower', me);
@@ -48,12 +102,25 @@ class SocialApi {
     final List<String> ids = a.intersection(b).toList();
     if (ids.isEmpty) return <NxUser>[];
     final List<dynamic> rows = await c.from('profiles').select(_cols).inFilter('id', ids);
-    final List<NxUser> out = rows.map((dynamic r) => NxUser.fromRow(Map<String, dynamic>.from(r as Map))).toList();
+    final List<NxUser> out = rows
+        .map((dynamic r) => NxUser.fromRow(Map<String, dynamic>.from(r as Map)).copyWith(isFollowing: true))
+        .toList();
     out.sort((NxUser x, NxUser y) {
       if (x.isOnlineNow != y.isOnlineNow) return x.isOnlineNow ? -1 : 1;
       return x.username.toLowerCase().compareTo(y.username.toLowerCase());
     });
     return out;
+  }
+
+  /// People I follow (one-way or mutual).
+  Future<List<NxUser>> following() async {
+    final List<dynamic> mine = await c.from('follows').select('followee').eq('follower', me);
+    final List<String> ids = mine.map((dynamic r) => '${(r as Map)['followee']}').toList();
+    if (ids.isEmpty) return <NxUser>[];
+    final List<dynamic> rows = await c.from('profiles').select(_cols).inFilter('id', ids);
+    return rows
+        .map((dynamic r) => NxUser.fromRow(Map<String, dynamic>.from(r as Map)).copyWith(isFollowing: true))
+        .toList();
   }
 
   Future<List<FriendRequest>> requests() async {
@@ -93,11 +160,53 @@ class SocialApi {
 
   Future<NxUser?> profile(String id) async => (await profiles(<String>[id]))[id];
 
-  Future<List<NxUser>> search(String q) async {
-    final String t = q.trim().replaceAll('%', '').replaceAll(',', '');
-    if (t.length < 2) return <NxUser>[];
-    final List<dynamic> rows = await c.from('profiles').select(_cols).ilike('username', '%$t%').neq('id', me).limit(25);
+  /// Rich public profile preview (counts, follow relationship, bio, wins, explorer id).
+  Future<Map<String, dynamic>?> socialProfile(String userId) async {
+    final dynamic res = await c.rpc('nx_social_profile', params: <String, dynamic>{'p_user': userId});
+    if (res is Map) return Map<String, dynamic>.from(res);
+    return null;
+  }
+
+  /// Follow / unfollow a user via `nx_social_toggle_follow` (private-account & notification aware).
+  /// Returns the updated `nx_social_profile` JSON map.
+  Future<Map<String, dynamic>?> toggleFollow(String userId, bool follow) async {
+    final dynamic res = await c.rpc('nx_social_toggle_follow', params: <String, dynamic>{
+      'p_target': userId,
+      'p_follow': follow,
+    });
+    if (res is Map) return Map<String, dynamic>.from(res);
+    return null;
+  }
+
+  /// Universal directory / search via `nx_social_search` (also works with an empty query to browse explorers).
+  Future<List<NxUser>> directory([String q = '', int limit = 30]) async {
+    final String clean = q.trim().replaceAll('%', '').replaceAll('@', '');
+    try {
+      final dynamic res = await c.rpc('nx_social_search', params: <String, dynamic>{
+        'p_q': clean,
+        'p_limit': limit,
+      });
+      if (res is List) {
+        return res
+            .whereType<Map>()
+            .map((Map r) => NxUser.fromRow(Map<String, dynamic>.from(r)))
+            .toList();
+      }
+    } catch (_) {
+      // Fallback if RPC is not yet available.
+    }
+    var req = c.from('profiles').select(_cols).neq('id', me);
+    if (clean.isNotEmpty) {
+      req = req.ilike('username', '%$clean%');
+    }
+    final List<dynamic> rows = await req.order('online_at', ascending: false).limit(limit);
     return rows.map((dynamic r) => NxUser.fromRow(Map<String, dynamic>.from(r as Map))).toList();
+  }
+
+  Future<List<NxUser>> search(String q) async {
+    final String t = q.trim();
+    if (t.isEmpty) return <NxUser>[];
+    return directory(t, 25);
   }
 
   Future<String> sendRequest(String userId) async => '${await c.rpc('send_friend_request', params: <String, dynamic>{'p_user': userId})}';

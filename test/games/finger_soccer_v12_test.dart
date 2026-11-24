@@ -57,14 +57,14 @@ void main() {
     expect(File('assets/games/bermuda/goals/white.webp').existsSync(), isTrue);
   });
 
-  test('balls: the 18 owner balls, one cut art each', () {
-    expect(kBmBallN.length, 18);
-    expect(kBmBallFa.length, 18);
-    expect(kBmBallSlug.toSet().length, 18);
-    for (int i = 0; i < 18; i++) {
+  test('balls: all 22 owner balls, one cut art each', () {
+    expect(kBmBallN.length, 22);
+    expect(kBmBallFa.length, 22);
+    expect(kBmBallSlug.toSet().length, 22);
+    for (int i = 0; i < 22; i++) {
       expect(File(bmBallArt(i)).existsSync(), isTrue, reason: bmBallArt(i));
     }
-    expect(Directory('assets/games/bermuda/balls/v9').listSync().length, 18);
+    expect(Directory('assets/games/bermuda/balls/v9').listSync().length, 22);
   });
 
   test('longer pitch: lengthwise world stretched, corners at least the cushion radius', () {

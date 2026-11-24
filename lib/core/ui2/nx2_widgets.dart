@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import '../profile/profile_service.dart';
 import '../settings/app_settings.dart';
 import 'anix_kit.dart';
+import 'luxe.dart';
 import 'nx2_assets.dart';
 import '../../worlds/oracle_core/persona/oracle_tour.dart';
 import '../../worlds/hub/hub_search.dart';
@@ -75,33 +76,44 @@ class Nx2Background extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool light = Luxe.isLight(context);
     final Size s = MediaQuery.sizeOf(context);
     final int cw = (math.min(s.width, 600) * 2).round();
+    final Color base = light ? Luxe.dayBg : Nx2.deep;
     return Stack(fit: StackFit.expand, children: <Widget>[
-      const ColoredBox(color: Nx2.deep),
-      Image.asset(_asset,
-          fit: BoxFit.cover,
-          alignment: Alignment.topCenter,
-          cacheWidth: cw,
-          gaplessPlayback: true,
-          errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+      ColoredBox(color: base),
+      Opacity(
+        opacity: light ? 0.16 : 1.0,
+        child: Image.asset(_asset,
+            fit: BoxFit.cover,
+            alignment: Alignment.topCenter,
+            cacheWidth: cw,
+            gaplessPlayback: true,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+      ),
       IgnorePointer(
         child: DecoratedBox(
           decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
-              colors: <Color>[
-                Nx2.deep.withValues(alpha: dim * 0.6),
-                Nx2.deep.withValues(alpha: dim),
-                Nx2.deep.withValues(alpha: math.min(1, dim + 0.25)),
-              ],
+              colors: light
+                  ? const <Color>[Color(0xD8FFFCF5), Color(0xEAF7F0E2), Color(0xF5F3EBDC)]
+                  : <Color>[
+                      Nx2.deep.withValues(alpha: dim * 0.6),
+                      Nx2.deep.withValues(alpha: dim),
+                      Nx2.deep.withValues(alpha: math.min(1, dim + 0.25)),
+                    ],
               stops: const <double>[0, 0.55, 1],
             ),
           ),
         ),
       ),
-      if (child != null) child!,
+      if (child != null)
+        DefaultTextStyle.merge(
+          style: TextStyle(color: Luxe.inkOf(context)),
+          child: child!,
+        ),
     ]);
   }
 }
@@ -233,6 +245,7 @@ class Nx2Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool light = Luxe.isLight(context);
     final Gradient border = borderColor != null
         ? LinearGradient(colors: <Color>[
             borderColor!,
@@ -240,24 +253,35 @@ class Nx2Panel extends StatelessWidget {
           ])
         : (gold ? Nx2.goldGrad : Nx2.neon);
     final Gradient? fill = tint == null
-        ? (gold
+        ? (light
             ? const LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: <Color>[Color(0xE63A2C14), Color(0xEB0F0D09)])
-            : null)
+                colors: <Color>[Color(0xF2FFFDFA), Color(0xE8F6EFE1)])
+            : (gold
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: <Color>[Color(0xE63A2C14), Color(0xEB0F0D09)])
+                : null))
         : LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: <Color>[
-              Color.alphaBlend(tint!, const Color(0xE61C1912)),
-              Color.alphaBlend(tint!, const Color(0xEB0A0A0D)),
+              Color.alphaBlend(tint!.withValues(alpha: light ? 0.16 : 1.0), light ? const Color(0xF2FFFDFA) : const Color(0xE61C1912)),
+              Color.alphaBlend(tint!.withValues(alpha: light ? 0.12 : 1.0), light ? const Color(0xECF6EFE1) : const Color(0xEB0A0A0D)),
             ],
           );
     Widget body = CustomPaint(
       painter: Nx2FramePainter(
-          cut: cut, fill: fill, border: border, glow: glow, gems: gems),
-      child: Padding(padding: padding, child: child),
+          cut: cut, fill: fill, border: border, glow: light ? glow * 0.4 : glow, gems: gems),
+      child: Padding(
+        padding: padding,
+        child: DefaultTextStyle.merge(
+          style: TextStyle(color: Luxe.inkOf(context)),
+          child: child,
+        ),
+      ),
     );
     if (onTap != null) {
       body = _Pressable(onTap: onTap!, child: body);
@@ -444,16 +468,18 @@ class Nx2Stat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool light = Luxe.isLight(context);
     final Widget pill = CustomPaint(
       painter: Nx2FramePainter(
           cut: 9,
-          glow: 0.2,
+          glow: light ? 0.1 : 0.2,
           border: LinearGradient(colors: <Color>[
             color,
             Color.lerp(color, Nx2.magenta, 0.5) ?? color
           ]),
-          fill: const LinearGradient(
-              colors: <Color>[Color(0xF0180B40), Color(0xF00B0522)])),
+          fill: light
+              ? const LinearGradient(colors: <Color>[Color(0xF5FFFDFA), Color(0xEEF5EDE0)])
+              : const LinearGradient(colors: <Color>[Color(0xF0180B40), Color(0xF00B0522)])),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(6, 5, 10, 5),
         child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
@@ -474,8 +500,8 @@ class Nx2Stat extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           Text(value,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w900, fontSize: 13, color: Nx2.text)),
+              style: TextStyle(
+                  fontWeight: FontWeight.w900, fontSize: 13, color: Luxe.inkOf(context))),
         ]),
       ),
     );
@@ -558,18 +584,18 @@ class Nx2SectionHeader extends StatelessWidget {
       const SizedBox(width: 8),
       Expanded(
         child: Text(title,
-            style: const TextStyle(
+            style: TextStyle(
                 fontWeight: FontWeight.w900,
                 fontSize: 15,
                 letterSpacing: 0.6,
-                color: Nx2.text)),
+                color: Luxe.inkOf(context))),
       ),
       if (action != null)
         GestureDetector(
           onTap: onAction,
           child: Text(action!,
-              style: const TextStyle(
-                  color: Nx2.cyan, fontWeight: FontWeight.w800, fontSize: 12)),
+              style: TextStyle(
+                  color: Luxe.goldOf(context), fontWeight: FontWeight.w800, fontSize: 12)),
         ),
     ]);
   }
@@ -630,70 +656,80 @@ class Nx2Dock extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       barrierColor: const Color(0x8C030306),
-      builder: (BuildContext ctx) => Container(
-        padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.paddingOf(ctx).bottom + 18),
-        decoration: const BoxDecoration(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-          gradient: LinearGradient(
-              begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: <Color>[Color(0xFF14130F), Color(0xFF0A0A0D)]),
-          border: Border(top: BorderSide(color: Color(0x33D9B872))),
-        ),
-        child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-          Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 14),
-              decoration: BoxDecoration(color: const Color(0x40F6E7BD), borderRadius: BorderRadius.circular(4))),
-          GridView.count(
-            crossAxisCount: 3,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 10,
-            crossAxisSpacing: 10,
-            childAspectRatio: 0.95,
-            children: <Widget>[
-              for (final (Nx2Tab?, String, String, String, String?) r in rows)
-                _Pressable(
-                  onTap: () {
-                    Navigator.of(ctx).pop();
-                    if (r.$1 != null) {
-                      nx2GoTab(context, r.$1!, current);
-                    } else {
-                      context.push(r.$5!);
-                    }
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(22),
-                      gradient: const LinearGradient(
-                          begin: Alignment(-0.6, -1),
-                          end: Alignment(0.6, 1),
-                          colors: <Color>[Color(0x13FFFFFF), Color(0x04FFFFFF)]),
-                      border: Border.all(color: r.$1 == current && current != null ? _gold : const Color(0x33D9B872)),
-                    ),
-                    padding: const EdgeInsets.all(8),
-                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
-                      Expanded(
-                        child: Image.asset('assets/luxe/icons/${r.$2}.webp',
-                            cacheWidth: 180, errorBuilder: (_, __, ___) => const SizedBox()),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(context.tx(r.$3, r.$4),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 11.5, color: Color(0xFFF4EAD2))),
-                    ]),
-                  ),
-                ),
-            ],
+      builder: (BuildContext ctx) {
+        final bool light = Luxe.isLight(ctx);
+        return Container(
+          padding: EdgeInsets.fromLTRB(16, 12, 16, MediaQuery.paddingOf(ctx).bottom + 18),
+          decoration: BoxDecoration(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+            gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: light
+                    ? const <Color>[Color(0xFFFFFDF8), Color(0xFFF3EBDC)]
+                    : const <Color>[Color(0xFF14130F), Color(0xFF0A0A0D)]),
+            border: Border(top: BorderSide(color: Luxe.lineOf(ctx))),
           ),
-        ]),
-      ),
+          child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+            Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(
+                    color: light ? const Color(0x458A6A2C) : const Color(0x40F6E7BD),
+                    borderRadius: BorderRadius.circular(4))),
+            GridView.count(
+              crossAxisCount: 3,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 10,
+              crossAxisSpacing: 10,
+              childAspectRatio: 0.95,
+              children: <Widget>[
+                for (final (Nx2Tab?, String, String, String, String?) r in rows)
+                  _Pressable(
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      if (r.$1 != null) {
+                        nx2GoTab(context, r.$1!, current);
+                      } else {
+                        context.push(r.$5!);
+                      }
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(22),
+                        gradient: light ? Luxe.dayGlass : Luxe.glass,
+                        border: Border.all(
+                            color: r.$1 == current && current != null ? Luxe.goldOf(ctx) : Luxe.lineOf(ctx)),
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
+                        Expanded(
+                          child: Image.asset('assets/luxe/icons/${r.$2}.webp',
+                              cacheWidth: 180, errorBuilder: (_, __, ___) => const SizedBox()),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(context.tx(r.$3, r.$4),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(fontSize: 11.5, color: Luxe.inkOf(ctx))),
+                      ]),
+                    ),
+                  ),
+              ],
+            ),
+          ]),
+        );
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool light = Luxe.isLight(context);
+    final Color activeColor = light ? Luxe.dayGold : _gold2;
+    final Color inactiveColor = light ? Luxe.dayMute : _mute;
     final double bottom = MediaQuery.paddingOf(context).bottom;
 
     Widget cell({required String id, required bool on, required String fa, required String en, String? icon,
@@ -719,7 +755,7 @@ class Nx2Dock extends StatelessWidget {
                           end: Alignment.bottomCenter,
                           colors: <Color>[Color(0x33D9B872), Color(0x08D9B872)])
                       : null,
-                  border: Border.all(color: on ? const Color(0x40D9B872) : Colors.transparent),
+                  border: Border.all(color: on ? const Color(0x55D9B872) : Colors.transparent),
                 ),
                 child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
                   SizedBox(
@@ -733,9 +769,10 @@ class Nx2Dock extends StatelessWidget {
                                     ? const <BoxShadow>[BoxShadow(color: Color(0x88D9B872), blurRadius: 12)]
                                     : const <BoxShadow>[]),
                             child: Image.asset('assets/luxe/icons/$icon.webp',
-                                cacheWidth: 96, errorBuilder: (_, __, ___) => Icon(glyph, color: on ? _gold2 : _mute)),
+                                cacheWidth: 96,
+                                errorBuilder: (_, __, ___) => Icon(glyph, color: on ? activeColor : inactiveColor)),
                           )
-                        : Icon(glyph, size: 24, color: on ? _gold2 : _mute),
+                        : Icon(glyph, size: 24, color: on ? activeColor : inactiveColor),
                   ),
                   const SizedBox(height: 2),
                   SizedBox(
@@ -744,7 +781,10 @@ class Nx2Dock extends StatelessWidget {
                       fit: BoxFit.scaleDown,
                       child: Text(context.tx(fa, en),
                           maxLines: 1,
-                          style: TextStyle(fontSize: 10, color: on ? _gold2 : _mute, fontWeight: FontWeight.w500)),
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: on ? (light ? Luxe.dayInk : _gold2) : inactiveColor,
+                              fontWeight: on ? FontWeight.w700 : FontWeight.w500)),
                     ),
                   ),
                 ]),
@@ -774,9 +814,12 @@ class Nx2Dock extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.all(5),
                   decoration: BoxDecoration(
-                    color: const Color(0x8C0E0E12),
+                    color: light ? const Color(0xE8FCF8EF) : const Color(0x8C0E0E12),
                     borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: const Color(0x33D9B872)),
+                    border: Border.all(color: Luxe.lineOf(context)),
+                    boxShadow: light
+                        ? const <BoxShadow>[BoxShadow(color: Color(0x1E6E5320), blurRadius: 20, offset: Offset(0, 8))]
+                        : null,
                   ),
                   child: Row(children: <Widget>[
                     cell(
@@ -961,12 +1004,13 @@ class Nx2SegmentTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool light = Luxe.isLight(context);
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: const Color(0xCC14130F),
+        color: light ? const Color(0xE8FAF4E8) : const Color(0xCC14130F),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Nx2.cyan.withValues(alpha: 0.45)),
+        border: Border.all(color: Luxe.lineOf(context)),
       ),
       child: TabBar(
         dividerColor: Colors.transparent,
@@ -976,7 +1020,7 @@ class Nx2SegmentTabs extends StatelessWidget {
           gradient: const LinearGradient(colors: <Color>[Color(0xFFF6E7BD), Color(0xFFD9B872)]),
         ),
         labelColor: const Color(0xFF14120C),
-        unselectedLabelColor: Nx2.muted,
+        unselectedLabelColor: Luxe.muteOf(context),
         labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5),
         tabs: <Widget>[for (final String l in labels) Tab(height: 36, text: l)],
       ),

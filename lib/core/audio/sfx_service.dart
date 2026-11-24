@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'audio_mix.dart';
 
 /// Short UI / game-flow sound effects (assets/sfx/ui/*.mp3): button tick, chat, join, leave, ready, win, lose.
-/// Follows the Sound effects switch and volume in Settings; never throws into the UI.
+/// Follows the Sound effects switch and volume in Settings; never steals audio focus from a LiveKit voice call.
 class NxSfx {
   NxSfx._();
   static final NxSfx instance = NxSfx._();
@@ -16,7 +16,7 @@ class NxSfx {
 
   bool _enabled = true;
   double _volume = 0.8;
-  final Map<String, AudioPlayer> _players = <String, AudioPlayer>{};
+  final Map<String, Future<AudioPlayer>> _players = <String, Future<AudioPlayer>>{};
   DateTime _lastTick = DateTime.fromMillisecondsSinceEpoch(0);
 
   static final bool _inTests = !kIsWeb && Platform.environment.containsKey('FLUTTER_TEST');
@@ -41,16 +41,24 @@ class NxSfx {
     unawaited(_play(name, (_volume * gain).clamp(0.0, 1.0)));
   }
 
+  Future<AudioPlayer> _open(String name) {
+    return _players.putIfAbsent(name, () async {
+      final AudioPlayer a = AudioPlayer();
+      // Set mode/release BEFORE applying audio context so SoundPool/MediaPlayer recreation does not reset focus.
+      try {
+        await a.setPlayerMode(PlayerMode.lowLatency);
+      } catch (_) {}
+      try {
+        await a.setReleaseMode(ReleaseMode.stop);
+      } catch (_) {}
+      await NxAudioMix.apply(a);
+      return a;
+    });
+  }
+
   Future<void> _play(String name, double vol) async {
     try {
-      final AudioPlayer p = _players.putIfAbsent(name, () {
-        final AudioPlayer a = AudioPlayer();
-        // Mix, never request audio focus (a lobby "join" tick used to take focus from the voice call).
-        unawaited(NxAudioMix.apply(a).then((_) {}, onError: (Object _) {}));
-        unawaited(a.setPlayerMode(PlayerMode.lowLatency).then((_) {}, onError: (Object _) {}));
-        unawaited(a.setReleaseMode(ReleaseMode.stop).then((_) {}, onError: (Object _) {}));
-        return a;
-      });
+      final AudioPlayer p = await _open(name);
       await p.stop();
       await p.setVolume((vol * NxAudioMix.gain).clamp(0.0, 1.0).toDouble());
       await p.play(AssetSource('sfx/ui/$name.mp3'));

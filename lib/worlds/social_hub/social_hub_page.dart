@@ -35,7 +35,7 @@ class _SocialHubPageState extends State<SocialHubPage> {
       (Icons.group_rounded, context.tx('دوستان', 'Friends')),
     ];
     return Scaffold(
-      backgroundColor: Luxe.bg,
+      backgroundColor: Luxe.bgOf(context),
       body: IndexedStack(index: _tab, children: <Widget>[
         for (int i = 0; i < pages.length; i++) _built.contains(i) ? pages[i] : const SizedBox.shrink(),
       ]),
@@ -58,6 +58,7 @@ class _SocialHubPageState extends State<SocialHubPage> {
   /// hairline glass when not — the same chip [LuxeStationPage] uses for its own tabs.
   Widget _worldPill(BuildContext context, int i, (IconData, String) tab, {required VoidCallback onSelect}) {
     final bool on = i == _tab;
+    final bool light = Luxe.isLight(context);
     final String label = tab.$2;
     return LuxePress(
       onTap: onSelect,
@@ -69,14 +70,14 @@ class _SocialHubPageState extends State<SocialHubPage> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(LuxeRadius.pill),
           gradient: on ? Luxe.goldGrad : null,
-          color: on ? null : const Color(0x0FFFFFFF),
-          border: Border.all(color: on ? Colors.transparent : Luxe.line),
+          color: on ? null : (light ? const Color(0xCCF7F0E2) : const Color(0x0FFFFFFF)),
+          border: Border.all(color: on ? Colors.transparent : Luxe.lineOf(context)),
           boxShadow: on
               ? const <BoxShadow>[BoxShadow(color: Color(0x88D9B872), blurRadius: 22, spreadRadius: -4)]
               : const <BoxShadow>[],
         ),
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
-          Icon(tab.$1, size: 16, color: on ? const Color(0xFF1A1408) : Luxe.mute),
+          Icon(tab.$1, size: 16, color: on ? const Color(0xFF1A1408) : Luxe.muteOf(context)),
           const SizedBox(width: 6),
           Flexible(
             child: Text(
@@ -86,7 +87,7 @@ class _SocialHubPageState extends State<SocialHubPage> {
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
-                color: on ? const Color(0xFF1A1408) : Luxe.mute,
+                color: on ? const Color(0xFF1A1408) : Luxe.muteOf(context),
               ),
             ),
           ),

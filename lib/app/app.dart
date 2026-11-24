@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/audio/music_service.dart';
+import '../core/backend/backend_gateway.dart';
 import '../core/online/call_watcher.dart';
 import '../core/online/cloud_profile_sync.dart';
 import '../core/online/invite_watcher.dart';
@@ -87,14 +88,15 @@ class _NexoraAppState extends ConsumerState<NexoraApp> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(backendProvider);
     final settings = ref.watch(settingsProvider);
     MusicService.instance
-        .configure(enabled: settings.music, volume: settings.musicVolume);
+        .configure(enabled: false, volume: 0);
     NxSfx.instance.configure(enabled: settings.sound, volume: settings.sfxVolume);
     return MaterialApp.router(
       title: 'NEXORA',
       debugShowCheckedModeBanner: false,
-      theme: buildNxTheme(settings.visualTheme),
+      theme: buildNxTheme(settings.visualTheme, mode: settings.appearanceMode),
       locale: settings.locale,
       supportedLocales: const [Locale('fa'), Locale('en')],
       localizationsDelegates: const [
