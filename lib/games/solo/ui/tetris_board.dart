@@ -19,7 +19,6 @@ class TetrisBoard extends SoloBoard {
 
 class TetrisBoardState extends SoloBoardState<TetrisBoard> {
   late TetrisWorld world;
-  int _shownLines = 0;
   double _lineFlash = 0;
   double _piecePulse = 0;
   bool _wasOver = false;
@@ -37,7 +36,6 @@ class TetrisBoardState extends SoloBoardState<TetrisBoard> {
   @override
   void reset() {
     world = TetrisWorld(seed: widget.run.seed);
-    _shownLines = 0;
     _lineFlash = 0;
     _piecePulse = 0;
     _wasOver = false;

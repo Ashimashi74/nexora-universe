@@ -141,7 +141,7 @@ class RunnerBoardState extends SoloBoardState<RunnerBoard> {
       final double alpha = (0.08 + u * 0.55).clamp(0.0, 0.9);
       for (int l = 1; l < lanes; l++) {
         final Offset a = _project(play, u, l - 0.03, bottomW / 3, bottomY, horizon);
-        final Offset b = _project(play, u, l, bottomW / 3, bottomY, horizon);
+        final Offset b = _project(play, u, l.toDouble(), bottomW / 3, bottomY, horizon);
         canvas.drawLine(
           a,
           b,
@@ -159,7 +159,7 @@ class RunnerBoardState extends SoloBoardState<RunnerBoard> {
       final double sc = 0.14 + 0.86 * math.pow(u, 1.4).toDouble();
       final double w = play.width * 0.13 * sc;
       final double h = play.height * 0.20 * sc * o.height;
-      final Offset at = _project(play, u, o.lane, bottomW / 3, bottomY, horizon);
+      final Offset at = _project(play, u, o.lane.toDouble(), bottomW / 3, bottomY, horizon);
       final Rect r = Rect.fromLTWH(at.dx - w / 2, at.dy - h, w, h);
       SoloArt.barrier(canvas, r, o.height > 1.2 ? SoloArt.gold : SoloArt.danger);
       // headlight bloom in front of the barrier
