@@ -290,6 +290,15 @@ class TrafficWorld {
 
   int get metres => travelled.floor();
 
+  /// The player's car sits at this normalised y (bottom of the road) and the traffic is driven
+  /// toward it; a car is a crash when it reaches this band in the player's lane.
+  static const double playerY = 0.86;
+  static const double hitBand = 0.075;
+
+  /// A car spawned closer than this to another car in the same lane would be unavoidable, so
+  /// the spawner looks for a gap instead.
+  static const double minGap = 0.34;
+
   void update(double dt) {
     if (crashed) return;
     speed = math.min(2.4, 0.5 + travelled * 0.0009);
@@ -297,19 +306,37 @@ class TrafficWorld {
     spawnCooldown -= dt;
     if (spawnCooldown <= 0) {
       spawnCooldown = (0.8 - speed * 0.16).clamp(0.26, 0.8);
-      final int l = rng.nextInt(3);
-      cars.add(TrafficCar(lane: l, y: 1.2));
+      final int? laneAt = _spawnLane();
+      if (laneAt != null) cars.add(TrafficCar(lane: laneAt, y: 1.2));
     }
     for (final TrafficCar c in cars) {
       c.y -= (speed * 1.5) * dt;
     }
     for (final TrafficCar c in cars) {
-      if (c.y > 0.02 && c.y < 0.24 && c.lane == lane && !c.passed) crashed = true;
-      if (c.y <= 0.02 && !c.passed) {
-        c.passed = true;
+      if (!c.passed && (c.y - playerY).abs() < hitBand && c.lane == lane) {
+        crashed = true;
+        break;
       }
+      if (c.y <= playerY - hitBand && !c.passed) c.passed = true;
     }
     cars.removeWhere((TrafficCar c) => c.y < -0.3);
+  }
+
+  /// Picks a lane whose next car is far enough away, so a spawn can never be an instant
+  /// unavoidable hit. Returns null when every lane is busy this frame (the shot is skipped).
+  int? _spawnLane() {
+    final List<int> lanes = <int>[0, 1, 2]..shuffle(rng);
+    for (final int l in lanes) {
+      bool clear = true;
+      for (final TrafficCar c in cars) {
+        if (c.lane == l && c.y > 1.2 - minGap) {
+          clear = false;
+          break;
+        }
+      }
+      if (clear) return l;
+    }
+    return null;
   }
 
   void steer(int dir) => lane = (lane + dir).clamp(0, 2);

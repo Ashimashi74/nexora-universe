@@ -18,6 +18,8 @@ out/
 *.aab
 analyze.txt
 test.txt
+solo-test.txt
+solo-render.txt
 build-apk.txt
 render.txt
 intro.txt

@@ -111,7 +111,8 @@ The flagship game: flick discs, bend shots, score.
 | 🕶️ | **Spy Mafia** | 4–8 | Find the spy before they find the location |
 
 The ten **solo arcade** games are single-player (no online seats) but share the arcade's medals, daily challenge and
-server-validated global score boards:
+server-validated global score boards. Their boards were rebuilt on a shared art system (neon backdrops, shaded
+sprites, particles, a pinned control deck) so each game has a real look instead of a flat sketch:
 
 | | Game | Controls | Highlights |
 |---|---|---|---|

@@ -77,3 +77,45 @@ jobs:
           name: render-shots
           path: shots
           if-no-files-found: ignore
+
+  # Solo arcade art pass: renders every solo board to docs/solo_shots (uploaded as an artifact)
+  # and fails the job only on a thrown exception, so the screenshots are always available for
+  # review even when a board needs a tweak.
+  solo-art:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      checks: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.50.0'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Widget tests (solo art + rules)
+        run: |
+          set +e
+          flutter test test/games/solo --reporter expanded > solo-test.txt 2>&1
+          status=$?
+          grep -E "All tests passed|Some tests failed|\[E\]|Expected:|Actual:|Which:" solo-test.txt | head -40
+          grep -E "\[E\]|Expected:|Actual:" solo-test.txt | head -20 | while IFS= read -r line; do
+            echo "::error title=solo-test::$line"
+          done
+          exit "$status"
+      - name: Render every solo board
+        run: |
+          set +e
+          sudo apt-get install -y -qq fonts-dejavu-core >/dev/null 2>&1
+          flutter test test_render/solo_render_test.dart \
+            --dart-define=SHOTS=$PWD/shots/solo > solo-render.txt 2>&1
+          grep -E "All tests passed|Some tests failed|EXCEPTION|overflowed|RenderFlex|Expected:|Actual:" solo-render.txt | head -30
+          ls -R shots/solo 2>/dev/null | head -60
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: solo-art-shots
+          path: shots/solo
+          if-no-files-found: warn

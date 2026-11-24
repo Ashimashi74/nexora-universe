@@ -48,6 +48,22 @@ The README's **26 games** is correct. The static audit found **16 `*_entry.dart`
 
 Solo games: `minPlayers/maxPlayers = 1`, `supportsOnline = false` for live play; they share medals, daily challenge and the server-validated global score board like every other arcade game.
 
+### Solo arcade art + control contract (v14)
+
+Every solo board now builds on `lib/games/solo/solo_kit.dart` + `lib/games/solo/ui/solo_art.dart`:
+
+- **Bands.** `SoloMetrics.hudTop` (88) is the shell's score/best/daily strip; `SoloMetrics.deck` (98) is the
+  control deck; the game paints in `playRect()`, so no board can draw under the HUD or the pads.
+- **One ticker per board**, delta clamped to 20 ms (`SoloBoardState`), one `CustomPainter`, one `ArcadeFx`
+  instance (particles, shake, flash) that obeys `fancyEffects` / `reducedMotion`.
+- **Input.** Boards implement `onPointer(at, SoloGesture)`; the deck (`SoloStage` / `SoloPad`) calls the same
+  game methods, so touch and pads can never disagree.
+- **Art.** `SoloArt` owns the shared palette and primitives (`backdrop`, `sunset`, `floorGrid`, `ridge`,
+  `skyline`, `caustics`, `road`, `panel`, `cube`, `orb`, `spike`, `diamond`, `barrier`, `blade`, `meter`,
+  `chip`, `label`) so the ten games read as one family instead of ten one-off sketches.
+- **Proof.** `test/games/solo/solo_art_test.dart` (palette/layout maths + degenerate-canvas paint pass) and
+  `test_render/solo_render_test.dart` (renders ready card + mid-run PNG per game; CI job `solo-art`).
+
 ## Billiards vs Pool8 — kept separate (evidence)
 - `billiards`: 8-ball with a **smart aim guide**, offline bot + pass-and-play, group 1.
 - `pool8`: 8-ball with a **shot clock** (20 s per shot), bot offline, turn-by-turn online, `supportsLocal: false`, group 1, `isNew: true`.

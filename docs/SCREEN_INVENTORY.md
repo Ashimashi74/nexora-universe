@@ -65,7 +65,7 @@ Status legend: **Implemented** (real page with layout + data binding), **Shell**
 | 41 | Online match | in-app | `lib/worlds/arcade/online/online_match_page.dart` — reconnect/resume, leave |
 | 42 | Leaderboard | `/leaderboard` | `lib/worlds/arcade/online/leaderboard_page.dart` — per-game ranking (online) |
 | 43 | Game boards (16 entry points) | in-app | `lib/games/<id>/ui/*` — full game UI per contract; board geometry LTR-wrapped |
-| 44 | Solo arcade boards (10) | in-app | `lib/games/solo/ui/*` — action/puzzle boards with daily challenge + global board (online) |
+| 44 | Solo arcade boards (10) | in-app | `lib/games/solo/ui/*` — one board per game (`dash_board`, `runner_board`, `traffic_board`, `fruit_board`, `knife_board`, `helix_board`, `bubble_board`, `stack_board`, `tetris_board`, `grid2048_board`) painted through the shared `solo_art.dart` system; daily challenge + global board (online) |
 | 45 | Finger Soccer intro flow | in-app | `lib/games/finger_soccer/intro/*` — team/badge, field, ball, formation, match format (1v1/2v2/3v3), score table |
 | 46 | Finger Soccer shop | in-app | `fs_shop.dart` — club/nation/NX badges, kits, pucks |
 

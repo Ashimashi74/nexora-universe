@@ -3,26 +3,50 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
-import '../arcade_kit/arcade_shell.dart';
+import '../../arcade_kit/arcade_fx.dart';
+import '../../arcade_kit/arcade_skin.dart';
+import '../../core/game_contract.dart';
+import 'solo_art.dart';
 
 // `SoloRun` is declared in arcade_shell.dart and is the shell's controller; re-exported so
 // registry and board files that only need the controller do not import the shell machinery.
-export '../arcade_kit/arcade_shell.dart' show SoloRun;
-import '../arcade_kit/arcade_skin.dart';
-import '../core/game_contract.dart';
+export '../../arcade_kit/arcade_shell.dart' show SoloRun;
+
+/// Drawing primitives the boards paint with (shaded blocks, spheres, glows, particles).
+export '../../arcade_kit/arcade_fx.dart'
+    show
+        ArcadeFx,
+        FloatText,
+        Particle,
+        ParticleKind,
+        drawLabel,
+        paintBackdrop,
+        paintBlock,
+        paintGlow,
+        paintNeonPath,
+        paintPulseRing,
+        paintShadow,
+        paintSphere,
+        paintTrail,
+        paintVignette,
+        shade;
+
+export 'solo_art.dart';
 
 /// ===================== SOLO ARCADE KIT =====================
-/// Shared plumbing and premium electric-night visual system for the ten solo arcade games.
+/// Shared plumbing and the visual system for the ten solo arcade games.
 ///
 ///  * `SoloDef` declares a game (title, hint, accent, board builder) and
-///    [buildSoloGame] wraps it in [ArcadeSoloShell] — so the ready card, HUD, medals,
+///    [buildSoloGame] wraps it in `ArcadeSoloShell` — so the ready card, HUD, medals,
 ///    daily challenge, personal best and the hand-off to the host are identical for
 ///    every solo game.
-///  * [SoloBoard] is the base class a game's board extends: it owns one ticker, calls
-///    [step] with a clamped delta time (never more than 20 ms, so a hitch cannot tunnel
-///    objects) and repaints a single CustomPainter instead of rebuilding widgets.
-///  * [LuxeBoardPainter] holds the shared drawing helpers (background, glow, frames, text)
-///    so no board invents its own palette.
+///  * [SoloBoard] is the base class a game's board extends: it owns one ticker, feeds the
+///    game a clamped delta time (never more than 20 ms, so a hitch cannot tunnel objects),
+///    runs a particle/shake FX system and repaints a single CustomPainter instead of
+///    rebuilding widgets. It also tracks the play rect so every board can lay itself out
+///    between the shell HUD and the control deck.
+///  * [SoloStage] is the shared control deck: glass pads that drive the same input the
+///    playfield accepts by touch, so a game is always playable one-handed.
 /// ===========================================================
 
 /// How a solo game takes input.
@@ -69,11 +93,11 @@ class SoloDef {
 Widget buildSoloGame(SoloDef def, GameLaunch launch) {
   final ArcadeSkin skin = ArcadeSkin(
     gameId: def.id,
-    bgTop: const Color(0xFF101B32),
-    bgBottom: const Color(0xFF050812),
+    bgTop: SoloArt.mix(const Color(0xFF16233F), def.accent, 0.10),
+    bgBottom: const Color(0xFF04060D),
     accent: def.accent,
     accent2: def.accent2,
-    glow: def.accent2,
+    glow: def.accent,
   );
   return ArcadeSoloShell(
     launch: launch,
@@ -86,27 +110,50 @@ Widget buildSoloGame(SoloDef def, GameLaunch launch) {
   );
 }
 
-/// Base class of every solo playfield: one ticker, clamped dt, single CustomPainter.
+/// Base class of every solo playfield: one ticker, clamped dt, one CustomPainter, one FX system.
 ///
-/// Subclasses implement [step] (advance the simulation) and [paint] (draw it). The board
-/// only runs while the shell reports [SoloRun.playing]; when the run is over the board
-/// freezes on its last frame so the result overlay appears over a stable image.
+/// Subclasses implement [step] (advance the simulation) and [paint] (draw it, in the full
+/// viewport) and may override [onPointer] for touch input. The board only simulates while the
+/// shell reports [SoloRun.playing]; when the run is over it freezes on its last frame so the
+/// result overlay appears over a stable image.
 abstract class SoloBoard extends StatefulWidget {
   const SoloBoard({super.key, required this.run});
   final SoloRun run;
-
-  // `StatefulWidget` already declares `State<StatefulWidget> createState()`; every board
-  // narrows it to its own `_XBoardState` (a `SoloBoardState<XBoard>`), which is a valid
-  // override, so the base class only documents the contract.
 }
 
 abstract class SoloBoardState<T extends SoloBoard> extends State<T> with SingleTickerProviderStateMixin {
   late final Ticker ticker;
+
+  /// Repaint signal; incremented once per frame (only after the board is laid out).
   final ValueNotifier<int> frame = ValueNotifier<int>(0);
   Duration _last = Duration.zero;
 
   /// Seconds since the board was created (always advancing, for idle animations).
   double clock = 0;
+
+  /// Particle bursts, screen shake and floating score text.
+  late final ArcadeFx fx = ArcadeFx(
+    enabled: widget.run.launch.fancyEffects && !widget.run.launch.reducedMotion,
+    skin: widget.run.skin,
+  );
+
+  /// Last laid-out viewport (0 before the first build).
+  Size viewport = Size.zero;
+
+  /// Last pointer position seen, also handed to [onPointer] for `up` / `dragEnd` so a swipe
+  /// can be resolved against where the finger actually lifted.
+  Offset lastPointer = Offset.zero;
+
+  /// Top safe inset, read on the first build so [playRect] never touches MediaQuery while the
+  /// ticker is running (a board may paint before it is laid out).
+  double topInset = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    reset();
+    ticker = createTicker(_onTick)..start();
+  }
 
   /// Starts a fresh run (called by [restart] and available to subclasses).
   void reset();
@@ -117,15 +164,22 @@ abstract class SoloBoardState<T extends SoloBoard> extends State<T> with SingleT
   /// Paints the current state. [size] is the full play area.
   void paint(Canvas canvas, Size size);
 
+  /// Touch hook: [at] is the pointer position in viewport coordinates, [kind] is the gesture.
+  void onPointer(Offset at, SoloGesture kind) {}
+
   /// Whether the game is currently simulating (default: only while the run plays).
   bool get simulating => widget.run.playing && !widget.run.over;
 
-  @override
-  void initState() {
-    super.initState();
-    reset();
-    ticker = createTicker(_onTick)..start();
-  }
+  /// Playfield between the shell HUD and the control deck.
+  Rect playRect(Size size) => Rect.fromLTRB(
+        0,
+        SoloMetrics.hudTop + topInset,
+        size.width,
+        size.height - SoloMetrics.deck,
+      );
+
+  /// Bottom deck rect (control area).
+  Rect deckRect(Size size) => Rect.fromLTRB(0, size.height - SoloMetrics.deck, size.width, size.height);
 
   void _onTick(Duration elapsed) {
     double dt = (elapsed - _last).inMicroseconds / 1e6;
@@ -133,7 +187,11 @@ abstract class SoloBoardState<T extends SoloBoard> extends State<T> with SingleT
     if (dt <= 0) return;
     if (dt > 0.02) dt = 0.02;
     clock += dt;
+    fx.update(dt);
     if (simulating) step(dt);
+    // Only repaint once a size is known: painting with a zero viewport would divide by zero
+    // and log a framework error before the first layout.
+    if (viewport.isEmpty) return;
     frame.value++;
   }
 
@@ -150,13 +208,61 @@ abstract class SoloBoardState<T extends SoloBoard> extends State<T> with SingleT
   }
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-        animation: frame,
-        builder: (BuildContext c, _) => RepaintBoundary(
-          child: CustomPaint(painter: _SoloPainter(this), size: Size.infinite),
-        ),
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (BuildContext c, BoxConstraints box) {
+          viewport = box.biggest;
+          // The shell already keeps its HUD inside the status bar; the board only needs a hair
+          // of extra room on notched devices.
+          topInset = MediaQuery.paddingOf(context).top * 0.15;
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (TapDownDetails d) {
+              lastPointer = d.localPosition;
+              onPointer(d.localPosition, SoloGesture.down);
+            },
+            onTapUp: (TapUpDetails d) {
+              lastPointer = d.localPosition;
+              onPointer(d.localPosition, SoloGesture.up);
+            },
+            onTapCancel: () => onPointer(lastPointer, SoloGesture.cancel),
+            onPanStart: (DragStartDetails d) {
+              lastPointer = d.localPosition;
+              onPointer(d.localPosition, SoloGesture.dragStart);
+            },
+            onPanUpdate: (DragUpdateDetails d) {
+              lastPointer = d.localPosition;
+              onPointer(d.localPosition, SoloGesture.drag);
+            },
+            onPanEnd: (DragEndDetails d) => onPointer(lastPointer, SoloGesture.dragEnd),
+            child: AnimatedBuilder(
+              animation: frame,
+              builder: (BuildContext c, _) => RepaintBoundary(
+                child: CustomPaint(painter: _SoloPainter(this), size: Size.infinite),
+              ),
+            ),
+          );
+        },
       );
+
+  /// Paints the FX layer on top of the game (subclasses call this last).
+  void paintFx(Canvas canvas, Size size) {
+    canvas.save();
+    final Offset sh = fx.shakeOffset;
+    if (sh != Offset.zero) canvas.translate(sh.dx * 0.5, sh.dy * 0.5);
+    fx.paint(canvas);
+    canvas.restore();
+    fx.paintFlash(canvas, size);
+  }
+
+  /// Emits a burst of particles clamped to [rect] so effects never bleed outside the playfield.
+  void burst(Rect rect, Offset at, Color color, {int count = 16, double speed = 240, ParticleKind kind = ParticleKind.spark}) {
+    if (!rect.contains(at)) return;
+    fx.burst(at, color, count: count, speed: speed, kind: kind, life: 0.5, size: 3.4);
+  }
 }
+
+/// Pointer gesture kinds a board can react to.
+enum SoloGesture { down, up, cancel, dragStart, drag, dragEnd }
 
 class _SoloPainter extends CustomPainter {
   _SoloPainter(this.state);
@@ -169,160 +275,169 @@ class _SoloPainter extends CustomPainter {
   bool shouldRepaint(covariant _SoloPainter old) => true;
 }
 
-/// Shared drawing helpers: every solo board uses this palette and these primitives, so
-/// the ten games look like one family (and like the rest of ANIX PRO).
-class LuxeBoardPainter {
-  LuxeBoardPainter._();
+/// Control deck: a glass panel holding one action button ([SoloStage.action]) and/or a row of
+/// directional pads ([SoloStage.left] / [SoloStage.right]). Every game funnels its touch input
+/// through the same widgets, so the deck reads as one product across ten games.
+class SoloStage extends StatelessWidget {
+  const SoloStage({
+    super.key,
+    required this.accent,
+    this.onAction,
+    this.onActionDown,
+    this.onActionUp,
+    this.actionIcon = Icons.arrow_upward_rounded,
+    this.actionLabel,
+    this.onLeft,
+    this.onRight,
+    this.leftIcon = Icons.chevron_left_rounded,
+    this.rightIcon = Icons.chevron_right_rounded,
+    this.extra,
+  });
 
-  static const Color ink = Color(0xFFF4F8FF);
-  static const Color mute = Color(0xFFA7B5CC);
-  static const Color gold = Color(0xFF43D9FF); // electric cyan
-  static const Color champagne = Color(0xFFEAFBFF);
-  static const Color bronze = Color(0xFF806CFF); // ultraviolet
+  final Color accent;
+  final VoidCallback? onAction;
+  final VoidCallback? onActionDown;
+  final VoidCallback? onActionUp;
+  final IconData actionIcon;
+  final String? actionLabel;
+  final VoidCallback? onLeft;
+  final VoidCallback? onRight;
+  final IconData leftIcon;
+  final IconData rightIcon;
 
-  static void background(Canvas canvas, Size size, Color accent) {
-    final Rect rect = Offset.zero & size;
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[Color(0xFF101B32), Color(0xFF080D1A), Color(0xFF050812)],
-          stops: <double>[0, 0.48, 1],
-        ).createShader(rect),
-    );
-    // Quiet technical grid gives every solo title a deliberate arcade-console stage.
-    final double spacing = (size.width / 15).clamp(22, 36).toDouble();
-    final Paint grid = stroke(const Color(0xFF8CB6FF).withValues(alpha: 0.055), 0.7);
-    for (double x = spacing; x < size.width; x += spacing) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), grid);
-    }
-    for (double y = spacing; y < size.height; y += spacing) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
-    }
-    final Offset c = Offset(size.width * 0.5, size.height * 0.24);
-    final double r = math.max(size.width, size.height) * 0.82;
-    canvas.drawCircle(
-      c,
-      r,
-      Paint()
-        ..shader = RadialGradient(colors: <Color>[accent.withValues(alpha: 0.18), Colors.transparent])
-            .createShader(Rect.fromCircle(center: c, radius: r)),
-    );
-    final Rect vignette = rect;
-    canvas.drawRect(
-      vignette,
-      Paint()
-        ..shader = const RadialGradient(
-          radius: 0.9,
-          colors: <Color>[Colors.transparent, Color(0x99020712)],
-          stops: <double>[0.55, 1],
-        ).createShader(vignette),
-    );
-  }
+  /// Optional extra control (e.g. rotate / hard drop).
+  final Widget? extra;
 
-  static Paint stroke(Color c, [double w = 1.2]) => Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = w
-    ..color = c;
-
-  static Paint fill(Color c) => Paint()..color = c;
-
-  static void glow(Canvas canvas, Offset at, double r, Color c, [double alpha = 0.34]) {
-    canvas.drawCircle(
-      at,
-      r * 2,
-      Paint()
-        ..shader = RadialGradient(colors: <Color>[c.withValues(alpha: alpha), Colors.transparent])
-            .createShader(Rect.fromCircle(center: at, radius: r * 2)),
-    );
-  }
-
-  static void text(
-    Canvas canvas,
-    String s,
-    Offset centre, {
-    Color color = ink,
-    double size = 16,
-    FontWeight weight = FontWeight.w800,
-    TextAlign align = TextAlign.center,
-    double maxWidth = 460,
-  }) {
-    final TextPainter tp = TextPainter(
-      text: TextSpan(
-        text: s,
-        style: TextStyle(
-          color: color,
-          fontSize: size,
-          fontWeight: weight,
-          fontFamily: 'ChakraPetch',
-          shadows: <Shadow>[Shadow(color: Colors.black.withValues(alpha: 0.65), blurRadius: 4)],
+  @override
+  Widget build(BuildContext context) {
+    final bool hasDpad = onLeft != null || onRight != null;
+    return SizedBox(
+      height: SoloMetrics.deck,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+        child: Row(
+          children: <Widget>[
+            if (hasDpad) ...<Widget>[
+              SoloPad(icon: leftIcon, onTap: onLeft ?? () {}, accent: accent, size: 66),
+              const SizedBox(width: 12),
+              SoloPad(icon: rightIcon, onTap: onRight ?? () {}, accent: accent, size: 66),
+            ],
+            const Spacer(),
+            if (extra != null) ...<Widget>[extra!, const SizedBox(width: 12)],
+            if (onAction != null)
+              _ActionButton(
+                accent: accent,
+                icon: actionIcon,
+                label: actionLabel,
+                onTap: onAction!,
+                onDown: onActionDown,
+                onUp: onActionUp,
+              ),
+          ],
         ),
       ),
-      textAlign: align,
-      textDirection: TextDirection.ltr,
-    )..layout(maxWidth: maxWidth);
-    final double dx = align == TextAlign.center ? tp.width / 2 : (align == TextAlign.right ? tp.width : 0);
-    tp.paint(canvas, centre - Offset(dx, tp.height / 2));
-  }
-
-  static void roundedRect(Canvas canvas, Rect r, double radius, Color fillColor, {Color? border, double borderWidth = 1.2}) {
-    final RRect rr = RRect.fromRectAndRadius(r, Radius.circular(radius));
-    canvas.drawRRect(rr, fill(fillColor));
-    if (border != null) canvas.drawRRect(rr, stroke(border, borderWidth));
-  }
-
-  /// Subtle inset frame with short illuminated corner ticks; never competes with gameplay.
-  static void frame(Canvas canvas, Size size, Color accent) {
-    const double m = 10;
-    const double len = 20;
-    final Rect r = Rect.fromLTWH(m, m, size.width - 2 * m, size.height - 2 * m);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(r, const Radius.circular(22)),
-      stroke(const Color(0xFFB8D4FF).withValues(alpha: 0.12), 0.8),
     );
-    final Paint p = stroke(accent.withValues(alpha: 0.78), 1.6);
-    for (final Offset c in <Offset>[r.topLeft, r.topRight, r.bottomLeft, r.bottomRight]) {
-      final double sx = c.dx == r.left ? 1 : -1;
-      final double sy = c.dy == r.top ? 1 : -1;
-      canvas.drawLine(c, c + Offset(len * sx, 0), p);
-      canvas.drawLine(c, c + Offset(0, len * sy), p);
-      canvas.drawCircle(c + Offset(len * sx * .42, len * sy * .42), 2, fill(accent));
-    }
-  }
-
-  /// Soft edge vignette that keeps the HUD scrollable over busy playfields.
-  static void vignette(Canvas canvas, Size size) {
-    final Rect rect = Offset.zero & size;
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = RadialGradient(
-          radius: 0.95,
-          colors: <Color>[Colors.transparent, Colors.black.withValues(alpha: 0.5)],
-        ).createShader(rect),
-    );
-  }
-
-  static double lerp(double a, double b, double t) => a + (b - a) * t.clamp(0.0, 1.0);
-
-  static double easeOutBack(double t) {
-    const double c = 1.70158;
-    final double u = t.clamp(0.0, 1.0) - 1;
-    return 1 + (c + 1) * u * u * u + c * u * u;
-  }
-
-  /// A Luxe-styled button drawn on the canvas (for tap-anywhere "start over" prompts).
-  static void pill(Canvas canvas, Rect r, Color accent, String label) {
-    roundedRect(canvas, r, r.height / 2, const Color(0xF01C1A14), border: accent.withValues(alpha: 0.6));
-    text(canvas, label, r.center, color: champagne, size: 14, weight: FontWeight.w900);
   }
 }
 
-/// Square frame button used by solo boards for arrows / actions.
+class _ActionButton extends StatefulWidget {
+  const _ActionButton({required this.accent, required this.icon, required this.onTap, this.label, this.onDown, this.onUp});
+  final Color accent;
+  final IconData icon;
+  final String? label;
+  final VoidCallback onTap;
+  final VoidCallback? onDown;
+  final VoidCallback? onUp;
+
+  @override
+  State<_ActionButton> createState() => _ActionButtonState();
+}
+
+class _ActionButtonState extends State<_ActionButton> {
+  bool _down = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = widget.accent;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) {
+        setState(() => _down = true);
+        widget.onDown?.call();
+      },
+      onTapUp: (_) {
+        setState(() => _down = false);
+        widget.onUp?.call();
+      },
+      onTapCancel: () {
+        setState(() => _down = false);
+        widget.onUp?.call();
+      },
+      onTap: widget.onTap,
+      child: AnimatedScale(
+        scale: _down ? 0.94 : 1,
+        duration: const Duration(milliseconds: 90),
+        child: Semantics(
+          button: true,
+          label: widget.label,
+          child: Container(
+            height: 72,
+            constraints: const BoxConstraints(minWidth: 96),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: _down
+                    ? <Color>[SoloArt.lift(accent, 0.1), accent]
+                    : <Color>[SoloArt.lift(accent, 0.22), SoloArt.sink(accent, 0.18)],
+              ),
+              border: Border.all(color: SoloArt.a(const Color(0xFFFFFFFF), 0.5), width: 1.2),
+              boxShadow: <BoxShadow>[
+                BoxShadow(color: SoloArt.a(accent, _down ? 0.55 : 0.32), blurRadius: _down ? 26 : 18, spreadRadius: -2),
+                const BoxShadow(color: Color(0x66000000), blurRadius: 12, offset: Offset(0, 6)),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Icon(widget.icon, color: const Color(0xFF06101E), size: 26),
+                if (widget.label != null) ...<Widget>[
+                  const SizedBox(width: 8),
+                  Text(
+                    widget.label!,
+                    style: const TextStyle(
+                      fontFamily: 'ChakraPetch',
+                      color: Color(0xFF06101E),
+                      fontWeight: FontWeight.w900,
+                      fontSize: 14,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Square glass frame button used by solo boards for arrows / actions (kept for boards that
+/// need a bespoke deck layout).
 class SoloPad extends StatefulWidget {
-  const SoloPad({super.key, required this.icon, required this.onTap, this.onHold, this.onRelease, this.size = 64, this.accent = const Color(0xFF43D9FF)});
+  const SoloPad({
+    super.key,
+    required this.icon,
+    required this.onTap,
+    this.onHold,
+    this.onRelease,
+    this.size = 64,
+    this.accent = const Color(0xFF43D9FF),
+  });
   final IconData icon;
   final VoidCallback onTap;
   final VoidCallback? onHold;
@@ -362,22 +477,39 @@ class _SoloPadState extends State<SoloPad> {
               width: widget.size,
               height: widget.size,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(widget.size * 0.28),
+                borderRadius: BorderRadius.circular(widget.size * 0.30),
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: _down
-                      ? <Color>[widget.accent.withValues(alpha: 0.34), const Color(0xFF111A2D)]
-                      : const <Color>[Color(0xE91B2941), Color(0xF0091121)],
+                      ? <Color>[SoloArt.a(widget.accent, 0.42), const Color(0xFF0C1526)]
+                      : const <Color>[Color(0xF0203050), Color(0xF0060C18)],
                 ),
-                border: Border.all(color: widget.accent.withValues(alpha: _down ? 0.9 : 0.48), width: 1.3),
+                border: Border.all(color: SoloArt.a(widget.accent, _down ? 0.95 : 0.5), width: 1.4),
                 boxShadow: <BoxShadow>[
-                  BoxShadow(color: widget.accent.withValues(alpha: _down ? 0.38 : 0.12), blurRadius: 18, spreadRadius: -5),
+                  BoxShadow(color: SoloArt.a(widget.accent, _down ? 0.45 : 0.14), blurRadius: 20, spreadRadius: -4),
+                  const BoxShadow(color: Color(0x66000000), blurRadius: 10, offset: Offset(0, 5)),
                 ],
               ),
-              child: Icon(widget.icon, color: const Color(0xFFEAFBFF), size: widget.size * 0.46),
+              child: Icon(widget.icon, color: SoloArt.ink, size: widget.size * 0.46),
             ),
           ),
         ),
       );
 }
+
+/// Small centred banner text used for in-run callouts (PERFECT, COMBO, STAGE 2…).
+void paintCallout(Canvas canvas, Offset at, String text, Color color, {double scale = 1, double alpha = 1}) {
+  if (text.isEmpty || alpha <= 0.01) return;
+  canvas.save();
+  canvas.translate(at.dx, at.dy);
+  canvas.scale(scale);
+  SoloArt.label(canvas, text, Offset.zero, size: 22 * scale.clamp(0.8, 1.2), color: SoloArt.ink, glow: color);
+  canvas.restore();
+}
+
+/// Linear interpolation helper shared by boards (kept here so no board redefines it).
+double soloLerp(double a, double b, double t) => a + (b - a) * t.clamp(0.0, 1.0);
+
+/// Frame-rate independent approach factor: `1 - pow(sharpness, dt)`.
+double soloApproach(double sharpness, double dt) => 1 - math.pow(sharpness, dt).toDouble();

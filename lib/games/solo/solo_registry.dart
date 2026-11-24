@@ -2,8 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../core/game_contract.dart';
 import 'solo_kit.dart';
-import 'ui/action_boards.dart';
-import 'ui/puzzle_boards.dart';
+import 'ui/bubble_board.dart';
+import 'ui/dash_board.dart';
+import 'ui/fruit_board.dart';
+import 'ui/grid2048_board.dart';
+import 'ui/helix_board.dart';
+import 'ui/knife_board.dart';
+import 'ui/runner_board.dart';
+import 'ui/stack_board.dart';
+import 'ui/tetris_board.dart';
+import 'ui/traffic_board.dart';
 
 /// ===================== SOLO ARCADE REGISTRY =====================
 /// The ten single-player arcade games, registered like every other ANIX game so they get
