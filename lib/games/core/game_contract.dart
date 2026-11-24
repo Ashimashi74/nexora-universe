@@ -49,7 +49,13 @@ class GameLaunch {
     this.net,
     this.tournamentMatchId,
     this.daily = false,
+    this.immersive,
   });
+
+  /// Set to true by a game whose match screen draws its own complete chrome (its own menu with an exit, its own
+  /// clock) while the match runs, so the host page hides its corner buttons, tutorial banner and presence dots and
+  /// nothing covers the playfield. The host owns the notifier; null when the host does not support it.
+  final ValueNotifier<bool>? immersive;
 
   /// Daily challenge run: [seed] is today's shared seed (solo: score target, multiplayer: win vs Hard bots).
   final bool daily;
@@ -116,7 +122,13 @@ class GameResult {
     this.durationMs,
     this.endsMatch = true,
     this.holdMs,
+    this.holdUntil,
   });
+
+  /// Online only: the host shows its result overlay once [holdMs] has passed AND this future has completed, so a game
+  /// can keep its own end screen up while something there is still in progress (finger soccer: a rematch request
+  /// being answered). Null: [holdMs] alone. The game must complete it (it does at the latest when it is disposed).
+  final Future<void>? holdUntil;
 
   /// How long (ms) the game keeps its own end screen up before the host shows its result overlay (null: the host's
   /// default short pause). The result is reported / recorded at once either way. v6 finger soccer: its 20 s score
@@ -162,6 +174,8 @@ class GameInfo {
     required this.rulesEn,
     required this.minPlayers,
     required this.maxPlayers,
+    this.onlineMin,
+    this.onlineMax,
     required this.builder,
     required this.accent,
     this.supportsLocal = true,
@@ -193,6 +207,17 @@ class GameInfo {
   final String rulesEn;
   final int minPlayers;
   final int maxPlayers;
+
+  /// Online seat bounds, when the networked format differs from the offline one.
+  /// Finger soccer is 1v1 on one phone but plays 1v1, 2v2 and 3v3 online, so its
+  /// online range is 2..6 while [maxPlayers] (offline pass-and-play) stays 2.
+  /// These are the numbers the online lobby, the room manager and `nx_game_bounds`
+  /// on the games project must agree on.
+  final int? onlineMin;
+  final int? onlineMax;
+
+  int get onlineMinPlayers => onlineMin ?? minPlayers;
+  int get onlineMaxPlayers => onlineMax ?? maxPlayers;
   final int defaultPlayers;
   final bool supportsLocal;
   final Color accent;

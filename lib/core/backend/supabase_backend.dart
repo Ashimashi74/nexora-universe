@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../online/online_config.dart';
 import '../online/online_service.dart';
+import '../online/voice_connect.dart';
 import 'backend_gateway.dart';
 
 /// Online implementation of [BackendGateway] (Supabase + Edge Functions).
@@ -56,45 +60,58 @@ class SupabaseBackend extends BackendGateway {
     return r?['token'] as String?;
   }
 
-  Future<Map<String, dynamic>?> liveKitGrant(String room, {bool video = false}) async {
+  /// Grant cache key: per signed-in user, so switching accounts never reuses someone else's token.
+  String? _voiceKey(String kind, String id) {
+    final String? uid = _c?.auth.currentUser?.id;
+    return uid == null ? null : '$uid|$kind|$id';
+  }
+
+  Future<Map<String, dynamic>?> _cachedGrant(String kind, String id, bool fresh,
+      Future<Map<String, dynamic>?> Function() fetch) {
+    final String? k = _voiceKey(kind, id);
+    if (k == null) return fetch();
+    if (fresh) VoiceGrantCache.instance.invalidate(k);
+    return VoiceGrantCache.instance.get(k, fetch);
+  }
+
+  /// Orbit Network call grant. Cached for most of its 15 min life, so a call opened right after [prefetch]
+  /// (chat page open / incoming ring) skips the Edge Function round-trip entirely.
+  Future<Map<String, dynamic>?> liveKitGrant(String room, {bool video = false, bool fresh = false}) =>
+      _cachedGrant('call${video ? 'v' : ''}', room, fresh, () => _invoke(<String, dynamic>{'room': room, 'video': video}));
+
+  /// Warms the voice grant for a chat in the background (no-op offline).
+  void prefetchLiveKitGrant(String room, {bool video = false}) {
+    if (_c?.auth.currentSession == null) return;
+    unawaited(liveKitGrant(room, video: video).then((_) {}, onError: (Object _) {}));
+  }
+
+  /// Forget a cached grant (role changed, token rejected).
+  void invalidateLiveKitGrant(String kind, String id) {
+    final String? k = _voiceKey(kind, id);
+    if (k != null) VoiceGrantCache.instance.invalidate(k);
+  }
+
+  Future<Map<String, dynamic>?> _invoke(Map<String, dynamic> body, {bool errorMap = false}) async {
     final SupabaseClient? c = _c;
     if (c == null || c.auth.currentSession == null) return null;
     try {
-      final FunctionResponse r = await c.functions.invoke('nx-call-token', body: <String, dynamic>{'room': room, 'video': video});
+      final FunctionResponse r = await c.functions.invoke('nx-call-token',
+          body: body, region: OnlineConfig.functionsRegion.isEmpty ? null : OnlineConfig.functionsRegion);
       final dynamic d = r.data;
       return d is Map ? Map<String, dynamic>.from(d) : null;
-    } catch (_) {
-      return null;
+    } catch (e) {
+      return errorMap ? <String, dynamic>{'error': '$e'} : null;
     }
   }
 
   /// Voice-stage token for a ROOM (games project room id): speakers publish, listeners only subscribe.
-  Future<Map<String, dynamic>?> liveKitRoomGrant(String roomId) async {
-    final SupabaseClient? c = _c;
-    if (c == null || c.auth.currentSession == null) return null;
-    try {
-      final FunctionResponse r =
-          await c.functions.invoke('nx-call-token', body: <String, dynamic>{'kind': 'room', 'room': roomId});
-      final dynamic d = r.data;
-      return d is Map ? Map<String, dynamic>.from(d) : null;
-    } catch (e) {
-      return <String, dynamic>{'error': '$e'};
-    }
-  }
+  Future<Map<String, dynamic>?> liveKitRoomGrant(String roomId, {bool fresh = false}) => _cachedGrant(
+      'room', roomId, fresh, () => _invoke(<String, dynamic>{'kind': 'room', 'room': roomId}, errorMap: true));
 
   /// Voice grant for an online GAME room (lobby) or match: `nx-call-token` kind 'game'.
-  Future<Map<String, dynamic>?> liveKitGameGrant(String id, {bool match = false}) async {
-    final SupabaseClient? c = _c;
-    if (c == null || c.auth.currentSession == null) return null;
-    try {
-      final FunctionResponse r = await c.functions
-          .invoke('nx-call-token', body: <String, dynamic>{'kind': 'game', 'room': id, if (match) 'match': true});
-      final dynamic d = r.data;
-      return d is Map ? Map<String, dynamic>.from(d) : null;
-    } catch (e) {
-      return <String, dynamic>{'error': '$e'};
-    }
-  }
+  Future<Map<String, dynamic>?> liveKitGameGrant(String id, {bool match = false, bool fresh = false}) =>
+      _cachedGrant('game${match ? 'm' : ''}', id, fresh,
+          () => _invoke(<String, dynamic>{'kind': 'game', 'room': id, if (match) 'match': true}, errorMap: true));
 
   /// ORACLE remote replies through the `nx-oracle` Edge Function (key lives server-side).
   @override

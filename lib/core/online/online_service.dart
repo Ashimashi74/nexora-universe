@@ -258,6 +258,21 @@ class OnlineService extends ChangeNotifier {
   static String loginPassword(String id, String password) => isUsernameLogin(id) ? 'nx#$password' : password;
   bool get isInternalAccount => (email ?? '').endsWith('@$internalDomain');
 
+  /// The username this account signed up with (auth metadata, or the local part of an internal username account).
+  /// Null for guests, signed-out phones and accounts that never chose one.
+  String? get accountUsername {
+    final User? u = user;
+    if (u == null || u.isAnonymous) return null;
+    final dynamic meta = u.userMetadata?['username'];
+    if (meta is String && meta.trim().length >= 2) return meta.trim();
+    final String mail = u.email ?? '';
+    if (mail.endsWith('@$internalDomain')) {
+      final String local = mail.substring(0, mail.length - internalDomain.length - 1);
+      if (local.length >= 2) return local;
+    }
+    return null;
+  }
+
   // ------------------------------------------------------------------ username + password accounts
   /// Usernames: 3-20 of a-z 0-9 _ . (lower case; what nx-login and the profiles constraint accept).
   static final RegExp usernamePattern = RegExp(r'^[a-z0-9_.]{3,20}$');

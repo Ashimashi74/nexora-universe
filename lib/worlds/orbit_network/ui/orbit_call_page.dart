@@ -7,6 +7,7 @@ import 'package:livekit_client/livekit_client.dart';
 import '../../../core/backend/backend_gateway.dart';
 import '../../../core/backend/supabase_backend.dart';
 import '../../../core/online/online_config.dart';
+import '../../../core/online/voice_connect.dart';
 import '../../../core/settings/app_settings.dart';
 import '../../../core/theme/nx_theme.dart';
 import '../../../core/widgets/nx_widgets.dart';
@@ -40,6 +41,7 @@ class OrbitCallPage extends ConsumerStatefulWidget {
 
 class _OrbitCallPageState extends ConsumerState<OrbitCallPage> {
   Room? _room;
+  EventsListener<RoomEvent>? _events;
   String? _callId;
   String? _error;
   bool _connecting = true;
@@ -58,6 +60,9 @@ class _OrbitCallPageState extends ConsumerState<OrbitCallPage> {
     unawaited(_start());
   }
 
+  /// Connect path, all independent steps in parallel:
+  ///   ring (nx_start_call) ‖ grant (cached / Edge Function) ‖ mic open ‖ DNS+TLS+region warm-up
+  /// then one LiveKit join that publishes the mic (and camera) as part of the handshake.
   Future<void> _start() async {
     final BackendGateway be = ref.read(backendProvider);
     final SupabaseOrbitRepository? repo =
@@ -69,36 +74,60 @@ class _OrbitCallPageState extends ConsumerState<OrbitCallPage> {
       });
       return;
     }
+    final Room room = Room(roomOptions: voiceRoomOptions());
+    _room = room;
+    room.addListener(_onRoom);
+    warmVoice(room, OnlineConfig.liveKitUrl);
+    final Future<LocalAudioTrack?> micF = openMic();
+    LocalAudioTrack? mic;
     try {
-      if (widget.startNew) {
-        _callId = await repo.startCall(widget.chatId, video: widget.video);
-      }
-      final Map<String, dynamic>? grant =
-          await be.liveKitGrant(widget.chatId, video: widget.video);
+      final Future<String?> ring = widget.startNew
+          ? repo.startCall(widget.chatId, video: widget.video)
+          : Future<String?>.value(_callId);
+      final Future<Map<String, dynamic>?> grantF =
+          be.liveKitGrant(widget.chatId, video: widget.video);
+      final List<Object?> both = await Future.wait<Object?>(<Future<Object?>>[ring, grantF]);
+      _callId = both[0] as String?;
+      final Map<String, dynamic>? grant = both[1] as Map<String, dynamic>?;
       final String? token = grant?['token'] as String?;
       if (token == null) throw StateError('${grant?['error'] ?? 'no_token'}');
       _canPublish = grant?['canPublish'] != false;
-      final Room room = Room(
-          roomOptions: const RoomOptions(adaptiveStream: true, dynacast: true));
-      room.addListener(_onRoom);
-      _room = room;
-      await room.connect('${grant?['url'] ?? OnlineConfig.liveKitUrl}', token);
-      if (_canPublish) {
-        await room.localParticipant?.setMicrophoneEnabled(true);
-        if (widget.video) await room.localParticipant?.setCameraEnabled(true);
-      } else {
+      final String url = '${grant?['url'] ?? OnlineConfig.liveKitUrl}';
+      mic = await micF;
+      if (!_canPublish) {
+        await dropMic(mic);
+        mic = null;
         _mic = false;
         _cam = false;
+      } else if (mic == null) {
+        _mic = false; // mic unavailable (permission denied): still join and listen
       }
-      try {
-        await Hardware.instance.setSpeakerphoneOn(true);
-      } catch (_) {}
+      final EventsListener<RoomEvent> ev = room.createListener();
+      _events = ev;
+      ev.on<RoomDisconnectedEvent>((RoomDisconnectedEvent e) {
+        // The SDK already tried to resume / fully reconnect before this fires: show the call as dropped instead
+        // of reconnecting in a loop.
+        if (!mounted || !identical(_room, room)) return;
+        if (e.reason != DisconnectReason.clientInitiated) {
+          setState(() => _error = 'disconnected');
+        }
+      });
+      await connectVoice(room, url, token,
+          micTrack: mic, camera: _canPublish && widget.video);
+      mic = null; // the room owns it now
+      unawaited(Hardware.instance.setSpeakerphoneOn(true).then((_) {}, onError: (Object _) {}));
       _since = DateTime.now();
       _tick = Timer.periodic(const Duration(seconds: 1), (_) {
         if (mounted) setState(() {});
       });
       if (mounted) setState(() => _connecting = false);
     } catch (e) {
+      be.invalidateLiveKitGrant('call${widget.video ? 'v' : ''}', widget.chatId);
+      if (mic != null) {
+        unawaited(dropMic(mic));
+      } else {
+        unawaited(micF.then(dropMic));
+      }
       if (mounted) {
         setState(() {
           _connecting = false;
@@ -118,12 +147,11 @@ class _OrbitCallPageState extends ConsumerState<OrbitCallPage> {
   Future<void> _hangUp() async {
     final Room? r = _room;
     final bool alone = r == null || r.remoteParticipants.isEmpty;
+    final EventsListener<RoomEvent>? ev = _events;
     _room = null;
+    _events = null;
     r?.removeListener(_onRoom);
-    try {
-      await r?.disconnect();
-      await r?.dispose();
-    } catch (_) {}
+    await disposeVoice(r, ev);
     final String? id = _callId;
     final SupabaseOrbitRepository? repo =
         ref.read(orbitControllerProvider).online;
@@ -135,9 +163,12 @@ class _OrbitCallPageState extends ConsumerState<OrbitCallPage> {
   void dispose() {
     _tick?.cancel();
     final Room? r = _room;
+    final EventsListener<RoomEvent>? ev = _events;
+    _room = null;
+    _events = null;
     if (r != null) {
       r.removeListener(_onRoom);
-      unawaited(r.disconnect().then((_) => r.dispose()));
+      unawaited(disposeVoice(r, ev));
     }
     super.dispose();
   }
@@ -230,7 +261,7 @@ class _OrbitCallPageState extends ConsumerState<OrbitCallPage> {
             child: Icon(icon,
                 color: color != null
                     ? Colors.white
-                    : (active ? Colors.white : NxColors.navyDeep)),
+                    : (active ? Colors.white : NxColors.luxeBg)),
           ),
         ),
       );
@@ -253,7 +284,9 @@ class _OrbitCallPageState extends ConsumerState<OrbitCallPage> {
       status = _error == 'offline'
           ? context.tx(
               'برای تماس باید آنلاین باشی.', 'You need to be online to call.')
-          : context.tx('اتصال تماس برقرار نشد.', 'Could not connect the call.');
+          : _error == 'disconnected'
+              ? context.tx('تماس قطع شد.', 'Call dropped.')
+              : context.tx('اتصال تماس برقرار نشد.', 'Could not connect the call.');
     } else if (_connecting) {
       status = context.tx('در حال اتصال…', 'Connecting…');
     } else if (remotes == 0) {
@@ -282,7 +315,7 @@ class _OrbitCallPageState extends ConsumerState<OrbitCallPage> {
                 '${widget.video ? context.tx('تماس تصویری', 'Video call') : context.tx('تماس صوتی', 'Voice call')} · $status',
                 style: const TextStyle(color: NxColors.textDim),
               ),
-              if (_error != null && _error != 'offline')
+              if (_error != null && _error != 'offline' && _error != 'disconnected')
                 Padding(
                   padding: const EdgeInsets.all(12),
                   child: Text(_error!,

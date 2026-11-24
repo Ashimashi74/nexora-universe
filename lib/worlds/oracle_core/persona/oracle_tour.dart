@@ -185,18 +185,18 @@ class _OracleTourOverlayState extends State<OracleTourOverlay> with SingleTicker
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
                   gradient: const LinearGradient(colors: <Color>[Color(0xF5182A5E), Color(0xF52A1556)]),
-                  border: Border.all(color: const Color(0xFF39E6FF), width: 1.2),
+                  border: Border.all(color: const Color(0xFFD9B872), width: 1.2),
                   boxShadow: const <BoxShadow>[BoxShadow(color: Color(0x8839E6FF), blurRadius: 24)],
                 ),
                 child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
                   Row(children: <Widget>[
                     Image.asset('assets/characters/oracle/moods/wave.webp',
-                        width: 46, height: 46, errorBuilder: (_, __, ___) => const Icon(Icons.smart_toy_rounded, color: Color(0xFF8FF3FF))),
+                        width: 46, height: 46, errorBuilder: (_, __, ___) => const Icon(Icons.smart_toy_rounded, color: Color(0xFFF6E7BD))),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(s.title,
                           textDirection: dirOf(s.title),
-                          style: const TextStyle(color: Color(0xFF8FF3FF), fontSize: 15, fontWeight: FontWeight.w900)),
+                          style: const TextStyle(color: Color(0xFFF6E7BD), fontSize: 15, fontWeight: FontWeight.w900)),
                     ),
                     Text('${_i + 1}/${widget.steps.length}', style: const TextStyle(color: Colors.white54, fontSize: 12)),
                   ]),
@@ -210,7 +210,7 @@ class _OracleTourOverlayState extends State<OracleTourOverlay> with SingleTicker
                     ),
                     const Spacer(),
                     FilledButton(
-                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFF39E6FF), foregroundColor: Colors.black),
+                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD9B872), foregroundColor: Colors.black),
                       onPressed: _next,
                       child: Text(_i >= widget.steps.length - 1 ? (fa ? 'فهمیدم!' : 'Got it!') : (fa ? 'بعدی' : 'Next'),
                           style: const TextStyle(fontWeight: FontWeight.w900)),
@@ -247,7 +247,7 @@ class _SpotPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2
-          ..color = const Color(0xFF39E6FF)
+          ..color = const Color(0xFFD9B872)
           ..maskFilter = MaskFilter.blur(BlurStyle.solid, g));
   }
 

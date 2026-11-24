@@ -18,6 +18,8 @@ import 'orbit_chat_page.dart';
 import 'orbit_sheets.dart';
 
 import '../../../core/ui2/anix_kit.dart';
+import '../../../core/ui2/luxe.dart';
+
 void openOrbitChat(BuildContext context, String chatId, {String? focusMessageId}) {
   Navigator.of(context).push<void>(MaterialPageRoute<void>(
     builder: (BuildContext c) => OrbitChatPage(chatId: chatId, focusMessageId: focusMessageId),
@@ -169,7 +171,7 @@ class OrbitChatsTab extends ConsumerWidget {
                               padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                               decoration: BoxDecoration(color: pal.primary, borderRadius: BorderRadius.circular(10)),
                               child: Text('${s.unread}',
-                                  style: const TextStyle(color: NxColors.navyDeep, fontSize: 11, fontWeight: FontWeight.w900)),
+                                  style: const TextStyle(color: NxColors.luxeBg, fontSize: 11, fontWeight: FontWeight.w900)),
                             ),
                         ]),
                       ]),
@@ -253,11 +255,11 @@ class _OfflineCallsTab extends StatelessWidget {
         const OnlineOnlyNotice(featureFa: 'تماس صوتی، تصویری و گروهی', featureEn: 'Voice, video and group calls'),
         const SizedBox(height: 14),
         card(Icons.call_rounded, 'تماس صوتی', 'Voice call', 'صدای شفاف با هاله‌ی صوتی', 'Crystal voice with a reactive aura',
-            NxColors.turquoise),
+            NxColors.champagne),
         card(Icons.videocam_rounded, 'تماس تصویری', 'Video call', 'رو در رو، در هر کجای کهکشان',
-            'Face to face, anywhere in the galaxy', NxColors.electricBlue),
+            'Face to face, anywhere in the galaxy', NxColors.gold),
         card(Icons.groups_rounded, 'تماس گروهی', 'Group call', 'گردهمایی صوتی و تصویری دوستان', 'Voice and video with your crew',
-            NxColors.violet),
+            NxColors.goldDeep),
         const SizedBox(height: 20),
         Center(
           child: Column(children: <Widget>[
@@ -293,8 +295,8 @@ class _OfflineContactsTab extends ConsumerWidget {
     final ProfileService p = ref.watch(profileProvider);
     final String name = orbitMyName(context, p);
     final String shareText = context.tx(
-      'در ANIX پیدایم کن! شناسه‌ی کاوشگر من: ${p.explorerId} ($name)',
-      'Find me in ANIX! My Explorer ID: ${p.explorerId} ($name)',
+      'در نیکسورا پیدایم کن! شناسه‌ی کاوشگر من: ${p.explorerId} ($name)',
+      'Find me in NEXORA! My Explorer ID: ${p.explorerId} ($name)',
     );
     return ListView(
       padding: const EdgeInsets.fromLTRB(NxSpace.md, NxSpace.sm, NxSpace.md, 100),
@@ -304,11 +306,11 @@ class _OfflineContactsTab extends ConsumerWidget {
           borderColor: WorldPalette.orbit.primary.withValues(alpha: 0.6),
           child: Column(children: <Widget>[
             Row(children: <Widget>[
-              const Icon(Icons.fingerprint_rounded, color: NxColors.turquoise),
+              const Icon(Icons.fingerprint_rounded, color: NxColors.champagne),
               const SizedBox(width: 8),
               Text(context.tx('کارت کاوشگر', 'Explorer ID card'), style: const TextStyle(fontWeight: FontWeight.w900)),
               const Spacer(),
-              NxPill(label: 'Lv ${p.level}', color: NxColors.turquoise),
+              NxPill(label: 'Lv ${p.level}', color: NxColors.champagne),
             ]),
             const SizedBox(height: 14),
             Text(name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
@@ -317,7 +319,7 @@ class _OfflineContactsTab extends ConsumerWidget {
               textDirection: TextDirection.ltr,
               child: SelectableText(
                 p.explorerId,
-                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, letterSpacing: 3, color: NxColors.turquoise),
+                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, letterSpacing: 3, color: NxColors.champagne),
               ),
             ),
             const SizedBox(height: 4),
@@ -329,8 +331,7 @@ class _OfflineContactsTab extends ConsumerWidget {
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: p.explorerId));
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context)
-                          .showSnackBar(SnackBar(content: Text(context.tx('شناسه کپی شد', 'ID copied'))));
+                      luxeToast(context, context.tx('شناسه کپی شد', 'ID copied'));
                     }
                   },
                   icon: const Icon(Icons.copy_rounded),
@@ -340,13 +341,14 @@ class _OfflineContactsTab extends ConsumerWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: FilledButton.icon(
-                  style: FilledButton.styleFrom(backgroundColor: NxColors.turquoise),
+                  style: FilledButton.styleFrom(backgroundColor: NxColors.champagne),
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: shareText));
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                          content:
-                              Text(context.tx('متن دعوت کپی شد؛ هرجا خواستی بفرست', 'Invite text copied; paste it anywhere'))));
+                      luxeToast(
+                          context,
+                          context.tx('متن دعوت کپی شد؛ هرجا خواستی بفرست', 'Invite text copied; paste it anywhere'),
+                      );
                     }
                   },
                   icon: const Icon(Icons.share_rounded),
@@ -366,7 +368,7 @@ class _OfflineContactsTab extends ConsumerWidget {
             Text(
               context.tx(
                 'دوستانت بعد از اتصال آنلاین اینجا ظاهر می‌شوند. شناسه‌ات را به اشتراک بگذار تا پیدایت کنند.',
-                'Your friends appear here once ANIX is online. Share your ID so they can find you.',
+                'Your friends appear here once NEXORA is online. Share your ID so they can find you.',
               ),
               textAlign: TextAlign.center,
               style: const TextStyle(color: NxColors.textDim, height: 1.5),
@@ -547,7 +549,7 @@ class _OnlineCallsTabState extends ConsumerState<_OnlineCallsTab> {
                 final String title = chat == null ? '—' : orbitChatTitle(c, chat);
                 return ListTile(
                   leading: Icon(e.video ? Icons.videocam_rounded : Icons.call_rounded,
-                      color: out ? NxColors.turquoise : NxColors.electricBlue),
+                      color: out ? NxColors.champagne : NxColors.gold),
                   title: Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
                   subtitle: Text(
                     '${out ? c.tx('خروجی', 'Outgoing') : c.tx('ورودی', 'Incoming')} · ${_listTime(c, e.at)}'
@@ -631,7 +633,7 @@ class _OrbitFriendsPanelState extends ConsumerState<OrbitFriendsPanel> {
 
   void _snack(String fa, String en) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tx(fa, en))));
+    luxeToast(context, context.tx(fa, en));
   }
 
   Future<void> _message(NxUser u) async {

@@ -224,3 +224,236 @@ No extra server: everything runs in the existing Supabase project (Postgres RPCs
   ending the match (`GameResult.endsMatch` false); when a whole side has left, the other side wins at once.
 - Tests: `test/games/finger_soccer_v5_test.dart` (shared clock, early-pick wait, idle timeouts + fallback, tpick
   replay, controller seat, 2v2 / 3v3 results per seat, draw, leaver), `test/worlds/fs_swap_sides_test.dart`.
+
+## Finger soccer v7 — rail-like goals, formation button by the bar, 6 pitches removed, NX GIF balls (2026-11-20, branch `work/fs-v7`)
+- Goal posts and the inside of the goal (side nets, back net) rebound exactly like the rails for the ball and every
+  disc: normal restitution `kBmRailE` (.9), no tangential loss (`BmEngine.walls` / `BmEngine.post`). Before: ball
+  nets .62-.72 / post impulse 1.54-1.7 (speed dependent), disc .48. Only the ball settling in the net after a goal
+  (phase 'goal', play stopped) keeps its soft .2 / .3 damping. Contract row: `supabase/games/migrations/20261120040000_physics_fs_v7_rebound.sql`
+  (documentation only, not applied).
+- In-match "تغییر ترکیب" button moved down onto the game bar's row, right beside the bar handle (`kBmFormButtonLeft`,
+  vertically centred on `kFsBarHandleHeight`); same button, same picker, same D11 rule. The "one minute left" toast
+  moved one row up (where the button was). The button is still hidden only under the end-of-match score table.
+- Pitches: Neon Cup, Street Cage, Sockerbox, Gold Leather, Neon Grass, Royal Gold removed (catalog entries, field +
+  thumb art, `tool/fs_goal_cleanup.py` which only served them). They were the last six entries, so saved indices
+  0..29 are unchanged; any saved / synced / room index that no longer exists becomes pitch 0 (`bmFieldIndex`, used by
+  prefs, shop, room panel, online setup, room prefs and `BmEngine.startMatch`). No backend seed referenced them.
+- Balls: NX Spin (index 5, the owner's "NX ball fixed center spin", 24 frames) and NX Star (index 6, the owner's
+  "NX football", 16 frames), both 90 ms per frame, built by `tool/build_fs_nx_balls.py` from `tool/ball_src/`: GIF
+  order kept, each frame re-centred on its silhouette (the source drifted ~3 px; output centre within 0.1 px),
+  one scale per ball, anti-aliased circular trim, 160 px cells (ball radius 76 = kBmBallArtFill). Played with
+  `BmAnimBall.gifTimed`: exactly frameMs per frame while the ball moves, held on the current frame at rest, no extra
+  sprite rotation (only the GIF's own spin). NX Spin is the default (`kBmDefaultBall`); new preference key
+  `bm.ball.v7` so every player starts on it once (the v6 key was also written automatically at each match start, so
+  explicit picks could not be told apart); a pick in the shop / setup is kept under the new key.
+- Tests: `test/games/finger_soccer_v7_test.dart` (rail / back net / side net / post parity for ball and disc on two
+  pitches, speed-independent post, removed pitches + fallback incl. a saved removed pitch, default ball + GIF frame
+  timing, formation button beside the bar and still opening the picker).
+
+## Release hardening — build unblocked, one skin everywhere, server caught up with the repo (2026-11-22, branch `arena/5a46ff7d-cocos-c`)
+- **Build unblocked.** The branch had 7 analyzer errors, which are fatal in `.github/workflows/android.yml` (analyze) and made 6 test
+  suites fail to load (`widget_test`, `quiz_widget_test`, `finger_soccer_v6_test`, `solo/solo_rules_test`,
+  `finger_soccer_online_pick_test`, `online/finger_soccer_two_phones_test`). Two causes: `NxWorldScaffold` never forwarded the
+  in-page section bar (`sections` / `sectionIndex` / `onSectionSelect`) that NOVA Gallery and Orbit Network were already passing to
+  it, and `Nx2Pressable.onTap` was a non-nullable `VoidCallback` while `NxDockBar` passes null for a bar with no `onSelect`.
+  `Nx2Pressable.onTap` is now nullable and null means *disabled* (no gesture detector, no press scale, no tick) — the same contract
+  as `Nx2Button.onTap`; `NxBarButton`'s `onTap ?? () {}` placeholder went with it, so a dimmed bar button no longer swallows taps.
+  Analyze is clean and all 60 test files load and pass.
+- **Last of the second palette.** `/social` (`SocialHubPage`) still painted the retired navy/neon look: a hand-rolled world switcher
+  in `0xE6140A36` with a violet→pink `0xFF7B3CFF`/`0xFFE040C8` gradient on a bare `GestureDetector` (no press animation, no haptic,
+  no tick, no Semantics) — a third navigation style between the hosted world's own section bar and the app dock. It is now the
+  Station Luxe gold pill chip `LuxeStationPage` uses (`LuxePress` + `Luxe.goldGrad` + `Luxe.line`, gold glow on the selected world,
+  `Luxe.ease` 380 ms, `Luxe.reduceMotion` honoured). Same three worlds, same order, same `initial` tab.
+- **One feedback surface.** `luxeToast` existed for exactly this ("gold hairline panel above the dock, never a Material default") but
+  only 4 call sites used it while 51 built their own raw `SnackBar`; there is no `SnackBar(` left in `lib/` outside `luxe.dart`.
+  `luxeToastState` is the same panel for callers holding the root messenger without a `BuildContext` (the call / invite / tournament /
+  announcement watchers). The toast gained `actionLabel`/`onAction`, `duration` and `icon` so no caller had to keep a bespoke bar
+  (a call invitation keeps its call/videocam glyph and its 30 s; a tournament reminder 20 s; a save tick 1 s).
+  `tool/toast_codemod.py` did the mechanical rewrite (bracket- and quote-aware; converts only `content: Text(...)` bars and *reports*
+  anything richer rather than guessing) and `tool/toast_rewrap.py` re-wrapped the long lines it emitted.
+- **Catalogue copy is true again.** The arcade grew to 26 games (9 originals + 7 multiplayer + 10 solo) but every user-facing count
+  was frozen at the launch number: the Arcade world tagline said "9 games", ORACLE answered "what games do you have" with only the
+  nine launch titles, ORACLE's system context said "Arcade with 9 games", "Arcade Master" asked for "all 20 new arcade games"
+  (`kArcadeIds.length` is 17) and "Arcade Wings" read "Try all 9 games" for a rule that is nine *distinct* games of 26. ORACLE now
+  lists all 26 under the arcade's own five filter groups, in both languages. `test/core/game_count_claims_test.dart` is the guard —
+  the counts live in `const` strings that cannot interpolate the registry, so this test is the only thing that keeps them honest.
+- **Room manager stops lying.** `_capacityAction` returned `void` and swallowed the server's refusal, so "Make X the room manager"
+  toasted "The room has a new manager" even when the hand-over failed. It now returns whether the server accepted the change and
+  `_transferHost` only announces success on success.
+- **Server caught up with the repo (applied live on the games project `eyzafhrefnqlwcjpcdyg`).** Two committed migrations had never
+  been applied, and the client was already calling into them:
+  * `20261122100000_g_room_control_v6.sql` — `nx_room_transfer_host` and `nx_room_close` did not exist, so the room screen's
+    *transfer host* and *close room* buttons failed at runtime. Applied; `nx_room_set_muted` / `nx_room_set_role` also moved from the
+    literal `nx_room_member_role() = 'manager'` check to `_nx_room_can_manage()` (`host = auth.uid()` OR member role manager), which
+    is what the v5 capacity RPC already used — the UI showed manager controls the server then refused. `nx_room_join` in v6 is v5's
+    body modulo comments (diffed before applying), so nothing regressed.
+  * `20261121100000_g_online_move_log_fix.sql` — `nx_quick_cancel` did not exist and the client calls it with `onError: (_) {}`, so
+    cancelling quick matchmaking was a silent no-op that left ownerless waiting lobbies behind. Applied together with the intended
+    `nx_push_move` (append-only input log, no per-move turn gate, 45 s activity clock, 16 KB move cap, `bad seat` check) and
+    `nx_quick` (a waiting player moves into an *older* lobby, `for update skip locked`). The client posts move/timeout rows as kind
+    `system` with the real kind in `_k`, which works against both the old and the new function; that workaround can now be retired,
+    but it is compatible as-is and was left alone.
+  All five v6 functions and all three move-log functions verified live: `SECURITY DEFINER`, `EXECUTE` granted to `authenticated`,
+  not to `anon`. `nx_game_bounds` live matches the client registry exactly (finger_soccer 2–6, mafia 6–12, spy_mafia 4–8,
+  carrom/billiards/backgammon/quiz/pool8 2–2, the group games 2–4).
+- **Android build verified end to end.** `ANIX PRO Android Build` run 45038069825 passed analyze → tests → split-per-ABI release APKs
+  → universal release APK → packaging → `apksigner verify` + `aapt dump badging` (package `com.nexora.nexora`, `sdkVersion 24`,
+  `targetSdkVersion` ≥ 34, launchable activity, label `ANIX PRO`), and uploaded `ANIX-apks` (331,755,791 bytes).
+- **Repo hygiene.** `.gitignore` now keeps the generated `android/` platform folder, `out/` (the signed APKs, ~300 MB), `*.apk`,
+  `*.aab`, the workflow's teed logs (`analyze.txt`, `test.txt`, `build-apk.txt`, `render.txt`, `intro.txt`, `badging.txt`) and the
+  render-test `shots/` out of Git. `android_overlay/` (the branding source the workflow copies in) stays tracked. No secret or
+  credential file is tracked; the Supabase keys in the workflow are the publishable/anon ones, which ship inside the app by design
+  with RLS protecting the data.
+
+## Server state closed out (2026-11-22)
+
+Every migration in `supabase/games/migrations/` is now applied to the games project
+(`eyzafhrefnqlwcjpcdyg`) and verified against the live database rather than assumed from the
+SQL on disk. A committed file says nothing about what the server runs: three physics files and
+`g_pro_result_integrity` had been sitting unapplied while the client was already written for
+them.
+
+- `physics_reference_v4_sizes`, `physics_reference_v4`, `physics_fs_v7_rebound` — applied in
+  order; the contract row moved from `physics-2026-11-20-ref-v3` (PR 75 / BR 37.5) to v7.
+- `physics_fs_v8_engine_truth` (**new file**) — applying v4 alone would still have been
+  untrue: it recorded `PF1 45 / PF2 3.5 / launch_scale 2.04`, the calibration from
+  2026-11-20, while `bm_engine.dart` ships `PF1 0 / PF2 3.25 / kBmLaunch 1.97`. It also left
+  `post_restitution 1.9` arguing with the `goal_post_restitution 0.9` the owner asked for in
+  v7. v8 corrects the numbers, drops the contradictory key, records the constants that were
+  implemented but never written down, and lists the nine v1/v2 prototype keys the engine does
+  not implement under `legacy_keys_not_in_engine` instead of deleting owner history.
+- `pro_result_integrity` — one phone can no longer dictate a match result. Reports are
+  collected in `nx_match_reports` (RLS on, no client grants, `service_role` only), the match
+  finalizes when every required player agrees or when the silent ones are provably gone, and
+  conflicting claims end as `disputed` with no rewards. Rating moved from a flat +16/−12 to
+  Elo (K = 32) against the average opponent rating. `nx_forfeit` no longer lets the host
+  forfeit a seat that already reported or moved in the last 30 s.
+
+  `match_link.dart`'s `report()` was already written for this contract — it sends `p_hash` /
+  `p_reason` and waits out `{pending: true}` — and every device reports through
+  `online_match_page.dart:_onGameFinish`, so consensus is reachable in normal play. The live
+  function had the five-parameter signature but the old 1 199-character body, i.e. the client
+  was ahead of the server.
+
+Verification, not inference: the md5 of each function's `prosrc` was compared with the md5 of
+the corresponding body in the repo file and all three match exactly (`_nx_apply_result`
+2 509 bytes, `nx_finish_match` 4 799, `nx_forfeit` 1 564), all are `SECURITY DEFINER`,
+`nx_finish_match` / `nx_forfeit` are executable by `authenticated` and not by `anon`, and
+`_nx_apply_result` by neither. The `nx_matches` status check now admits `disputed`.
+
+The nine foundational files (`mirror_bridge`, `games_core`, `tournaments_v2`, `admin`,
+`turn_authority`, `arcade`, `rooms_talk`, `quick_match_fix`, `admin_powers`) have no ledger
+row — they predate the ledger convention — so their objects were enumerated from the SQL and
+checked directly: **all 29 relations and all 143 functions they declare exist live**. Nothing
+in the repo's server code is unapplied any more.
+
+## Finger soccer v9 — the owner's 3 pitches, 48 badges, 18 balls, score on the art, Flame scene (2026-11-22, branch `arena/5a46ff7d-cocos-c`)
+- **Pitches:** only the owner's three Sockerbox arts remain — Neon Arena (pitch 0), Gold Checker, Gold Stripes (941 x 1672,
+  goals, nets and the two side score displays drawn in). `tool/build_fs_v9_assets.py` builds the field / thumb webps from
+  `files/uploads/` and prints every measurement the engine uses (rails = inner edge of the frame line, posts = the white
+  tubes where they cross the goal line, net depth, score display boxes), scaled by `kBmV9ArtScale` .85. Every older pitch
+  and its art is deleted; a saved / synced pitch index that no longer exists becomes pitch 0 (`bmFieldIndex`).
+  Known: on Neon Arena the bottom goal is drawn ~17 art px deeper than its collider, because both goals use the
+  shallower net depth so the mirrored online phones stay deterministic.
+- **Teams:** 48 badges in three categories — Cars 24, Sport 12, NX 12 — cut from the owner's badge sheets (`discs/v9/`).
+  They reuse the shop catalogue ids (DECISIONS D15). The car / sport badges are real trademarked logos (BMW, Ferrari,
+  Nike, Adidas, …) supplied by the owner; that is a licensing question for the owner before any store release.
+- **Balls:** 18 still balls (`balls/v9/`, preference key `bm.ball.v9`, default ball 0), all rolled by the 3D ball renderer;
+  the v7 GIF balls and sprite sheets are gone (`kBmAnimBalls` is empty).
+- **Score on the art:** the live score is drawn as seven-segment digits on the pitch's own side displays (left/blue =
+  bottom side, right = top side, `BmScoreDisplay`); the HUD score is removed.
+- **Chrome:** the top bar is only menu + clock + formation button (`FsMatchTopBar`); the bottom strip (outside the pitch)
+  carries the one-minute toast and, online, the host page's mic / speaker controls. The game marks itself immersive
+  (`GameLaunch.immersive`) so the host hides its corner buttons and banners while the match runs.
+- **Flame:** the match loop and playfield run on Flame (`ui/fs_flame.dart`, `FsFlameGame`). `update(dt)` advances the
+  unchanged deterministic engine (same fixed steps, same online move log); each layer — pitch, under-layer, discs, ball,
+  over-layer, score — is a Flame component sharing `BmPainter`, and touch arrives through Flame drag events mapped with
+  the same `BmView` transform. `BmPainter` is still a `CustomPainter` (`paint()` runs the same phases in order) so the
+  collider audit draws it directly. Fix found while closing v9: Flame's `GameWidget` calls `update(0)` from inside its
+  `LayoutBuilder` on every resize, which advanced the view during build ("setState() called during build") and broke 9
+  widget tests; zero-length frames are now skipped.
+- **Physics unchanged:** `bm_engine.dart`'s v9 diff is only the score-display fields on `BmFieldS`, `NB` following the ball
+  list and a `Color` import. The render-interp golden was re-recorded because pitch 0 is a different shape (and the old
+  team ids are gone), not because the simulation changed.
+- **Tests:** `test/games/finger_soccer_v9_test.dart` (catalogue, geometry, score displays, balls, teams + shop ids, the
+  Flame match screen, fallbacks); the v5 / v6 / v61 / online-pick tests updated for the new chrome; `test_render/` reads
+  the painter from `BermudaView.flameGame`. Full `flutter test` (808 tests) and `flutter analyze` clean locally.
+- **CI:** commits 74c4cc5 + 06900a0 — Quick Check 45057896910 green, ANIX PRO Android Build 45057896896 green,
+  `ANIX-arm64-v8a-apk` artifact 14768481585 (60,343,269 bytes).
+- **Not done / honest limits:** nothing tested on a phone (build agent has no device). No offline microphone (voice is
+  the online LiveKit room only). Group games stay at the live server bound of 4 online players (no server migration for
+  more). Per-game manual checklists: `docs/anix_pro/TEST_CHECKLISTS.md`.
+
+## App-wide new-UI sweep (2026-11-22, branch `arena/5a46ff7d-cocos-c`)
+Goal from the owner: the UI is completely the new Station Luxe (home page) design, no trace of the old navy/neon look.
+Audit result: the theme tokens (`NxThemeColors.gold/neon/gameplay`, `NxColors.luxe*`, `WorldPalette`) were already the
+Luxe palette, so every screen that reads the theme was already on it. What was left were hard-coded remnants:
+- **Neon accent removed from app chrome.** `NxColors.turquoise` (0xFF2EE6D6) was the "you / owned / done / online" accent
+  on ~40 chrome call sites (admin, tournaments, arcade host/setup, online match, exchange, Nova, onboarding, ORACLE,
+  Orbit, settings, account, Social Station). Those now use the new `NxColors.champagne` (Luxe gold2, 0xFFF6E7BD); the one
+  place where champagne would have been indistinguishable from ink (your own row in a tournament standings table) uses
+  gold. `turquoise` stays only as a gameplay colour inside game boards (NX Cards card colour, Mafia / Quiz highlights),
+  where four distinguishable piece colours are needed.
+- **Neon cyan / violet hard-codes replaced** in the ORACLE buddy / mascot / tour / persona widgets / game sheet / config
+  page, the in-app update banner and the Luxe kit text: 0xFF39E6FF / 0xFF35D6FF -> gold, 0xFF8FF3FF -> champagne,
+  0x6639E6FF -> gold glow, 0xFFF4F0FF (lavender white) -> Luxe ink, 0x66B57CFF -> champagne hairline. Nova's post
+  background presets (user content, chosen per post) were left as they are.
+- **Lavender light skin removed.** `NxThemeColors.neonLight` (pale violet) is gone; light mode is the Luxe light
+  palette (`goldLight`) for either preset.
+- **Dead old screen removed.** The old first-launch "journey" (starfield cinematic, `lib/worlds/journey/`, 4 files +
+  its timeline test) had no route left, yet Menu -> "Replay the first journey" still pointed at `/journey` and opened
+  the 404 page; the menu test listed `/journey` as a registered route although the router never had it. The menu item
+  now replays the current onboarding (`/onboarding`), the test lists the real route, and the unused `journeySeen` setting
+  went with the page.
+- **Unused old widgets / art deleted:** `Nx2Banner`, `Nx2AvatarRing`, `Nx2Tile`, `Nx2IconButton`, `Nx2Bubble`,
+  `Nx2BoardChoice`, `WalletChip`, `AnixTintedIcon` (no references), and 71 never-referenced NX2 neon kit images
+  (cyan / pink / violet buttons, banners, bars, cards, chests, badges; ~3.3 MB) with their `Nx2Assets` constants; the
+  emptied `assets/ui/nx2/bars/` entry left pubspec.
+- Tests: full `flutter test` (802 tests; 6 fewer = the deleted journey timeline test) and `flutter analyze` clean locally.
+- CI: commits 0a60881 + 5919778 — Quick Check 45059376515 green, ANIX PRO Android Build 45059376499 green,
+  `ANIX-arm64-v8a-apk` artifact 14769376884 (56,888,723 bytes; ~3.4 MB smaller than the v9 build, the deleted NX2 art).
+
+What remains (not done in this pass, listed honestly):
+- Many screens still build their chrome from the shared `Nx*` / `Nx2*` widgets (`NxWorldScaffold`, `GlassPanel`, `NxPill`,
+  `Nx2Panel`, `Nx2Button` 9-slice art) rather than the `Luxe*` primitives. They are themed with the Luxe tokens, so the
+  colours match, but the NX2 9-slice frames (`assets/ui/nx2/frames`, still used: dock, violet banners, neon rings) are
+  the previous art direction. Replacing them needs per-screen visual review on a device and was not attempted blind.
+- Remaining NX2 art still in use: `framesBannerViolet`, `framesBannerWingsViolet`, `framesRingNeon`,
+  `framesRingWingsBlue/Purple`, `bgBgMain`, `bgBgRoom`, NX2 badges / chests / tiles / ORACLE poses.
+- `assets/ui/anix/*` (buttons, toggles, modals, nav, rank, frames) are referenced through `AnixAssets` path builders and
+  were kept; a per-state usage audit could trim unused states.
+- No screen of this sweep was looked at on a phone; render tests were not re-shot for every screen.
+
+## Tournaments launch hardening (2026-11-23, branch `fix/tournaments-complete`)
+Server: `supabase/games/migrations/20261123100100_g_tournaments_launch.sql` (games project, **not applied yet**).
+- Escrow only holds real money: fees of `nx_unlimited` accounts no longer inflate the prize pool (and their refunds no
+  longer reduce it). Wallet deltas carry `nx.reason` (`tournament_entry_fee` / `tournament_refund` / `tournament_prize`).
+- Payout keeps its idempotency keys + `paid_out`; skips players without a mirror row; no zero house-fee lines.
+- Cancel ends games still being played (accepted first, then `nx_matches` → abandoned) so nothing re-enters the engine.
+- Check-in: an organizer's "draw now"/"start now" before the window opens no longer removes everyone; waitlisted
+  players can check in and fill places freed by no-shows (promoted at the draw); the check-in reminder reaches them.
+- Disqualification after the draw (`nx_t_remove_entry` on drawn/live): open matches → walkovers, running game ended,
+  future matches → walkovers / byes in `_nx_t_check`; fee stays in the pool; notification `disqualified`.
+- `nx_matches.status = 'disputed'` (phones disagree) → tournament dispute instead of a 3-minute auto-accept as a
+  no-winner game. Match tools accept Bo 1..15; editing a match time moves its 10-minute reminder.
+- `nx_t_code_peek`: invite codes / `nexora://t/<code>` show the title and fee and ask before charging.
+Client: join-by-code confirmation, waitlist check-in, disqualify button + match time/Bo editing + runner list in the
+manage page, stale device reminders cancelled (`domain/reminders.dart`), missing notification texts and error codes,
+`BestOf` range 1..15 like the server. Tests: `test/features/tournaments/tournament_launch_test.dart`.
+
+## Finger soccer v11 — the owner's five pitches replace the three v9 Sockerbox pitches (2026-11-23, branch `feat/pitches-v11`)
+- Pitches, in the owner's order: `nx_checker_silver` Silver Checker / شطرنجی نقره‌ای (pitch 0), `nx_rings_green` Green
+  Rings / حلقه‌های سبز, `nx_street` Street / خیابانی, `nx_neon_blue` Neon Blue / نئون آبی, `nx_royal_purple` Royal Purple /
+  سلطنتی بنفش. Built by `tool/build_fs_v11_assets.py` from the 1086 x 1448 uploads (webp q86 + 240 x 320 thumbs).
+- Measured per art (image px): the inner edge of the frame rail on all four sides, the corner radius (royal: square, its
+  arcs are markings), the four post tubes (centre + radius), both nets' back bars, the halfway line and the two printed
+  digit cells of each side display. The engine's walls land on the drawn rail (the +-4 world offset of geo() is folded
+  into l0/r0/t0/b0); goals use the shallower of the two drawn nets (same depth both ends, online mirroring stays
+  deterministic); the field rows between the rails are remapped so the drawn halfway line is the kickoff line.
+- Score displays are per art now (`BmScoreDisplay` per field, `scoreLeft` + `scoreRight` colours measured on the printed
+  digits); the printed "00" is erased from the art. Pitch names show in Persian in the Persian UI (`bmFieldName`).
+- Local pitch preference moved to `bm.field.v11` (an old `bm.field` index falls back to pitch 0). Pitches are not stored
+  in the games database (checked: `nx_physics_contracts` only), so no migration.
+- Tests: v11 pitch group in `test/games/finger_soccer_v9_test.dart` (ids, assets, measured rails / posts / nets / corners,
+  per-art displays, pref fallback); render_interp golden re-recorded for the new pitch 0; collider audit
+  (`test_render/finger_soccer_colliders_test.dart`) now also shows a 12 - 7 score on the displays.

@@ -1,16 +1,20 @@
 // Shop "انتخاب محصول ها" (reference recording 2): back / page-view buttons, category tabs with NEW badges, and a grey
 // panel with a two-column grid of product cards (name, disc art, power / time / aim bars, select or buy-with-gems).
 // Categories map to the engine's real data: national / club / luxury teams, pitches and match balls. "اختصاصی"
-// (custom team from a photo) and "بازیکن ها" (players) have no backend yet and show their reference cards disabled.
+// (custom team from a photo) is a real 1000-gem server-backed entitlement; player cards remain future content.
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:nexora/core/economy/gem_shop.dart';
+import 'package:nexora/core/online/online_service.dart';
 import 'package:nexora/core/profile/profile_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/bm_data.dart';
 import '../core/bm_engine.dart';
+import '../core/fs_custom_teams.dart';
 import 'fs_intro_data.dart';
 import 'fs_intro_ui.dart';
+import '../../../core/ui2/luxe.dart';
 
 /// Locked team: confirm + buy with gems (server-side deduct and unlock). True when the team is now owned.
 Future<bool> fsBuyTeam(BuildContext context, BmTeam t, bool fa) async {
@@ -27,7 +31,7 @@ Future<bool> fsBuyTeam(BuildContext context, BmTeam t, bool fa) async {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
           child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-            FsDisc3D(asset: t.asset, r: 34, depth: 6),
+            FsDisc3D(asset: t.asset, r: 34, depth: 6, networkUrl: t.crestUrl),
             const SizedBox(height: 8),
             Text(fsTeamName(t, fa), style: fsText(18, weight: FontWeight.w900)),
             const SizedBox(height: 6),
@@ -57,8 +61,7 @@ Future<bool> fsBuyTeam(BuildContext context, BmTeam t, bool fa) async {
   if (ok != true) return false;
   final GemBuyResult r = await shop.buyTeam(t.id);
   if (!context.mounted) return r.ok;
-  ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
-      content: Text(r.ok ? '${fsTeamName(t, fa)} باز شد ✓' : gemErrorText(r.error, fa), textDirection: TextDirection.rtl)));
+  luxeToast(context, r.ok ? '${fsTeamName(t, fa)} باز شد ✓' : gemErrorText(r.error, fa));
   return r.ok;
 }
 
@@ -85,14 +88,23 @@ class FsShop extends StatefulWidget {
 }
 
 /// [label, isNew]
+const List<String> kFsTeamShopCategories = <String>[
+  'clubs', 'nations', 'nx', 'cars', 'sport', 'elite', 'legends',
+];
+
 const List<(String, bool)> kFsShopTabs = <(String, bool)>[
-  ('کشوری', false),
   ('باشگاهی', false),
-  ('لاکچری', true),
+  ('ملی', false),
+  ('نیکسورا', false),
+  ('خودرو', false),
+  ('ورزشی', false),
+  ('ویژه', false),
+  ('افسانه', false),
   ('اختصاصی', true),
-  ('بازیکن ها', true),
+  ('بازیکن', false),
   ('زمین', false),
-  ('افکت‌ها', false),
+  ('توپ', false),
+  ('افکت', false),
 ];
 
 class _FsShopState extends State<FsShop> {
@@ -108,8 +120,8 @@ class _FsShopState extends State<FsShop> {
     SharedPreferences.getInstance().then((SharedPreferences p) {
       if (!mounted) return;
       setState(() {
-        _field = (p.getInt('bm.field') ?? 0).clamp(0, kBmFields.length - 1);
-        _ball = (p.getInt(kBmBallPref) ?? kBmDefaultBall).clamp(0, NB - 1);
+        _field = bmFieldIndex(p.getInt(kBmFieldPref));
+        _ball = bmBallIndex(p.getInt(kBmBallPref));
       });
     }, onError: (Object _) {});
   }
@@ -145,69 +157,59 @@ class _FsShopState extends State<FsShop> {
         ),
       );
 
-  Widget _tabBtn(int i, double left) {
+  Widget _tabBtn(int i) {
     final (String label, bool isNew) = kFsShopTabs[i];
     final bool on = _tab == i;
-    return Positioned(
-      left: left,
-      top: 115,
-      width: 44,
-      height: 56,
+    return SizedBox(
+      width: 66,
+      height: 50,
       child: FsPress(
         onTap: () => setState(() => _tab = i),
-        child: Stack(clipBehavior: Clip.none, alignment: Alignment.topCenter, children: <Widget>[
-          Positioned(
-            top: 16,
-            child: FsBevel(
-              w: 44,
-              h: 40,
-              radius: 5,
-              lipH: 4,
-              top: on ? const Color(0xFFC8F53A) : const Color(0xFFF4F4F0),
-              bottom: on ? const Color(0xFF7DCB12) : const Color(0xFFDCDCD6),
-              lip: on ? const Color(0xFF2E8DC9) : const Color(0xFFA77E9E),
-              child: Text(label,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  style: fsText(on ? 11.5 : 9.5,
-                      color: on ? const Color(0xFF173A05) : const Color(0xFF505050), weight: FontWeight.w700, height: 1.05)),
-            ),
-          ),
-          if (isNew)
-            Positioned(
-              top: 0,
-              child: Container(
-                width: 31,
-                height: 22,
-                decoration: BoxDecoration(color: const Color(0xFF0E0E0E), borderRadius: BorderRadius.circular(3)),
-                child: Center(child: Text('NEW', style: fsText(10, family: 'ChakraPetch', weight: FontWeight.w700, height: 1))),
-              ),
-            ),
-        ]),
+        child: FsBevel(
+          w: 62,
+          h: 42,
+          radius: 7,
+          lipH: 4,
+          top: on ? const Color(0xFFC8F53A) : const Color(0xFFF4F4F0),
+          bottom: on ? const Color(0xFF7DCB12) : const Color(0xFFDCDCD6),
+          lip: on ? const Color(0xFF2E8DC9) : const Color(0xFFA77E9E),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
+            Text(label,
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: fsText(10.5, color: on ? const Color(0xFF173A05) : const Color(0xFF505050), weight: FontWeight.w800, height: 1)),
+            if (isNew)
+              Text('NEW', style: fsText(8, family: 'ChakraPetch', color: const Color(0xFF25876B), weight: FontWeight.w900, height: 1)),
+          ]),
+        ),
       ),
     );
   }
 
   List<Widget> _cards() {
+    if (_tab < kFsTeamShopCategories.length) {
+      final String cat = kFsTeamShopCategories[_tab];
+      return <Widget>[for (final BmTeam t in kBmTeams.where((BmTeam t) => t.cat == cat)) _teamCard(t)];
+    }
     switch (_tab) {
-      case 0:
-      case 1:
-      case 2:
-        final String cat = <String>['nat', 'club', 'lux'][_tab];
-        return <Widget>[for (final BmTeam t in kBmTeams.where((BmTeam t) => t.cat == cat)) _teamCard(t)];
-      case 3:
-        return <Widget>[_customCard()];
-      case 4:
+      case 7:
+        // the create card until the player made a team, then every shared custom team (power 10, 250 gems)
+        return <Widget>[
+          if (GemShop.instance.myCustomTeam == null) _customCard(),
+          for (final BmTeam t in kBmTeams.where((BmTeam t) => bmIsCustomTeamId(t.id))) _teamCard(t),
+        ];
+      case 8:
         return <Widget>[_emptyCard('بازیکن ها به‌زودی')];
-      case 5:
+      case 9:
         return <Widget>[
           for (int i = 0; i < kBmFieldsRaw.length; i++)
-            _artCard(kBmFieldsRaw[i].name, 'assets/games/bermuda/thumbs/${kBmFieldsRaw[i].id}.webp', i == _field, () {
+            _artCard(bmFieldName(i, widget.fa), 'assets/games/bermuda/thumbs/${kBmFieldsRaw[i].id}.webp', i == _field, () {
               setState(() => _field = i);
-              _savePref('bm.field', i);
+              _savePref(kBmFieldPref, i);
             }, square: true),
         ];
-      default:
+      case 10:
         return <Widget>[
           for (int i = 0; i < NB; i++)
             _artCard(widget.fa ? kBmBallFa[i] : kBmBallN[i], bmBallThumb(i), i == _ball, () {
@@ -215,6 +217,8 @@ class _FsShopState extends State<FsShop> {
               _savePref(kBmBallPref, i);
             }),
         ];
+      default:
+        return <Widget>[_emptyCard('افکت‌ها به‌زودی')];
     }
   }
 
@@ -270,7 +274,7 @@ class _FsShopState extends State<FsShop> {
           ),
           Expanded(
             child: Row(children: <Widget>[
-              Expanded(child: Center(child: FsDisc3D(asset: t.asset, r: 30, depth: 5))),
+              Expanded(child: Center(child: FsDisc3D(asset: t.asset, r: 30, depth: 5, networkUrl: t.crestUrl))),
               Column(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
                 _bar('قدرت', t.power),
                 const SizedBox(height: 4),
@@ -310,9 +314,18 @@ class _FsShopState extends State<FsShop> {
               child: Text(name, maxLines: 2, style: fsText(12.5, weight: FontWeight.w900, height: 1.2)),
             ),
             Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(square ? 6 : 60),
-                child: Image.asset(asset, fit: BoxFit.contain, cacheWidth: 240, errorBuilder: (_, __, ___) => const SizedBox()),
+              child: Center(
+                child: square
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.asset(asset, fit: BoxFit.contain, cacheWidth: 240, errorBuilder: (_, __, ___) => const SizedBox()),
+                      )
+                    : AspectRatio(
+                        aspectRatio: 1,
+                        child: ClipOval(
+                          child: Image.asset(asset, fit: BoxFit.contain, cacheWidth: 240, errorBuilder: (_, __, ___) => const SizedBox()),
+                        ),
+                      ),
               ),
             ),
             const SizedBox(height: 6),
@@ -339,10 +352,55 @@ class _FsShopState extends State<FsShop> {
             Text('با عکس دلخواهت تیم اختصاصی خودت رو بساز',
                 textAlign: TextAlign.center, style: fsText(11.5, weight: FontWeight.w700, height: 1.35)),
             const SizedBox(height: 8),
-            FsPress(enabled: false, onTap: () {}, child: fsLimeButton('ساخت تیم', 120, 27, size: 12)),
+            FsPress(onTap: _customTeam, child: fsLimeButton(
+                GemShop.instance.ownsCustomTeam() ? 'انتخاب عکس' : 'ساخت تیم', 120, 27, size: 12)),
           ]),
         ),
       );
+
+  Future<void> _customTeam() async {
+    final OnlineService? online = OnlineService.current;
+    if (online == null || !online.isOnline || online.isGuest || !GemShop.instance.online) {
+      if (mounted) luxeToast(context, 'برای ساخت تیم اختصاصی باید آنلاین وارد حساب باشی');
+      return;
+    }
+    final GemShop shop = GemShop.instance;
+    if (!shop.ownsCustomTeam()) {
+      final int price = shop.customTeamPrice;
+      final int balance = ProfileService.current?.gems ?? 0;
+      final bool? buy = await showDialog<bool>(context: context, builder: (BuildContext c) => AlertDialog(
+        backgroundColor: kFsNavy,
+        title: Text('تیم اختصاصی', style: fsText(18, weight: FontWeight.w900)),
+        content: Text('برای فعال‌سازی تیم اختصاصی ${fsFa(price)} جم پرداخت می‌شود. بعد از آن می‌توانی عکس را هر زمان عوض کنی.',
+            textAlign: TextAlign.center, style: fsText(13, color: const Color(0xFFC9CCE6))),
+        actions: <Widget>[
+          TextButton(onPressed: balance >= price ? () => Navigator.pop(c, true) : null, child: Text('خرید ${fsFa(price)} جم')),
+          TextButton(onPressed: () => Navigator.pop(c, false), child: const Text('انصراف')),
+        ],
+      ));
+      if (buy != true) return;
+      final GemBuyResult result = await shop.buyCustomTeam();
+      if (!mounted) return;
+      if (!result.ok) {
+        luxeToast(context, gemErrorText(result.error, widget.fa));
+        return;
+      }
+    }
+    final XFile? file = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1024, maxHeight: 1024, imageQuality: 92);
+    if (file == null) return;
+    // round crest + server-created shared team (default name: the player's name)
+    final CustomTeamResult r =
+        await shop.saveCustomTeam(await file.readAsBytes(), name: ProfileService.current?.username.trim());
+    if (!mounted) return;
+    final FsCustomTeam? team = r.team;
+    if (!r.ok || team == null) {
+      luxeToast(context, gemErrorText(r.error, widget.fa));
+      return;
+    }
+    setState(() => _team = team.teamId);
+    widget.onTeam(team.teamId);
+    luxeToast(context, 'تیم اختصاصی ذخیره شد ✓');
+  }
 
   Widget _emptyCard(String s) => _cardShell(child: Center(child: Text(s, style: fsText(12, color: const Color(0xFFBBBBBB)))));
 
@@ -361,7 +419,19 @@ class _FsShopState extends State<FsShop> {
               style: fsText(22, weight: FontWeight.w700, shadows: const <Shadow>[Shadow(color: Color(0x88000000), blurRadius: 3)])),
         ),
       ),
-      for (int i = 0; i < kFsShopTabs.length; i++) _tabBtn(i, 312 - i * 50.8),
+      Positioned(
+        left: 0,
+        right: 0,
+        top: 112,
+        height: 56,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 7),
+          children: <Widget>[
+            for (int i = 0; i < kFsShopTabs.length; i++) _tabBtn(i),
+          ],
+        ),
+      ),
       Positioned(
         left: 0,
         right: 0,

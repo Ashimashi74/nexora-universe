@@ -353,7 +353,7 @@ class _MatchCard extends StatelessWidget {
                 fontWeight: won ? FontWeight.w900 : FontWeight.w600,
                 color: uid == null
                     ? NxColors.textDim
-                    : (uid == me ? accent : NxColors.iceWhite),
+                    : (uid == me ? accent : NxColors.ink),
               )),
         ),
         if (m.isFinal || m.games > 0)

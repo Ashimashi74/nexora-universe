@@ -32,7 +32,7 @@ class MafiaStyle {
       case MafiaRole.doctor:
         return NxColors.success;
       case MafiaRole.detective:
-        return NxColors.electricBlue;
+        return NxColors.gold;
       case MafiaRole.sniper:
         return const Color(0xFFFFA24C);
       case MafiaRole.citizen:
@@ -564,7 +564,7 @@ class _SigilPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.6;
     for (int i = 0; i < 4; i++) {
-      p.color = (i.isEven ? NxColors.violet : NxColors.electricBlue)
+      p.color = (i.isEven ? NxColors.goldDeep : NxColors.gold)
           .withValues(alpha: 0.55 - i * 0.1);
       canvas.drawCircle(c, r * (1 - i * 0.2), p);
     }
@@ -646,7 +646,7 @@ class GlowButton extends StatelessWidget {
       {super.key,
       required this.label,
       required this.onTap,
-      this.color = NxColors.electricBlue,
+      this.color = NxColors.gold,
       this.icon});
   final String label;
   final VoidCallback? onTap;
@@ -685,14 +685,14 @@ class GlowButton extends StatelessWidget {
             ),
             child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
               if (icon != null) ...<Widget>[
-                Icon(icon, size: 18, color: NxColors.navyDeep),
+                Icon(icon, size: 18, color: NxColors.luxeBg),
                 const SizedBox(width: 6)
               ],
               Flexible(
                 child: Text(label,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                        color: NxColors.navyDeep,
+                        color: NxColors.luxeBg,
                         fontWeight: FontWeight.w900,
                         fontSize: 14)),
               ),
@@ -710,7 +710,7 @@ class GhostButton extends StatelessWidget {
       {super.key,
       required this.label,
       required this.onTap,
-      this.color = NxColors.iceWhite,
+      this.color = NxColors.ink,
       this.icon});
   final String label;
   final VoidCallback? onTap;

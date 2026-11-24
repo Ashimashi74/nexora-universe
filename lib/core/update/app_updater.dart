@@ -9,7 +9,7 @@ import 'package:path_provider/path_provider.dart';
 
 /// In-app updater for THIS app only (Flutter redesign line).
 ///
-/// Reads releases of Ashimashi74/nexora-universe and keeps only tags `anix-<n>` (prerelease or full release)
+/// Reads releases of ashkandevloper-code/cocos-c- and keeps only tags `anix-<n>` (prerelease or full release)
 /// whose notes carry `vc=<versionCode>`. The React Native app's "latest" release is never read.
 /// The current versionCode is injected by CI (`--dart-define=APP_VC=<run number>`, same value as
 /// `--build-number`).
@@ -27,7 +27,7 @@ class AppUpdater extends ChangeNotifier {
   static final AppUpdater instance = AppUpdater._();
 
   static const int currentVc = int.fromEnvironment('APP_VC', defaultValue: 0);
-  static const String repo = 'Ashimashi74/nexora-universe';
+  static const String repo = 'ashkandevloper-code/cocos-c-';
   static const String tagPrefix = 'anix-';
   static const String apkName = 'ANIX-universal.apk';
   static const MethodChannel _ch = MethodChannel('nexora/updater');

@@ -12,6 +12,8 @@ import '../../nova_gallery/models/art_asset.dart';
 import '../../nova_gallery/ui/nova_composer.dart' show showArtAssetPicker;
 import '../models/orbit_models.dart';
 import '../../../core/online/online_service.dart';
+import '../../../core/backend/backend_gateway.dart';
+import '../../../core/backend/supabase_backend.dart';
 import '../data/supabase_orbit_repository.dart';
 import '../state/orbit_controller.dart';
 import 'orbit_call_page.dart';
@@ -19,6 +21,8 @@ import 'orbit_bubbles.dart';
 import 'orbit_sheets.dart';
 
 import '../../../core/ui2/anix_kit.dart';
+import '../../../core/ui2/luxe.dart';
+
 /// One conversation (Saved Orbit, group or channel).
 class OrbitChatPage extends ConsumerStatefulWidget {
   const OrbitChatPage({super.key, required this.chatId, this.focusMessageId});
@@ -44,7 +48,19 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
     super.initState();
     _ctrl.openChat(widget.chatId);
     _text.addListener(_onText);
+    // Voice calls start instantly: fetch the 15 min call grant while the user reads the chat.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final BackendGateway be = ref.read(backendProvider);
+      if (be is SupabaseBackend && _uuid.hasMatch(widget.chatId)) {
+        be.prefetchLiveKitGrant(widget.chatId);
+      }
+    });
   }
+
+  static final RegExp _uuid = RegExp(
+      r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+      caseSensitive: false);
 
   void _onText() => setState(() {});
 
@@ -103,8 +119,8 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
         child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
           ListTile(
             leading: const Icon(Icons.collections_rounded,
-                color: NxColors.turquoise),
-            title: Text(c.tx('اثر هنری ANIX', 'ANIX art')),
+                color: NxColors.champagne),
+            title: Text(c.tx('اثر هنری نیکسورا', 'NEXORA art')),
             subtitle: Text(
                 c.tx('از کتابخانه‌ی هنری اپ', "From the app's art library")),
             onTap: () => Navigator.of(c).pop('art'),
@@ -175,9 +191,8 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
             if (mounted) context.push('/online/$g?code=$code');
           } catch (_) {
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(context.tx('ساخت اتاق آنلاین ممکن نشد.',
-                      'Could not create the online room.'))));
+              luxeToast(context, context.tx('ساخت اتاق آنلاین ممکن نشد.',
+                      'Could not create the online room.'));
             }
           }
           break;
@@ -219,7 +234,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
     if (!mounted || picked == null || picked.files.single.bytes == null) return;
     final PlatformFile file = picked.files.single;
     if (file.size > 8 * 1024 * 1024) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tx('حداکثر اندازه ۸ مگابایت است.', 'Maximum size is 8 MB.'))));
+      luxeToast(context, context.tx('حداکثر اندازه ۸ مگابایت است.', 'Maximum size is 8 MB.'));
       return;
     }
     final String ext = (file.extension ?? '').toLowerCase();
@@ -241,7 +256,7 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
       await _ctrl.send(widget.chatId, authorName: name, kind: kind, text: caption, payload: media);
       await _afterSend();
     } catch (_) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tx('ارسال فایل انجام نشد.', 'Could not send the file.'))));
+      if (mounted) luxeToast(context, context.tx('ارسال فایل انجام نشد.', 'Could not send the file.'));
     }
   }
 
@@ -305,9 +320,8 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
         await _ctrl.addMembers(chat.id, picked.toList());
       } catch (_) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(context.tx('فقط مدیران می‌توانند عضو اضافه کنند.',
-                  'Only admins can add members.'))));
+          luxeToast(context, context.tx('فقط مدیران می‌توانند عضو اضافه کنند.',
+                  'Only admins can add members.'));
         }
       }
     }
@@ -648,7 +662,10 @@ class _OrbitChatPageState extends ConsumerState<OrbitChatPage> {
     return Scaffold(
       backgroundColor: visual.background,
       appBar: AppBar(
-        backgroundColor: visual.surfaceRaised.withValues(alpha: 0.98),
+        backgroundColor: const Color(0xFF14130F),
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: Border(bottom: BorderSide(color: visual.accent.withValues(alpha: 0.22))),
         titleSpacing: 0,
         title: _searching
             ? TextField(

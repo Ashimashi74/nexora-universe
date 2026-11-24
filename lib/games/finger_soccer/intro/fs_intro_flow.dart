@@ -41,8 +41,12 @@ class _FsIntroFlowState extends State<FsIntroFlow> {
   GameLaunch get launch => widget.launch;
   bool get _bot => launch.vsBot;
 
+  /// A bot opponent: a club or a nation (never an NX coin, an elite coin or a boss — those stay the player's reward),
+  /// and never the team the player fields.
   String _randomTeam(String not) {
-    final List<BmTeam> pool = kBmTeams.where((BmTeam t) => t.id != not && (t.cat != 'lux' || _r.nextInt(4) == 0)).toList();
+    final List<BmTeam> pool = kBmTeams
+        .where((BmTeam t) => t.id != not && (t.cat == 'clubs' || t.cat == 'nations'))
+        .toList();
     return pool.isEmpty ? kBmTeams.first.id : pool[_r.nextInt(pool.length)].id;
   }
 

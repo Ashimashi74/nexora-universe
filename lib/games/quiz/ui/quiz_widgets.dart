@@ -30,7 +30,7 @@ Color quizCategoryColor(QuizCategory? c) {
     QuizCategory.geography => const Color(0xFF4FD1FF),
     QuizCategory.history => const Color(0xFFFFB020),
     QuizCategory.sports => const Color(0xFF7CFF8A),
-    QuizCategory.technology => NxColors.electricBlue,
+    QuizCategory.technology => NxColors.gold,
     QuizCategory.iran => const Color(0xFFFF6FB5),
     QuizCategory.general => const Color(0xFFFFE6A8),
     QuizCategory.media => const Color(0xFFFF4F6E),

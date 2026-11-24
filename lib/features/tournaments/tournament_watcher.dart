@@ -12,6 +12,8 @@ import '../../core/online/online_service.dart';
 import '../../core/settings/app_settings.dart';
 import 'data/models.dart';
 import 'data/tournament_repository.dart';
+import 'domain/reminders.dart';
+import '../../core/ui2/luxe.dart';
 
 /// Device notifications (the app has no FCM): immediate ones for tournament events that arrive while the
 /// app runs in the background, and scheduled 10-minute reminders that fire even when the app is closed.
@@ -45,7 +47,7 @@ class TLocalNotifier {
     }
   }
 
-  static int idFor(String key) => key.hashCode & 0x3fffffff;
+  static int idFor(String key) => ReminderPlanner.idFor(key);
 
   static Future<void> show(String key, String title, String body, {String? payload}) async {
     if (!_ready) return;
@@ -53,6 +55,27 @@ class TLocalNotifier {
       await _p.show(idFor(key), title, body, _details, payload: payload);
     } catch (e) {
       debugPrint('notify: $e');
+    }
+  }
+
+  /// Pending (scheduled, not yet shown) notifications: id → payload.
+  static Future<Map<int, String?>> pending() async {
+    if (!_ready) return <int, String?>{};
+    try {
+      final List<PendingNotificationRequest> l = await _p.pendingNotificationRequests();
+      return <int, String?>{for (final PendingNotificationRequest r in l) r.id: r.payload};
+    } catch (e) {
+      debugPrint('pending: $e');
+      return <int, String?>{};
+    }
+  }
+
+  static Future<void> cancel(int id) async {
+    if (!_ready) return;
+    try {
+      await _p.cancel(id);
+    } catch (e) {
+      debugPrint('cancel: $e');
     }
   }
 
@@ -137,6 +160,11 @@ class TournamentWatcher with WidgetsBindingObserver {
       'checkin_open' => t('۱۰ دقیقه تا شروع — همین الان اعلام حضور کن', '10 minutes to the start — check in now'),
       'no_checkin' => t('اعلام حضور نکردی؛ ورودیه برگشت', 'You did not check in — fee refunded'),
       'approved' => t('ثبت‌نامت تأیید شد', 'Registration approved'),
+      'registered' => t('ثبت‌نام شد؛ منتظر تأیید', 'Registered — waiting for approval'),
+      'waitlisted' => t('ظرفیت پر است؛ در لیست انتظاری', 'Full — you are on the waitlist'),
+      'bye' => t('استراحت (bye) گرفتی و بالا رفتی', 'You got a bye and advance'),
+      'result_corrected' => t('نتیجه توسط برگزارکننده اصلاح شد', 'An organizer corrected the result'),
+      'disqualified' => t('از تورنمنت حذف (محروم) شدی', 'You were disqualified'),
       'promoted' => t('از لیست انتظار وارد شدی', 'You are in from the waitlist'),
       'rejected' => t('ثبت‌نامت رد شد', 'Registration declined'),
       'drawn' => t('قرعه‌کشی انجام شد', 'The draw is done'),
@@ -174,11 +202,13 @@ class TournamentWatcher with WidgetsBindingObserver {
     final ScaffoldMessengerState? m = _messenger.currentState;
     if (m == null) return;
     final bool urgent = n.kind == 'match_ready';
-    m.showSnackBar(SnackBar(
-      duration: Duration(seconds: urgent ? 20 : 6),
-      content: Text('🏆 ${n.title}: $body'),
-      action: SnackBarAction(label: fa ? 'باز کن' : 'Open', onPressed: () => _open(route)),
-    ));
+    luxeToastState(
+        m,
+        '🏆 ${n.title}: $body',
+        actionLabel: fa ? 'باز کن' : 'Open',
+        onAction: () => _open(route),
+        duration: Duration(seconds: urgent ? 20 : 6),
+    );
   }
 
   /// Device-side 10-minute reminders for my approved tournaments and scheduled matches.
@@ -190,22 +220,31 @@ class TournamentWatcher with WidgetsBindingObserver {
     try {
       final Map<String, TEntry> mine = await repo.myEntries();
       final List<Tournament> all = await repo.list();
-      for (final Tournament t in all) {
-        final TEntry? e = mine[t.id];
-        if (e == null || e.status != 'approved' || t.isOver || t.status == 'live') continue;
-        await TLocalNotifier.scheduleAt('soon:${t.id}', t.startAt.subtract(const Duration(minutes: 10)), t.title,
-            t.cfgB('checkin', false)
-                ? (fa ? '۱۰ دقیقه تا شروع — همین الان اعلام حضور کن' : '10 minutes to the start — check in now')
-                : (fa ? 'تورنمنت ۱۰ دقیقه‌ی دیگر شروع می‌شود' : 'The tournament starts in 10 minutes'),
-            payload: '/tournaments/${t.id}');
+      final List<TMatch> matches = await repo.myOpenMatches();
+      final List<TReminder> plan = ReminderPlanner.plan(
+        nowUtc: DateTime.now().toUtc(),
+        tournaments: <TRemTournament>[
+          for (final Tournament t in all)
+            TRemTournament(id: t.id, status: t.status, startAt: t.startAt, checkin: t.cfgB('checkin', false)),
+        ],
+        myStatus: <String, String>{for (final MapEntry<String, TEntry> e in mine.entries) e.key: e.value.status},
+        myMatches: <TRemMatch>[
+          for (final TMatch m in matches)
+            TRemMatch(id: m.id, tournamentId: m.tournamentId, status: m.status, scheduledAt: m.scheduledAt),
+        ],
+      );
+      // reminders that no longer apply (withdrawn, removed, cancelled, moved, already started) are cancelled
+      for (final int id in ReminderPlanner.stale(await TLocalNotifier.pending(), plan)) {
+        await TLocalNotifier.cancel(id);
       }
-      for (final TMatch m in await repo.myOpenMatches()) {
-        final DateTime? at = m.scheduledAt;
-        if (m.status != 'scheduled' || at == null) continue;
-        final String title = all.where((Tournament t) => t.id == m.tournamentId).firstOrNull?.title ?? 'ANIX';
-        await TLocalNotifier.scheduleAt('msoon:${m.id}', at.subtract(const Duration(minutes: 10)), title,
-            fa ? 'بازی‌ات ۱۰ دقیقه‌ی دیگر شروع می‌شود' : 'Your match starts in 10 minutes',
-            payload: '/tournaments/${m.tournamentId}');
+      for (final TReminder r in plan) {
+        final String title = all.where((Tournament t) => t.id == r.tournamentId).firstOrNull?.title ?? 'NEXORA';
+        final String body = switch (r.kind) {
+          'checkin' => fa ? '۱۰ دقیقه تا شروع — همین الان اعلام حضور کن' : '10 minutes to the start — check in now',
+          'match' => fa ? 'بازی‌ات ۱۰ دقیقه‌ی دیگر شروع می‌شود' : 'Your match starts in 10 minutes',
+          _ => fa ? 'تورنمنت ۱۰ دقیقه‌ی دیگر شروع می‌شود' : 'The tournament starts in 10 minutes',
+        };
+        await TLocalNotifier.scheduleAt(r.key, r.at, title, body, payload: r.payload);
       }
     } catch (e) {
       debugPrint('reminders: $e');

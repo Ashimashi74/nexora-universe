@@ -235,49 +235,82 @@ class _ArcadeSoloShellState extends ConsumerState<ArcadeSoloShell> with TickerPr
       behavior: HitTestBehavior.opaque,
       onTap: _start,
       child: Container(
-        color: Colors.black.withValues(alpha: 0.38),
+        color: const Color(0xB8050915),
         alignment: Alignment.center,
-        child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-          Text(l.tx(widget.titleFa, widget.titleEn),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 34,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
-                shadows: <Shadow>[Shadow(color: s.accent, blurRadius: 24), const Shadow(color: Colors.black, blurRadius: 6)],
-              )),
-          if (l.daily)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: _chip(Icons.today_rounded, l.tx('چالش روزانه · هدف $_target', 'Daily challenge · target $_target'), s.accent),
-            ),
-          const SizedBox(height: 18),
-          AnimatedBuilder(
-            animation: _pulse,
-            builder: (_, Widget? child) => Transform.scale(scale: 0.95 + _pulse.value * 0.08, child: child),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 34, vertical: 14),
+              padding: const EdgeInsets.fromLTRB(24, 26, 24, 24),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(40),
-                gradient: LinearGradient(colors: <Color>[s.accent, s.accent2]),
-                boxShadow: <BoxShadow>[BoxShadow(color: s.accent.withValues(alpha: 0.6), blurRadius: 24)],
+                borderRadius: BorderRadius.circular(30),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: <Color>[Color(0xF51B2942), Color(0xF20B1222)],
+                ),
+                border: Border.all(color: s.accent.withValues(alpha: 0.55), width: 1.2),
+                boxShadow: <BoxShadow>[
+                  BoxShadow(color: s.accent.withValues(alpha: 0.18), blurRadius: 38, spreadRadius: -8),
+                  const BoxShadow(color: Colors.black54, blurRadius: 30, offset: Offset(0, 18)),
+                ],
               ),
-              child: Text(l.tx('برای شروع لمس کن', 'TAP TO PLAY'),
-                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Colors.white)),
+              child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: s.accent.withValues(alpha: 0.12),
+                    border: Border.all(color: s.accent.withValues(alpha: 0.6)),
+                    boxShadow: <BoxShadow>[BoxShadow(color: s.accent.withValues(alpha: 0.18), blurRadius: 22)],
+                  ),
+                  child: Icon(Icons.sports_esports_rounded, color: s.accent2, size: 30),
+                ),
+                const SizedBox(height: 15),
+                Text(l.tx('بازی تک‌نفره', 'SOLO ARCADE'),
+                    style: TextStyle(color: s.accent, fontSize: 11, letterSpacing: 2.2, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 8),
+                Text(l.tx(widget.titleFa, widget.titleEn),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 29, height: 1.12, fontWeight: FontWeight.w900, color: Colors.white)),
+                const SizedBox(height: 12),
+                Text(l.tx(widget.hintFa, widget.hintEn),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Color(0xFFC5D0E1), fontSize: 14, height: 1.6)),
+                if (l.daily) ...<Widget>[
+                  const SizedBox(height: 14),
+                  _chip(Icons.today_rounded, l.tx('چالش روزانه · هدف $_target', 'DAILY CHALLENGE · $_target'), s.accent),
+                ],
+                const SizedBox(height: 20),
+                AnimatedBuilder(
+                  animation: _pulse,
+                  builder: (_, Widget? child) => Transform.scale(scale: 0.98 + _pulse.value * 0.035, child: child),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(18),
+                      gradient: LinearGradient(colors: <Color>[s.accent, s.accent2]),
+                      boxShadow: <BoxShadow>[BoxShadow(color: s.accent.withValues(alpha: 0.28), blurRadius: 24, offset: const Offset(0, 8))],
+                    ),
+                    child: Row(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
+                      const Icon(Icons.play_arrow_rounded, color: Color(0xFF07101D), size: 24),
+                      const SizedBox(width: 8),
+                      Text(l.tx('شروع بازی', 'START GAME'),
+                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, letterSpacing: 1.1, color: Color(0xFF07101D))),
+                    ]),
+                  ),
+                ),
+                if (_best > 0) ...<Widget>[
+                  const SizedBox(height: 14),
+                  _chip(Icons.emoji_events_rounded, l.tx('رکورد شخصی $_best', 'PERSONAL BEST $_best'), const Color(0xFFFFD166)),
+                ],
+              ]),
             ),
           ),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 36),
-            child: Text(l.tx(widget.hintFa, widget.hintEn),
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.82), fontSize: 13.5, height: 1.5)),
-          ),
-          const SizedBox(height: 10),
-          if (_best > 0)
-            Text(l.tx('رکورد شخصی: $_best', 'Personal best: $_best'),
-                style: const TextStyle(color: Color(0xFFFFC94A), fontWeight: FontWeight.w800)),
-        ]),
+        ),
       ),
     );
   }

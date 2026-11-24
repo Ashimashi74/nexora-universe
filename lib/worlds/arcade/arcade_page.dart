@@ -25,7 +25,7 @@ class ArcadePage extends ConsumerWidget {
     return DefaultTabController(
       length: 2,
       child: NxWorldScaffold(
-        title: context.tx('آرکید ANIX', 'ANIX ARCADE'),
+        title: context.tx('آرکید نیکسورا', 'NEXORA ARCADE'),
         palette: WorldPalette.arcade,
         dock: Nx2Tab.games,
         body: Column(children: [
@@ -147,7 +147,7 @@ class _GamesGridState extends State<_GamesGrid> {
                       opacity: _group == i ? 1 : 0.7,
                       child: NxPill(
                         label: context.tx(groups[i].$1, groups[i].$2),
-                        color: _group == i ? Nx2.magenta : Nx2.violet,
+                        color: _group == i ? Nx2.gold : Nx2.goldDeep,
                       ),
                     ),
                   ),

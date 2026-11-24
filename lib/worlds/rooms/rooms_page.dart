@@ -6,19 +6,24 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../core/online/online_service.dart';
+import '../../core/online/room_capacity.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/theme/nx_theme.dart';
 import '../../core/ui2/anix_kit.dart';
+import '../../core/ui2/luxe.dart';
 import '../../core/ui2/nx2_widgets.dart';
 import '../../core/widgets/nx_widgets.dart';
-import '../../games/game_registry.dart';
 import '../../games/arcade_kit/arcade_icon.dart';
+import '../../games/game_registry.dart';
 
 /// ROOMS — opened by the big GAME button in the dock.
 ///  * Quick Play: pick a game -> real matchmaking (`nx_quick`) in that game's lobby.
 ///  * Create Room: pick a game -> a new public room (`nx_create_room`), others can join from this list.
+///  * Talk room: a conversation first (`nx_room_open`), games are picked inside.
 ///  * Open rooms: every public lobby on the server right now (no placeholder rows: empty/offline states only).
-///  * All games: the arcade list (offline vs-bot / pass-and-play stays available there).
+///
+/// Every surface here is built from the shared Station Luxe kit (LuxeCard / LuxeButton / LuxeSection /
+/// LuxeEmpty / showLuxePrompt), so the room list reads exactly like the home page.
 class RoomsPage extends ConsumerStatefulWidget {
   const RoomsPage({super.key});
 
@@ -47,8 +52,9 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
   }
 
   Future<void> _load({bool silent = false}) async {
+    if (!mounted) return;
     final OnlineService o = ref.read(onlineProvider);
-    if (!silent && mounted) setState(() => _loading = true);
+    if (!silent) setState(() => _loading = true);
     try {
       if (!o.isOnline) await o.ensureSession();
       final SupabaseClient? c = o.games;
@@ -94,13 +100,14 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
 
   Future<void> _pickGame(String action) async {
     final List<GameInfo> games = kGames.where((GameInfo g) => g.supportsOnline).toList();
-    final GameInfo? g = await showModalBottomSheet<GameInfo>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (BuildContext ctx) => _GamePickerSheet(games: games, title: action == 'quick'
-          ? ctx.tx('بازی سریع — کدام بازی؟', 'Quick Play — which game?')
-          : ctx.tx('ساخت اتاق — کدام بازی؟', 'Create room — which game?')),
+    final GameInfo? g = await showLuxeSheet<GameInfo>(
+      context,
+      builder: (BuildContext ctx) => _GamePickerSheet(
+        games: games,
+        title: action == 'quick'
+            ? ctx.tx('بازی سریع — کدام بازی؟', 'Quick play — which game?')
+            : ctx.tx('ساخت اتاق — کدام بازی؟', 'Create room — which game?'),
+      ),
     );
     if (g == null || !mounted) return;
     await context.push('/online/${g.id}?action=$action');
@@ -109,22 +116,14 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
 
   /// Opens a new conversation room (voice + chat; games are picked inside).
   Future<void> _openTalk() async {
-    final TextEditingController name = TextEditingController();
-    final String? title = await showDialog<String>(
-      context: context,
-      builder: (BuildContext ctx) => AlertDialog(
-        title: Text(ctx.tx('اتاق جدید', 'New room')),
-        content: TextField(
-          controller: name,
-          autofocus: true,
-          maxLength: 60,
-          decoration: InputDecoration(hintText: ctx.tx('نام اتاق (اختیاری)', 'Room name (optional)')),
-        ),
-        actions: <Widget>[
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(ctx.tx('انصراف', 'Cancel'))),
-          FilledButton(onPressed: () => Navigator.pop(ctx, name.text.trim()), child: Text(ctx.tx('ساخت', 'Create'))),
-        ],
-      ),
+    final String? title = await showLuxePrompt(
+      context,
+      title: context.tx('اتاق جدید', 'New room'),
+      message: context.tx('یک نام برای اتاق انتخاب کن؛ بعد از ساخت می‌توانی بازی را عوض کنی.',
+          'Name the room; you can change the game inside.'),
+      hint: context.tx('نام اتاق (اختیاری)', 'Room name (optional)'),
+      confirm: context.tx('ساخت', 'Create'),
+      maxLength: 60,
     );
     if (title == null || !mounted) return;
     final OnlineService o = ref.read(onlineProvider);
@@ -136,43 +135,31 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
       unawaited(_load(silent: true));
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(context.tx('ساخت اتاق ممکن نشد. وارد حساب شده‌ای؟', 'Could not create the room. Are you signed in?'))));
+        luxeToast(context, context.tx('ساخت اتاق ممکن نشد. وارد حساب شده‌ای؟', 'Could not create the room. Are you signed in?'),
+            error: true);
       }
     }
   }
 
   Widget _talkTile(Map<String, dynamic> r) {
     final GameInfo? g = gameById('${r['game']}');
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Nx2Panel(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-        onTap: () async {
-          await context.push('/room/${r['id']}');
-          unawaited(_load(silent: true));
-        },
-        child: Row(children: <Widget>[
-          Image.asset(AnixAssets.icon('headset'), width: 42, height: 42),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-              Text('${r['title'] ?? r['host_name'] ?? 'ANIX'}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Nx2.text)),
-              Text(
-                  '${r['status'] == 'playing' ? context.tx('در حال بازی', 'Playing') : context.tx('گفتگو', 'Talking')}'
-                  ' · ${g == null ? '' : context.tx(g.nameFa, g.nameEn)}',
-                  style: const TextStyle(color: Nx2.muted, fontSize: 12, fontWeight: FontWeight.w700)),
-            ]),
-          ),
-          const Icon(Icons.people_alt_rounded, color: Nx2.cyan, size: 18),
-          const SizedBox(width: 4),
-          Text('${r['members'] ?? 0}',
-              style: const TextStyle(color: Nx2.cyan, fontWeight: FontWeight.w900, fontSize: 16)),
-        ]),
-      ),
+    final int members = (r['members'] as num?)?.toInt() ?? 0;
+    final int capacity = (r['capacity'] as num?)?.toInt() ?? capacityOf('${r['game']}').max;
+    final bool locked = r['locked'] == true;
+    return LuxeListRow(
+      onTap: () async {
+        await context.push('/room/${r['id']}');
+        unawaited(_load(silent: true));
+      },
+      leading: Image.asset(AnixAssets.icon('headset'), width: 38, height: 38, errorBuilder: (_, __, ___) => const Icon(Icons.headset_mic_rounded, color: Luxe.gold)),
+      title: '${r['title'] ?? r['host_name'] ?? 'NEXORA'}',
+      subtitle: '${r['status'] == 'playing' ? context.tx('در حال بازی', 'Playing') : context.tx('گفتگو', 'Talking')}'
+          '${g == null ? '' : ' · ${context.tx(g.nameFa, g.nameEn)}'}'
+          ' · ${r['host_name'] ?? ''}',
+      trailing: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+        if (locked) const Padding(padding: EdgeInsets.only(right: 6), child: Icon(Icons.lock_rounded, size: 14, color: Luxe.mute)),
+        LuxeStat(label: '$members/$capacity', icon: Icons.people_alt_rounded),
+      ]),
     );
   }
 
@@ -191,82 +178,111 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
       dock: Nx2Tab.games,
       room: true,
       body: RefreshIndicator(
+        color: Luxe.gold,
+        backgroundColor: Luxe.panel,
         onRefresh: _load,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
           children: <Widget>[
-            Nx2Banner(text: context.tx('اتاق‌های زنده', 'LIVE ROOMS'), height: 56),
+            LuxeCard(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+                Text(context.tx('اتاق‌های زنده', 'LIVE ROOMS'),
+                    style: const TextStyle(fontFamily: 'ChakraPetch', letterSpacing: 2, fontSize: 11, color: Luxe.gold, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(
+                  context.tx('تماشاگر نامحدود؛ مدیر اتاق تعیین می‌کند چند نفر بازی کنند.',
+                      'Unlimited audience — the room manager picks how many play.'),
+                  style: const TextStyle(fontSize: 12, height: 1.45, color: Luxe.mute),
+                ),
+              ]),
+            ),
             const SizedBox(height: 12),
             Row(children: <Widget>[
               Expanded(
-                child: Nx2Button(
-                  label: context.tx('بازی سریع', 'QUICK'),
+                child: LuxeButton(
+                  label: context.tx('بازی سریع', 'QUICK PLAY'),
                   icon: Icons.bolt_rounded,
-                  kind: Nx2ButtonKind.pink,
-                  height: 58,
+                  height: 56,
                   onTap: () => _pickGame('quick'),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Nx2Button(
+                child: LuxeButton(
                   label: context.tx('ساخت اتاق', 'NEW ROOM'),
-                  icon: Icons.add_circle_rounded,
-                  kind: Nx2ButtonKind.cyan,
-                  height: 58,
+                  icon: Icons.add_circle_outline_rounded,
+                  kind: LuxeButtonKind.ghost,
+                  height: 56,
                   onTap: () => _pickGame('create'),
                 ),
               ),
             ]),
             const SizedBox(height: 10),
-            Nx2Button(
+            LuxeButton(
               label: context.tx('اتاق گفتگو + بازی', 'TALK ROOM + GAMES'),
               icon: Icons.headset_mic_rounded,
-              kind: Nx2ButtonKind.pink,
-              height: 54,
-              onTap: _openTalk,
-            ),
-            const SizedBox(height: 10),
-            Nx2Button(
-              label: context.tx('همه‌ی بازی‌ها (آفلاین و با ربات)', 'ALL GAMES (offline & vs bot)'),
-              icon: Icons.sports_esports_rounded,
-              kind: Nx2ButtonKind.violet,
+              kind: LuxeButtonKind.ghost,
               height: 50,
               fontSize: 13,
+              onTap: _openTalk,
+            ),
+            const SizedBox(height: 8),
+            LuxeButton(
+              label: context.tx('همه‌ی بازی‌ها (آفلاین و با ربات)', 'ALL GAMES (OFFLINE & VS BOT)'),
+              icon: Icons.sports_esports_rounded,
+              kind: LuxeButtonKind.ghost,
+              height: 46,
+              fontSize: 12,
               onTap: () => context.push('/world/nexora_arcade'),
             ),
             if (_talk.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 18),
-              Nx2SectionHeader(title: context.tx('اتاق‌های گفتگو', 'Talk rooms')),
-              const SizedBox(height: 8),
+              LuxeSection(title: context.tx('اتاق‌های گفتگو', 'Talk rooms'), top: LuxeSpace.lg),
               for (final Map<String, dynamic> r in _talk) _talkTile(r),
             ],
-            const SizedBox(height: 18),
-            Nx2SectionHeader(title: context.tx('اتاق‌های بازی', 'Game lobbies')),
-            const SizedBox(height: 8),
+            LuxeSection(title: context.tx('اتاق‌های بازی', 'Game lobbies'), top: LuxeSpace.lg),
             if (_loading && _rooms.isEmpty)
-              const Padding(padding: EdgeInsets.all(28), child: Center(child: CircularProgressIndicator()))
+              LuxeLoading(label: context.tx('در حال گرفتن اتاق‌ها…', 'Loading rooms…'))
             else if (_error != null && _rooms.isEmpty && ref.watch(onlineProvider).client?.auth.currentSession == null)
               // Guests (local-only mode) have no session: say so instead of a misleading "server unreachable".
-              _Empty(
+              LuxeEmpty(
                 icon: Icons.person_off_rounded,
-                text: context.tx('برای اتاق‌های آنلاین با ایمیل وارد شو. بازی آفلاین و با ربات در «همه‌ی بازی‌ها» است.',
+                title: context.tx('ورود لازم است', 'Sign in required'),
+                message: context.tx(
+                    'برای اتاق‌های آنلاین با ایمیل وارد شو. بازی آفلاین و با ربات در «همه‌ی بازی‌ها» است.',
                     'Sign in with email for online rooms. Offline and vs-bot games are under “All games”.'),
-                onRetry: _load,
+                action: LuxeButton(
+                  label: context.tx('ورود', 'SIGN IN'),
+                  height: 44,
+                  expand: false,
+                  onTap: () => context.go('/auth'),
+                ),
               )
             else if (_error != null && _rooms.isEmpty)
-              _Empty(
+              LuxeEmpty(
                 icon: Icons.wifi_off_rounded,
-                text: context.tx('اتصال به سرور برقرار نشد. بازی آفلاین در «همه‌ی بازی‌ها» در دسترس است.',
-                    'Could not reach the server. Offline games are under “All games”.'),
-                onRetry: _load,
+                title: context.tx('اتصال برقرار نشد', 'Could not reach the server'),
+                message: context.tx('بازی آفلاین در «همه‌ی بازی‌ها» در دسترس است.', 'Offline games are under “All games”.'),
+                action: LuxeButton(
+                  label: context.tx('تلاش دوباره', 'RETRY'),
+                  icon: Icons.refresh_rounded,
+                  height: 44,
+                  expand: false,
+                  onTap: _load,
+                ),
               )
             else if (_rooms.isEmpty)
-              _Empty(
+              LuxeEmpty(
                 icon: Icons.meeting_room_outlined,
-                text: context.tx('الان اتاق بازی وجود ندارد. اولین اتاق را بساز!',
-                    'No open rooms right now. Create the first one!'),
-                onRetry: _load,
+                title: context.tx('الان اتاق بازی وجود ندارد', 'No open rooms right now'),
+                message: context.tx('اولین اتاق را بساز!', 'Create the first one!'),
+                action: LuxeButton(
+                  label: context.tx('اتاق جدید', 'NEW ROOM'),
+                  icon: Icons.add_circle_outline_rounded,
+                  height: 44,
+                  expand: false,
+                  onTap: () => _pickGame('create'),
+                ),
               )
             else
               for (final Map<String, dynamic> r in _rooms) _roomTile(r),
@@ -279,68 +295,36 @@ class _RoomsPageState extends ConsumerState<RoomsPage> {
   Widget _roomTile(Map<String, dynamic> r) {
     final GameInfo? g = gameById('${r['game']}');
     final int n = _count(r), seats = (r['seats'] as num?)?.toInt() ?? 2;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Nx2Panel(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-        onTap: () async {
-          await context.push('/online/${r['game']}?room=${r['id']}');
-          unawaited(_load(silent: true));
-        },
-        child: Row(children: <Widget>[
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: (g?.accent ?? Nx2.cyan).withValues(alpha: 0.18),
-              border: Border.all(color: g?.accent ?? Nx2.cyan, width: 1.5),
-            ),
-            child: Icon(Icons.sports_esports_rounded, color: g?.accent ?? Nx2.cyan),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-              Text(g == null ? '${r['game']}' : context.tx(g.nameFa, g.nameEn),
-                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Nx2.text)),
-              Text('${context.tx('کد', 'Code')} ${r['code']}',
-                  style: const TextStyle(color: Nx2.muted, fontSize: 12, fontWeight: FontWeight.w700)),
-            ]),
-          ),
-          Text('$n/$seats',
-              style: const TextStyle(color: Nx2.cyan, fontWeight: FontWeight.w900, fontSize: 16)),
-          const SizedBox(width: 6),
-          const Icon(Icons.login_rounded, color: Nx2.text),
-        ]),
+    const Color accent = Luxe.gold;
+    return LuxeListRow(
+      onTap: () async {
+        await context.push('/online/${r['game']}?room=${r['id']}');
+        unawaited(_load(silent: true));
+      },
+      tint: accent,
+      leading: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: accent.withValues(alpha: 0.12),
+          border: Border.all(color: accent.withValues(alpha: 0.55), width: 1.2),
+        ),
+        child: Icon(Icons.sports_esports_rounded, color: accent, size: 20),
       ),
-    );
-  }
-}
-
-class _Empty extends StatelessWidget {
-  const _Empty({required this.icon, required this.text, required this.onRetry});
-  final IconData icon;
-  final String text;
-  final Future<void> Function() onRetry;
-
-  @override
-  Widget build(BuildContext context) {
-    return Nx2Panel(
-      padding: const EdgeInsets.all(18),
-      child: Column(children: <Widget>[
-        Icon(icon, size: 40, color: Nx2.muted),
-        const SizedBox(height: 8),
-        Text(text, textAlign: TextAlign.center, style: const TextStyle(color: Nx2.text, fontSize: 13)),
-        const SizedBox(height: 10),
-        TextButton.icon(
-            onPressed: onRetry,
-            icon: const Icon(Icons.refresh_rounded),
-            label: Text(context.tx('تلاش دوباره', 'Retry'))),
+      title: g == null ? '${r['game']}' : context.tx(g.nameFa, g.nameEn),
+      subtitle: '${context.tx('کد', 'CODE')} ${r['code']}'
+          ' · ${capacityOf('${r['game']}').min}–${capacityOf('${r['game']}').max} ${context.tx('بازیکن', 'players')}',
+      trailing: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
+        LuxeStat(label: '$n/$seats', icon: Icons.groups_rounded),
+        const SizedBox(width: 6),
+        const Icon(Icons.login_rounded, color: Luxe.ink, size: 18),
       ]),
     );
   }
 }
 
+/// Game picker: gold tiles with the arcade pedestal art.
 class _GamePickerSheet extends StatelessWidget {
   const _GamePickerSheet({required this.games, required this.title});
   final List<GameInfo> games;
@@ -348,48 +332,41 @@ class _GamePickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Nx2Panel(
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 10),
-          child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Nx2.text)),
-            const SizedBox(height: 10),
-            Flexible(
-              child: GridView.count(
-                shrinkWrap: true,
-                crossAxisCount: 3,
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-                childAspectRatio: 1.05,
-                children: <Widget>[
-                  for (final GameInfo g in games)
-                    Nx2Pressable(
-                      onTap: () => Navigator.pop(context, g),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(14),
-                          color: g.accent.withValues(alpha: 0.14),
-                          border: Border.all(color: g.accent.withValues(alpha: 0.8)),
-                        ),
-                        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
-                          Image.asset('assets/arcade/pedestals/${g.id}.webp',
-                              height: 52, errorBuilder: (_, __, ___) => SizedBox(height: 52, child: ArcadeMedallion(g.id))),
-                          const SizedBox(height: 4),
-                          Text(context.tx(g.nameFa, g.nameEn),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: Nx2.text)),
-                        ]),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ]),
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.7),
+      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Luxe.ink)),
+        const SizedBox(height: 10),
+        Flexible(
+          child: GridView.count(
+            shrinkWrap: true,
+            crossAxisCount: 3,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            childAspectRatio: 0.92,
+            children: <Widget>[
+              for (final GameInfo g in games)
+                LuxeCard(
+                  radius: LuxeRadius.md,
+                  padding: const EdgeInsets.all(6),
+                  onTap: () => Navigator.pop(context, g),
+                  semantics: context.tx(g.nameFa, g.nameEn),
+                  child: Column(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
+                    Image.asset('assets/arcade/pedestals/${g.id}.webp',
+                        height: 48, errorBuilder: (_, __, ___) => SizedBox(height: 48, child: ArcadeMedallion(g.id))),
+                    const SizedBox(height: 4),
+                    Text(context.tx(g.nameFa, g.nameEn),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Luxe.ink)),
+                    Text('${g.onlineMinPlayers}–${g.onlineMaxPlayers}',
+                        style: const TextStyle(fontSize: 9.5, color: Luxe.mute)),
+                  ]),
+                ),
+            ],
+          ),
         ),
-      ),
+      ]),
     );
   }
 }

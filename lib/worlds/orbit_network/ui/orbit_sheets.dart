@@ -15,6 +15,8 @@ import 'orbit_bubbles.dart';
 import '../../../games/arcade_kit/arcade_icon.dart';
 
 import '../../../core/ui2/anix_kit.dart';
+import '../../../core/ui2/luxe.dart';
+
 /// Club badge ids usable as group/channel/community icons.
 const List<String> kOrbitBadges = <String>[
   'badge_club_scorpion',
@@ -81,7 +83,7 @@ class OrbitBadgePicker extends StatelessWidget {
               decoration: BoxDecoration(
                 color: sel ? WorldPalette.orbit.primary.withValues(alpha: 0.2) : const Color(0x14FFFFFF),
                 borderRadius: BorderRadius.circular(NxRadius.md),
-                border: Border.all(color: sel ? WorldPalette.orbit.primary : NxColors.glassBorder, width: sel ? 2 : 1),
+                border: Border.all(color: sel ? WorldPalette.orbit.primary : NxColors.goldLine, width: sel ? 2 : 1),
               ),
               child: id.isEmpty
                   ? const Icon(Icons.block_rounded, color: NxColors.textDim)
@@ -389,7 +391,7 @@ class _SharedInboxSheet extends ConsumerWidget {
     await ctrl.deliverShared(item, target, authorName: orbitMyName(context, profile));
     final outcome = await ctrl.reward(profile);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tx('ارسال شد', 'Sent'))));
+    luxeToast(context, context.tx('ارسال شد', 'Sent'));
     await showAwardOutcome(context, outcome);
   }
 

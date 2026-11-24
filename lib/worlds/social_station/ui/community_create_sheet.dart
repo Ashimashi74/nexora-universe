@@ -153,11 +153,11 @@ class _CommunityEditorState extends ConsumerState<_CommunityEditor> {
               ChoiceChip(
                 selected: _kind == k,
                 onSelected: (_) => setState(() => _kind = k),
-                avatar: Icon(kindIcon(k), size: 16, color: _kind == k ? NxColors.navyDeep : kindColor(k)),
+                avatar: Icon(kindIcon(k), size: 16, color: _kind == k ? NxColors.luxeBg : kindColor(k)),
                 label: Text(kindLabel(context, k)),
                 selectedColor: kindColor(k),
                 showCheckmark: false,
-                labelStyle: TextStyle(color: _kind == k ? NxColors.navyDeep : NxColors.iceWhite, fontWeight: FontWeight.w700),
+                labelStyle: TextStyle(color: _kind == k ? NxColors.luxeBg : NxColors.ink, fontWeight: FontWeight.w700),
               ),
           ]),
           if (_kind == CommunityKind.private)
@@ -178,7 +178,7 @@ class _CommunityEditorState extends ConsumerState<_CommunityEditor> {
                   label: Text(context.tx(g.nameFa, g.nameEn)),
                   selectedColor: kSocialPalette.secondary,
                   showCheckmark: false,
-                  labelStyle: TextStyle(color: _gameId == g.id ? NxColors.navyDeep : NxColors.iceWhite, fontWeight: FontWeight.w700),
+                  labelStyle: TextStyle(color: _gameId == g.id ? NxColors.luxeBg : NxColors.ink, fontWeight: FontWeight.w700),
                 ),
             ]),
           ],
@@ -226,7 +226,7 @@ class _CommunityEditorState extends ConsumerState<_CommunityEditor> {
           FilledButton.icon(
             style: FilledButton.styleFrom(
               backgroundColor: accent,
-              foregroundColor: NxColors.navyDeep,
+              foregroundColor: NxColors.luxeBg,
               padding: const EdgeInsets.symmetric(vertical: 14),
             ),
             onPressed: _busy ? null : _save,

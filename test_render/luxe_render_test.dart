@@ -1,0 +1,84 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:nexora/core/online/online_service.dart';
+import 'package:nexora/core/profile/profile_service.dart';
+import 'package:nexora/features/admin/admin_access.dart';
+import 'package:nexora/core/settings/app_settings.dart';
+import 'package:nexora/core/storage/local_store.dart';
+import 'package:nexora/core/theme/nx_theme.dart';
+import 'package:nexora/worlds/hub/hub_page.dart';
+import 'package:nexora/worlds/hub/luxe_station_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'render_util.dart';
+
+const String only = String.fromEnvironment('ONLY');
+void main() {
+  setUpAll(() async {
+    // ignore: invalid_use_of_visible_for_testing_member
+    SharedPreferences.setMockInitialValues(<String, Object>{'settings.lang': 'en'});
+    await LocalStore.init();
+    await loadFonts();
+  });
+  final Map<String, Widget Function()> pages = <String, Widget Function()>{
+    'hub': () => const HubPage(),
+    'station_games': () => const LuxeStationPage(k: 'games'),
+    'station_chat': () => const LuxeStationPage(k: 'chat'),
+    'station_tournaments': () => const LuxeStationPage(k: 'tournaments'),
+  };
+  for (final String lang in <String>['en', 'fa']) {
+    for (final MapEntry<String, Widget Function()> e in pages.entries) {
+      if (only.isNotEmpty && !only.split(',').contains(e.key)) continue;
+      
+      testWidgets('luxe ${e.key} $lang', (WidgetTester tester) async {
+        phone(tester);
+        // The admin panel is rendered as the owner sees it (the server decides access on device).
+        final ProviderContainer c = ProviderContainer(overrides: <Override>[
+          adminAccessProvider.overrideWith((ref) => _OwnerAccess(ref.read(onlineProvider))),
+        ]);
+        addTearDown(c.dispose);
+        c.read(settingsProvider).languageCode = lang;
+        final ProfileService p = c.read(profileProvider);
+        if (!p.hasIdentity) p.updateProfile(name: 'Ashkan');
+        final GoRouter router = GoRouter(routes: <RouteBase>[GoRoute(path: '/', builder: (_, __) => e.value())]);
+        await tester.pumpWidget(UncontrolledProviderScope(
+          container: c,
+          child: MaterialApp.router(
+            debugShowCheckedModeBanner: false,
+            theme: buildNxTheme(),
+            locale: Locale(lang),
+            supportedLocales: const <Locale>[Locale('fa'), Locale('en')],
+            localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            routerConfig: router,
+            builder: (BuildContext context, Widget? child) =>
+                RepaintBoundary(key: kShotKey, child: child ?? const SizedBox.shrink()),
+          ),
+        ));
+        await settle(tester, frames: 25);
+        await shoot(tester, 'luxe/${e.key}_$lang.png');
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 1));
+      });
+    }
+  }
+}
+
+class _OwnerAccess extends AdminAccess {
+  _OwnerAccess(super.online) {
+    owner = true;
+    loaded = true;
+  }
+
+  @override
+  Future<void> refresh() async {
+    owner = true;
+    loaded = true;
+  }
+}

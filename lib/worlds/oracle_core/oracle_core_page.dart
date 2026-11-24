@@ -14,6 +14,8 @@ import '../../games/game_registry.dart';
 import 'core/oracle_brain.dart';
 
 import '../../core/ui2/anix_kit.dart';
+import '../../core/ui2/luxe.dart';
+
 const String _kChatKey = 'oracle.chat.v1';
 const int _kMaxMessages = 100;
 
@@ -321,11 +323,11 @@ class _OracleCorePageState extends ConsumerState<OracleCorePage> {
       setState(() => msg.ranIndex = index);
       _save();
       if (a.type == OracleActionType.setting) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content:
-              Text(context.tx('انجام شد: ${a.labelFa}', 'Done: ${a.labelEn}')),
-          duration: const Duration(seconds: 2),
-        ));
+        luxeToast(
+            context,
+            context.tx('انجام شد: ${a.labelFa}', 'Done: ${a.labelEn}'),
+            duration: const Duration(seconds: 2),
+        );
       }
     } else {
       setState(() {
@@ -494,7 +496,7 @@ class _OracleCorePageState extends ConsumerState<OracleCorePage> {
           ),
       ],
       body: Column(children: <Widget>[
-        SizedBox(height: kToolbarHeight),
+        const SizedBox(height: NxSpace.sm),
         // Floating ORACLE with a glow halo that follows the reply pose.
         AnimatedContainer(
           duration: NxMotion.normal,
@@ -508,7 +510,7 @@ class _OracleCorePageState extends ConsumerState<OracleCorePage> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(colors: <Color>[
-                  (_thinking ? NxColors.turquoise : WorldPalette.oracle.primary)
+                  (_thinking ? NxColors.champagne : WorldPalette.oracle.primary)
                       .withValues(alpha: 0.45),
                   Colors.transparent,
                 ]),

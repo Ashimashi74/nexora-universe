@@ -516,7 +516,7 @@ class PoolScenePainter extends CustomPainter {
           );
         }
         sec(0, 6, const Color(0xFF00E5FF));
-        sec(6, 16, const Color(0xFFEAF6FF));
+        sec(6, 16, const Color(0xFFF4EAD2));
         sec(16, 470, const Color(0xFF0D1B3A));
         sec(470, 478, const Color(0xFF00E5FF));
         sec(478, 690, const Color(0xFF0A1230));

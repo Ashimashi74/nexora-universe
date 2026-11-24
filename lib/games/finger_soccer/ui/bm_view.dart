@@ -1,42 +1,53 @@
 // BERMUDA NXG disc football inside the ANIX hub: pre-match setup (team / formation / field / ball),
 // the match (engine + painter + HUD) and the online wiring over the hub's NetLink (Supabase move log).
+// 2026-11-24 (owner request): the app's own black-gold match lobby (_setupScreen) is the ONLY pre-match screen,
+// offline and online. The reference-game intro (intro/fs_splash, fs_team_select, fs_formation_select, fs_shop,
+// fs_online_pick) is no longer opened: online it flashed this lobby first and then swapped to the navy screens.
+// Online the lobby shows from the first frame (disabled + "connecting" until the log is replayed), then the side
+// picks with one shared countdown ([kOnlinePickSeconds]) that sends the shown pick when it runs out.
 import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:nexora/core/theme/nx_theme.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:nexora/core/economy/gem_shop.dart';
+import 'package:nexora/core/online/online_service.dart';
 import 'package:nexora/core/profile/profile_service.dart';
-import 'package:nexora/core/ui2/anix_kit.dart';
 import 'package:nexora/core/widgets/user_avatar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:nexora/games/core/game_contract.dart';
 import '../core/bm_data.dart';
 import '../core/bm_engine.dart';
+import '../core/fs_custom_teams.dart';
 import 'bm_audio.dart';
 import 'bm_ball.dart';
 import 'bm_painter.dart';
+import 'bm_rematch.dart';
+import 'fs_flame.dart';
 import '../intro/fs_game_bar.dart';
 import '../intro/fs_intro_data.dart';
-import '../intro/fs_intro_ui.dart' show FsBarHandle;
-import '../intro/fs_online_pick.dart';
 import '../intro/fs_score_table.dart';
-import '../intro/fs_team_select.dart' show FsSidePlayer;
+import '../../../core/ui2/luxe.dart';
 
 const String _a = 'assets/games/bermuda/';
 
 /// Online match settings (config.js MATCH_SECONDS / TURN_SECONDS).
 const int kBmMatchSeconds = 300;
 
-/// Width reserved at each side of the top row for the host's exit / ORACLE buttons (6dp + 48dp + 4dp).
-const double kBmHostButtonLane = 58;
-
-/// Height of the match scoreboard (team chips + clock) below the status bar.
-const double kBmScoreboardHeight = 64;
+/// v9 match chrome: the top bar (clock, menu, formation button) below the status bar and the bottom strip (voice
+/// controls online, the "one minute left" toast) above the gesture bar. The pitch art is fitted between them, so no
+/// control ever sits on the playfield.
+/// v12: the top bar is the match scoreboard (menu, both sides' crest + score, the clock, the formation button).
+const double kFsTopBarHeight = 56;
+const double kFsBottomStripHeight = 58;
+/// v12: offline there are no voice controls, so the bottom strip shrinks and the pitch gets the room (bigger pitch).
+const double kFsBottomStripCompact = 10;
 const double kBmOnlineTurnSeconds = 10;
 
 /// v6 reference: how long the "one minute left" toast stays up (about 3 s in the recordings).
@@ -75,8 +86,8 @@ class _Setup {
     return _Setup(
         t,
         i('form').clamp(0, kBmForms.length - 1).toInt(),
-        i('field').clamp(0, kBmFields.length - 1).toInt(),
-        i('ball').clamp(0, NB - 1).toInt());
+        bmFieldIndex(i('field')),
+        bmBallIndex((d['ball'] as num?)?.toInt()));
   }
 }
 
@@ -88,6 +99,8 @@ class _BermudaViewState extends State<BermudaView>
   final BmView view = BmView();
   late final BmAudio audio = BmAudio(enabled: widget.launch.soundOn);
   final ValueNotifier<int> _frame = ValueNotifier<int>(0);
+  /// v12: the scoreboard's data; it only notifies when something it shows changes (not every frame).
+  final ValueNotifier<FsHudData> _hud = ValueNotifier<FsHudData>(FsHudData.empty);
   late final Ticker _ticker;
   Duration _last = Duration.zero;
   double _nowMs = 0;
@@ -112,6 +125,9 @@ class _BermudaViewState extends State<BermudaView>
   /// v6: seconds left on the end-of-match score table (reference "جدول امتیازات"), -1 when it is not shown.
   double _tableT = -1;
 
+  /// v13: online rematch on the score table (bm_rematch.dart); null offline, in tournaments and before the end.
+  FsRematchController? _rematch;
+
   /// v6 reference toast "یک دقیقه تا پایان بازی": seconds it stays up, fired once when the match clock enters its
   /// last minute.
   double _minuteT = 0;
@@ -119,6 +135,11 @@ class _BermudaViewState extends State<BermudaView>
 
   /// v6 score table avatars per global seat (ANIX avatar id or photo url), exchanged on the live channel ('fs_av').
   final Map<int, String> _avatars = <int, String>{};
+  /// Uploaded custom-team crest per global online seat, exchanged with the avatar event.
+  final Map<int, String> _customTeamUrls = <int, String>{};
+
+  /// The team id saved in the prefs (a shared custom team may load after the prefs; see _customTeamsChanged).
+  String? _savedTeam;
   StreamSubscription<NetLiveMessage>? _liveSub;
   bool _disposed = false;
   bool _paused = false;
@@ -143,8 +164,12 @@ class _BermudaViewState extends State<BermudaView>
   /// v5 shared picks: team picks logged so far ({'a': 'tpick'}, or a side's 'setup'), by side.
   final Map<int, String> _teamPicks = <int, String>{};
 
-  /// v5: the online pick screens were opened on this phone; they stay up (waiting) until the match starts.
-  bool _pickShown = false;
+  /// Pass-and-play (offline, no bot): which side the lobby is picking for (0 = team one, 1 = team two) and side two's
+  /// pick (null = a random opponent as before).
+  int _pickSide = 0;
+  String? _oppTeam;
+  int? _oppForm;
+  bool get _localTwo => !online && !launch.vsBot;
 
   GameLaunch get launch => widget.launch;
   bool get online => launch.online;
@@ -160,6 +185,12 @@ class _BermudaViewState extends State<BermudaView>
     super.initState();
     _ticker = createTicker(_onTick)..start();
     WidgetsBinding.instance.addObserver(this);
+    // shared custom teams (تیم‌های اختصاصی): the lobby lists them; reload so a team made since the last load shows
+    FsCustomTeams.instance.addListener(_customTeamsChanged);
+    final OnlineService? onl = OnlineService.current;
+    if (onl?.client != null && onl!.client!.auth.currentSession != null) {
+      unawaited(FsCustomTeams.instance.load(onl.client!));
+    }
     unawaited(audio.init());
     final Future<void> prefs = _loadPrefs();
     final NetLink? net = launch.net;
@@ -191,12 +222,14 @@ class _BermudaViewState extends State<BermudaView>
     try {
       final SharedPreferences p = await SharedPreferences.getInstance();
       final String t = p.getString('bm.team') ?? kDefaultTeam;
+      _savedTeam = t;
       my = _Setup(
-          // Only an owned (or free) team can be fielded; locked teams fall back to the default free team.
-          GemShop.instance.usableTeam(kBmTeams.any((BmTeam x) => x.id == t) ? t : kDefaultTeam),
+          // Only an owned (or free) team can be fielded; locked teams fall back to the default free team. A shared
+          // custom team (cx_...) may not be in the list yet; usableTeam checks its ownership.
+          GemShop.instance.usableTeam(kBmTeams.any((BmTeam x) => x.id == t) || bmIsCustomTeamId(t) ? t : kDefaultTeam),
           (p.getInt('bm.form') ?? 0).clamp(0, kBmForms.length - 1).toInt(),
-          (p.getInt('bm.field') ?? 0).clamp(0, kBmFields.length - 1).toInt(),
-          (p.getInt(kBmBallPref) ?? kBmDefaultBall).clamp(0, NB - 1).toInt());
+          bmFieldIndex(p.getInt(kBmFieldPref)),
+          bmBallIndex(p.getInt(kBmBallPref)));
       _cat = math.max(0,
           kBmCats.indexWhere((List<Object> c) => c[0] == bmTeam(my.team).cat));
       audio.announcer = p.getBool('bm.ann') ??
@@ -210,7 +243,7 @@ class _BermudaViewState extends State<BermudaView>
       final SharedPreferences p = await SharedPreferences.getInstance();
       await p.setString('bm.team', my.team);
       await p.setInt('bm.form', my.form);
-      await p.setInt('bm.field', my.field);
+      await p.setInt(kBmFieldPref, my.field);
       await p.setInt(kBmBallPref, my.ball);
     } catch (_) {}
   }
@@ -225,7 +258,12 @@ class _BermudaViewState extends State<BermudaView>
 
   void _announceAvatar() {
     try {
-      launch.net?.sendLive('fs_av', <String, dynamic>{'av': _myAvatar});
+      launch.net?.sendLive('fs_av', <String, dynamic>{
+        'av': _myAvatar,
+        // custom team crest (network url) + its id, so a phone that has not loaded that team still draws it
+        'team': bmTeam(my.team).crestUrl ?? '',
+        'tid': my.team,
+      });
     } catch (_) {}
   }
 
@@ -235,6 +273,15 @@ class _BermudaViewState extends State<BermudaView>
     if (av is! String || av.isEmpty || av.length > 512) return;
     final bool known = _avatars.containsKey(m.seat);
     _avatars[m.seat] = av;
+    final dynamic team = m.data['team'];
+    if (team is String && team.startsWith('https://') && team.length <= 2048) {
+      _customTeamUrls[m.seat] = team;
+      if (stage == 'match' && cfg != null) unawaited(_loadMatchImages(cfg!));
+    }
+    final dynamic tid = m.data['tid'];
+    if (tid is String && bmIsCustomTeamId(tid) && FsCustomTeams.instance.byTeamId(tid) == null) {
+      unawaited(FsCustomTeams.instance.ensure(OnlineService.current?.client, tid));
+    }
     // a phone we had not heard from yet (joined late): tell it ours once
     if (!known) _announceAvatar();
   }
@@ -245,6 +292,23 @@ class _BermudaViewState extends State<BermudaView>
     _last = el;
     if (dt < 0) dt = 0;
     _nowMs = el.inMicroseconds / 1000;
+    // v9: while the Flame scene is running the match it advances the game (FsFlameGame.update -> _advance); this
+    // ticker only keeps the clock for the painters and drives the screens before / without the Flame scene.
+    if (stage == 'match' && _nowMs - _flameAtMs < 250) return;
+    _advance(dt);
+  }
+
+  /// Time of the last Flame frame on the ticker's clock (ms).
+  double _flameAtMs = -1e9;
+
+  void _flameFrame(double dt) {
+    if (_disposed) return;
+    _flameAtMs = _nowMs;
+    _advance(dt);
+  }
+
+  /// One frame of the match screen: audio, toasts, the engine, clocks, net waiters and the end of the match.
+  void _advance(double dt) {
     audio.frame(dt);
     if (_toastT > 0) _toastT -= dt;
     if (_minuteT > 0) _minuteT -= dt;
@@ -270,16 +334,46 @@ class _BermudaViewState extends State<BermudaView>
           // v6: the score table comes up and the result is reported at once; the host holds its own result screen
           // until the table's countdown is over (GameResult.holdMs).
           _tableT = kFsScoreTableSeconds.toDouble();
-          _report(holdMs: kFsScoreTableSeconds * 1000);
+          // v13: online room matches offer "بازی مجدد" on the table; the host's result overlay waits while a rematch
+          // request is open (GameResult.holdUntil).
+          if (online && _rematch == null) {
+            _rematch = FsRematchController.forLink(launch.net,
+                tournamentMatchId: launch.tournamentMatchId, onGo: _goRematch);
+          }
+          _report(holdMs: kFsScoreTableSeconds * 1000, holdUntil: _rematch?.released);
           // v6.1 fix: the table is a child of build(), not of the per-frame builders: rebuild once to show it.
           if (mounted && !_disposed) setState(() {});
         }
       }
-      if (_tableT > 0) _tableT = math.max(0, _tableT - dt);
+      if (_tableT > 0) {
+        _tableT = math.max(0, _tableT - dt);
+        if (_tableT <= 0) _rematch?.tableDone();
+      }
       _checkSideLeft();
     }
     if (_disposed) return;
     _frame.value++;
+    if (stage == 'match') _hud.value = _hudData();
+  }
+
+  /// The scoreboard's current data (quantised so it changes a few times a second, not every frame).
+  FsHudData _hudData() {
+    final bool hasBodies = e.bodies.isNotEmpty;
+    return FsHudData(
+      clock: _clockText(),
+      red: ((e.mt > 0 && !e.sd ? bmClockRed(e.mleft, e.mt) : (e.sd ? 1.0 : 0.0)) * 20).round() / 20,
+      turn: e.phase == 'aim' && e.tt > 0 ? ((e.tleft / e.tt).clamp(0.0, 1.0) * 60).round() / 60 : -1,
+      turnMine: e.turn == 0,
+      score0: e.score[0],
+      score1: e.score[1],
+      name0: hasBodies ? e.nm(0) : '',
+      name1: hasBodies ? e.nm(1) : '',
+      crest0: _hudCrests[0],
+      crest1: _hudCrests[1],
+      pulse0: (e.shake[0].clamp(0.0, 1.0) * 10).round() / 10,
+      pulse1: (e.shake[1].clamp(0.0, 1.0) * 10).round() / 10,
+      formation: _tableT < 0,
+    );
   }
 
   void _ensureBallRenderer() {
@@ -382,10 +476,10 @@ class _BermudaViewState extends State<BermudaView>
     final math.Random r = math.Random(launch.seed);
     // Bots / local opponents draw from every category (Club, National, Luxury) so all supplied crests appear.
     final List<BmTeam> clubs = kBmTeams
-        .where((BmTeam t) => t.id != my.team && (t.cat != 'lux' || r.nextInt(4) == 0))
+        .where((BmTeam t) => t.id != my.team && t.cat != 'custom' && (t.cat != 'nx' || r.nextInt(4) == 0))
         .toList();
     final FsMatchPick? pk = widget.pick;
-    final String opp = pk != null ? pk.teams[1] : clubs[r.nextInt(clubs.length)].id;
+    final String opp = pk != null ? pk.teams[1] : (_localTwo ? _oppTeam : null) ?? clubs[r.nextInt(clubs.length)].id;
     final String mine = pk != null ? pk.teams[0] : my.team;
     final bool bot = launch.vsBot;
     final int lvl = switch (launch.difficulty) {
@@ -400,7 +494,7 @@ class _BermudaViewState extends State<BermudaView>
       teams: <String>[mine, opp],
       form: pk != null
           ? <int>[pk.forms[0].clamp(0, kBmForms.length - 1).toInt(), pk.forms[1].clamp(0, kBmForms.length - 1).toInt()]
-          : <int>[my.form, r.nextInt(kBmForms.length)],
+          : <int>[my.form, (_localTwo ? _oppForm : null) ?? r.nextInt(kBmForms.length)],
       names: bot
           ? <String>[
               me,
@@ -435,9 +529,11 @@ class _BermudaViewState extends State<BermudaView>
     final dynamic mine = rp['$seat'];
     final Map<String, dynamic> m = mine is Map ? Map<String, dynamic>.from(mine) : <String, dynamic>{};
     final String t = '${m['team'] ?? ''}';
-    final String team = kBmTeams.any((BmTeam x) => x.id == t) ? t : (seat == 0 ? 'club0' : 'club1');
+    final String team =
+        kBmTeams.any((BmTeam x) => x.id == t) || bmIsCustomTeamId(t) ? t : (seat == 0 ? 'club0' : 'club1');
     int i(dynamic v, int max) => ((v as num?)?.toInt() ?? 0).clamp(0, max - 1).toInt();
-    return _Setup(team, i(m['form'], kBmForms.length), i(st['field'], kBmFields.length), i(st['ball'] ?? kBmDefaultBall, NB));
+    return _Setup(team, i(m['form'], kBmForms.length), bmFieldIndex((st['field'] as num?)?.toInt()),
+        bmBallIndex((st['ball'] as num?)?.toInt()));
   }
 
   /// Side name: "Ali" for 1v1, "Ali · Sara · Reza" for team games.
@@ -519,15 +615,41 @@ class _BermudaViewState extends State<BermudaView>
     }
   }
 
+  Future<ui.Image?> _imgNetwork(String? url, {int? w}) async {
+    if (url == null || !url.startsWith('http')) return null;
+    try {
+      final ByteData data = await NetworkAssetBundle(Uri.parse(url)).load(url);
+      final ui.Codec codec = await ui.instantiateImageCodec(data.buffer.asUint8List(), targetWidth: w);
+      final ui.FrameInfo f = await codec.getNextFrame();
+      codec.dispose();
+      return f.image;
+    } catch (err) {
+      debugPrint('bermuda network image $url: $err');
+      return null;
+    }
+  }
+
   Future<void> _loadMatchImages(BmConfig c) async {
-    final BmFieldS f = kBmFields[c.field];
+    final BmFieldS f = kBmFields[bmFieldIndex(c.field)];
+    // shared custom teams draw their uploaded crest: from the list (fetched now when this phone does not know the
+    // team yet), else the url the other phone sent with its avatar; the team's fallback disc when both fail
+    Future<String?> crest(int side) async {
+      final String id = c.teams[e.ct(side)];
+      if (!bmIsCustomTeamId(id)) return null;
+      final FsCustomTeam? t = await FsCustomTeams.instance.ensure(OnlineService.current?.client, id);
+      return t?.crestUrl ?? (online ? _customTeamUrls[side] : null);
+    }
+
+    final List<String?> crests = await Future.wait(<Future<String?>>[crest(0), crest(1)]);
+    if (!mounted || _disposed) return;
+    final String? team0Custom = crests[0], team1Custom = crests[1];
     final List<ui.Image?> r = await Future.wait(<Future<ui.Image?>>[
       _img(f.asset),
       f.builtInGoals ? Future<ui.Image?>.value(null) : _img('${_a}goals/${f.gs}.webp'),
-      // v6: the classic ball is drawn by the 3D roller from its flat art (no sprite sheet)
-      c.ball == kBmClassicBallIndex ? _img(kBmClassicBall) : Future<ui.Image?>.value(null),
-      _img(bmTeam(c.teams[e.ct(0)]).asset, w: 192),
-      _img(bmTeam(c.teams[e.ct(1)]).asset, w: 192),
+      // v9: every ball is a flat art the 3D roller rolls with the ball's motion (no sprite sheet)
+      _img(bmBallArt(c.ball)),
+      _imgNetwork(team0Custom, w: 192).then((ui.Image? x) => x ?? _img(bmTeam(c.teams[e.ct(0)]).asset, w: 192)),
+      _imgNetwork(team1Custom, w: 192).then((ui.Image? x) => x ?? _img(bmTeam(c.teams[e.ct(1)]).asset, w: 192)),
     ]);
     if (!mounted || _disposed) {
       for (final ui.Image? i in r) {
@@ -552,9 +674,28 @@ class _BermudaViewState extends State<BermudaView>
       im.ballSheet = sheet;
       im.ballFrames = anim.frames;
       im.ballFrameMs = anim.frameMs;
+      im.ballTimed = anim.gifTimed;
+      im.animMs = 0;
     }
     im.team[0] = r[3];
     im.team[1] = r[4];
+    _refreshHudCrests();
+  }
+
+  /// v12: the scoreboard holds its own handles (clones) of the two crests, so replacing / disposing the match images
+  /// never leaves it painting a disposed image: the old handles are released only after the next frame, when the
+  /// scoreboard has been rebuilt with the new ones.
+  List<ui.Image?> _hudCrests = <ui.Image?>[null, null];
+  void _refreshHudCrests() {
+    final List<ui.Image?> old = _hudCrests;
+    _hudCrests = <ui.Image?>[im.team[0]?.clone(), im.team[1]?.clone()];
+    if (stage == 'match') _hud.value = _hudData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final ui.Image? i in old) {
+        i?.dispose();
+      }
+    });
+    WidgetsBinding.instance.scheduleFrame();
   }
 
   void _end(List<int> local) {
@@ -582,7 +723,7 @@ class _BermudaViewState extends State<BermudaView>
     }
   }
 
-  void _report({bool forfeit = false, int? sideLeft, bool leftTeam = false, int? holdMs}) {
+  void _report({bool forfeit = false, int? sideLeft, bool leftTeam = false, int? holdMs, Future<void>? holdUntil}) {
     if (_reported) return;
     _reported = true;
     final List<int> sc = e.score; // local: [me, opponent]
@@ -611,6 +752,7 @@ class _BermudaViewState extends State<BermudaView>
       tournamentMatchId: launch.tournamentMatchId,
       endsMatch: !leftTeam,
       holdMs: holdMs,
+      holdUntil: holdUntil,
       summaryFa:
           'نتیجه‌ی فوتبال: ${sc[0]} - ${sc[1]}${forfeit ? ' (انصراف)' : ''}',
       summaryEn:
@@ -659,13 +801,30 @@ class _BermudaViewState extends State<BermudaView>
           }
           if (_setups.containsKey(mySeat)) {
             stage = 'waiting';
-            _armSetupFallback();
           } else if (mySeat > 1) {
             // team games: seats 0 and 1 pick their side's team / formation; the others wait for them.
             stage = 'waiting';
           }
+          // ANIX PRO watchdog on every phone from the moment the log is replayed (picks included).
+          _armSetupFallback();
+          // v13 rematch: this phone's team / formation (and the host's pitch / ball) from the match just played are
+          // logged at once, so the rematch starts without the pick screens.
+          final Map<String, dynamic>? carry = FsRematchCarry.take(launch.net!);
+          final _Setup? cs = carry == null ? null : _Setup.fromJson(carry);
+          if (cs != null && mySeat <= 1 && !_setups.containsKey(mySeat) && stage != 'match') {
+            my = _Setup(GemShop.instance.usableTeam(cs.team), cs.form, cs.field, cs.ball);
+            _sendSetup();
+          }
         }
       }
+      if (mounted) setState(() {});
+      return;
+    }
+    if (m.kind == 'ownSetup') {
+      // our own setup (or a fallback we logged for a side) is confirmed in the log at this point of the stream
+      final _Setup? s = _Setup.fromJson(m.data);
+      if (s != null && !_setups.containsKey(m.seat)) _setups[m.seat] = s;
+      _maybeStartOnline();
       if (mounted) setState(() {});
       return;
     }
@@ -768,76 +927,96 @@ class _BermudaViewState extends State<BermudaView>
   void _sendSetup() {
     final NetLink? net = launch.net;
     if (net == null) return;
-    _setups[mySeat] = _Setup(GemShop.instance.usableTeam(my.team), my.form, my.field, my.ball);
-    net.send(_setups[mySeat]!.toJson());
+    final _Setup mine = _Setup(GemShop.instance.usableTeam(my.team), my.form, my.field, my.ball);
+    // ANIX PRO: the setup counts only once it is in the server log (order-independent 'fl' move, re-posted after a
+    // seq race). A default setup logged FOR this side before it (fallback of another phone) wins on every phone, so
+    // this phone adopts the log instead of its local pick: both phones always start from the same setups.
     stage = 'waiting';
-    _maybeStartOnline();
     _armSetupFallback();
+    unawaited(net.send(<String, dynamic>{...mine.toJson(), kNetFloat: true}).then((bool ok) {
+      if (_disposed) return;
+      if (ok) {
+        _inbox?.add(NetMove(seq: -2, seat: mySeat, kind: 'ownSetup', data: mine.toJson()));
+      } else {
+        _setupSendFailed = true;
+        if (mounted) setState(() {});
+      }
+    }));
     setState(() {});
   }
 
-  /// Seconds this phone waits, after sending its own setup, for the other side's (v5: both phones open the formation
-  /// screen on the same logged team pick and it times out after 15 s; this covers a phone that left or never opened
-  /// the picks). Was 75 with the v4 45 s team screen.
-  static const int kOnlineSetupWaitSeconds = 25;
 
+  /// ANIX PRO watchdog: after this many seconds without a match the waiting screen offers to leave.
+  static const int kOnlineStallSeconds = 75;
+
+  /// Seconds from the end of the log replay (the picks open) before missing setups are filled in: the shared pick
+  /// time (team 15 s + grace 3 s + formation 15 s) plus a margin, so a slow but present opponent always gets to pick.
+  static const int kOnlineFirstFillSeconds = 45;
+
+  /// A send of this phone's setup was refused (offline / match over): the waiting screen shows retry / leave.
+  bool _setupSendFailed = false;
+  Timer? _stallTimer;
+  int _waitedSeconds = 0;
+
+  /// The pre-match watchdog (every phone, every seat): every 20 s (from [kOnlineFirstFillSeconds]) without a match it logs a
+  /// default setup FOR each side (0 / 1) that still has none, so an absent or silent side can never hold the match
+  /// on the pick screens. The first setup per side in the log wins on every phone, so this never desyncs.
   void _armSetupFallback() {
-    if (_setupFallback != null || mySeat > 1 || stage == 'match') return;
-    _setupFallback = Timer(const Duration(seconds: kOnlineSetupWaitSeconds), () {
-      final NetLink? net = launch.net;
-      final int opp = 1 - mySeat;
-      if (_disposed || net == null || stage == 'match' || _setups.containsKey(opp)) return;
-      final _Setup d = (_roomPrefs != null ? _prefSetup(opp) : null) ??
-          _Setup(opp == 0 ? 'club0' : 'club1', 0, my.field, my.ball);
-      net.send(<String, dynamic>{...d.toJson(), 'for': opp});
+    if (_stallTimer != null || stage == 'match') return;
+    _stallTimer = Timer.periodic(const Duration(seconds: 1), (Timer t) {
+      if (_disposed || stage == 'match') {
+        t.cancel();
+        return;
+      }
+      _waitedSeconds++;
+      if (_onlinePicking) {
+        if (_waitedSeconds >= kOnlinePickSeconds) {
+          _sendSetup(); // time is up: the pick on screen goes out
+        } else if (mounted) {
+          setState(() {}); // the countdown on the READY button
+        }
+      }
+      // seats 0 / 1 fill in after the shared pick time; seats 2+ (team games) a little later
+      final int first = kOnlineFirstFillSeconds + (mySeat > 1 ? 10 : 0);
+      if (_waitedSeconds >= first && (_waitedSeconds - first) % 20 == 0) _fillMissingSetups();
+      if (_waitedSeconds == kOnlineStallSeconds && mounted) setState(() {});
     });
   }
 
-  /// v4: the online team / formation screens (seats 0 and 1, before their setup is logged).
-  bool get _onlinePicking =>
-      online &&
-      _netReady &&
-      mySeat <= 1 &&
-      ((stage == 'setup' && !_setups.containsKey(mySeat)) || (stage == 'waiting' && _pickShown));
-
-  Widget _onlinePick() {
-    _pickShown = true;
-    final NetLink net = launch.net!;
-    final int opp = 1 - mySeat;
-    String nm(int s) => s < net.names.length && net.names[s].isNotEmpty ? net.names[s] : (s == mySeat ? 'من' : 'حریف');
-    final ProfileService? pr = ProfileService.current;
-    return FsOnlinePick(
-      key: const ValueKey<String>('online-pick'),
-      team: my.team,
-      form: my.form,
-      opponentTeam: _setups[opp]?.team ?? _teamPicks[opp] ?? (opp == 0 ? 'club0' : 'club1'),
-      opponentTeamIn: _teamPicks.containsKey(opp) || _setups.containsKey(opp),
-      onTeam: (String t) {
-        final NetLink? n = launch.net;
-        if (_disposed || n == null || _teamPicks.containsKey(mySeat) || _setups.containsKey(mySeat)) return;
-        final String team = GemShop.instance.usableTeam(t);
-        _teamPicks[mySeat] = team;
-        n.send(<String, dynamic>{'a': 'tpick', 'team': team});
-        if (mounted) setState(() {});
-      },
-      players: <FsSidePlayer>[
-        FsSidePlayer(
-            name: nm(mySeat),
-            portrait: 'assets/ui/anix/avatars/${pr?.portrait ?? '01-vanguard'}.webp',
-            badge: 'سطح ${fsFa(pr?.level ?? 1)}'),
-        FsSidePlayer(name: nm(opp), portrait: 'assets/ui/anix/avatars/02-cyber-scout.webp', badge: 'حریف'),
-      ],
-      topLane: 50,
-      onBar: () {},
-      onDone: (String t, int f) {
-        if (_disposed || stage != 'setup' || _setups.containsKey(mySeat)) return;
-        my.team = GemShop.instance.usableTeam(t);
-        my.form = f;
-        unawaited(_savePrefs());
-        _sendSetup();
-      },
-    );
+  void _fillMissingSetups() {
+    final NetLink? net = launch.net;
+    if (_disposed || net == null || stage == 'match') return;
+    for (final int side in <int>[0, 1]) {
+      if (_setups.containsKey(side)) continue;
+      // our own side: our real pick is in flight (or about to be); only fill the OTHER sides
+      if (side == mySeat) continue;
+      final _Setup d = (_roomPrefs != null ? _prefSetup(side) : null) ??
+          _Setup(side == 0 ? 'club0' : 'club1', 0, my.field, my.ball);
+      unawaited(net.send(<String, dynamic>{...d.toJson(), 'for': side, kNetFloat: true}).then((bool ok) {
+        if (ok && !_disposed) {
+          _inbox?.add(NetMove(seq: -2, seat: side, kind: 'ownSetup', data: d.toJson()));
+        }
+      }));
+    }
   }
+
+  /// Shown on the waiting screen after [kOnlineStallSeconds] (or a refused send): never a dead end.
+  bool get _stalled => _setupSendFailed || _waitedSeconds >= kOnlineStallSeconds;
+
+  void _leaveStalled() {
+    final NetLink? net = launch.net;
+    if (net != null) unawaited(net.send(<String, dynamic>{'a': 'leave', 'seat': mySeat}, kind: 'forfeit'));
+    _report(forfeit: true);
+  }
+
+  /// Seconds the online lobby gives seats 0 / 1 to pick (the old team 15 s + formation 15 s). When they run out the
+  /// shown pick is sent, so an idle phone never holds the match ([kOnlineFirstFillSeconds] covers an absent one).
+  static const int kOnlinePickSeconds = 30;
+
+  /// This phone still has to pick its side online (seats 0 / 1; team-game seats 2+ wait for them).
+  bool get _onlinePicking => online && _netReady && mySeat <= 1 && stage == 'setup' && !_setups.containsKey(mySeat);
+
+  int get _pickLeft => math.max(0, kOnlinePickSeconds - _waitedSeconds);
 
   // ------------------------------------------------------------------ in-match formation change
   /// Global side whose formation the button changes: online this phone's side, vs bot the player's side (0),
@@ -969,10 +1148,22 @@ class _BermudaViewState extends State<BermudaView>
     }
   }
 
+  void _customTeamsChanged() {
+    if (!mounted || _disposed) return;
+    // a saved custom team that was not loaded yet when the prefs were read
+    if (my.team == kDefaultTeam && _savedTeam != null && bmIsCustomTeamId(_savedTeam!) &&
+        GemShop.instance.usableTeam(_savedTeam!) == _savedTeam) {
+      my.team = _savedTeam!;
+    }
+    setState(() {});
+  }
+
   @override
   void dispose() {
+    FsCustomTeams.instance.removeListener(_customTeamsChanged);
     _disposed = true;
     _setupFallback?.cancel();
+    _stallTimer?.cancel();
     unawaited(_liveSub?.cancel());
     WidgetsBinding.instance.removeObserver(this);
     _ticker.dispose();
@@ -984,90 +1175,166 @@ class _BermudaViewState extends State<BermudaView>
     audio.dispose();
     im.dispose();
     _frame.dispose();
+    _hud.dispose();
+    for (final ui.Image? i in _hudCrests) {
+      i?.dispose();
+    }
     e.stop();
+    _rematch?.dispose();
     super.dispose();
   }
+
+  /// v13: everyone accepted the rematch and its match exists: keep this phone's picks for it and leave the finished
+  /// match page; the room page opens the new match like any other.
+  void _goRematch(String matchId) {
+    final NetLink? net = launch.net;
+    final BmConfig? c = cfg;
+    if (net == null || _disposed) return;
+    if (c != null && mySeat <= 1) {
+      final int side = _mySide;
+      FsRematchCarry.put(net.matchId, net.names, _Setup(c.teams[side], c.form[side], c.field, c.ball).toJson());
+    }
+    if (!mounted) return;
+    final ModalRoute<dynamic>? route = ModalRoute.of(context);
+    final NavigatorState? nav = Navigator.maybeOf(context);
+    if (route == null || nav == null) return;
+    if (route.isCurrent) {
+      nav.pop();
+    } else {
+      nav.removeRoute(route);
+    }
+  }
+
+  /// ANIX PRO: the pre-match screen is never a dead end. After [kOnlineStallSeconds] without a match (or a refused
+  /// send) it says so and offers to try again (re-logs any missing setup) or to leave.
+  Widget _stallBar() => Positioned(
+        left: 18,
+        right: 18,
+        bottom: 28 + MediaQuery.paddingOf(context).bottom,
+        child: Material(
+          key: const ValueKey<String>('online-stall'),
+          color: const Color(0xF0141210),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+            child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+              Text(
+                  _setupSendFailed
+                      ? 'ارسال انتخابت به سرور ناموفق بود.'
+                      : 'حریف هنوز آماده نشده یا اتصالش قطع است.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13.5)),
+              const SizedBox(height: 10),
+              Row(children: <Widget>[
+                Expanded(
+                  child: FilledButton(
+                    key: const ValueKey<String>('online-stall-retry'),
+                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFFD4AF37), foregroundColor: Colors.black),
+                    onPressed: () {
+                      setState(() {
+                        _waitedSeconds = 0;
+                        if (_setupSendFailed && !_setups.containsKey(mySeat)) {
+                          _setupSendFailed = false;
+                          _sendSetup();
+                        }
+                      });
+                      _fillMissingSetups();
+                    },
+                    child: const Text('تلاش دوباره'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton(
+                    key: const ValueKey<String>('online-stall-leave'),
+                    style: OutlinedButton.styleFrom(foregroundColor: Colors.white),
+                    onPressed: _leaveStalled,
+                    child: const Text('خروج'),
+                  ),
+                ),
+              ]),
+            ]),
+          ),
+        ),
+      );
 
   // ------------------------------------------------------------------ build
   @override
   Widget build(BuildContext context) {
     if (stage != 'match') {
+      _syncImmersive(false);
       // v4: no menu soundtrack on the screen that only hands over to an auto-started match (offline intro), and
       // none during a match; it comes back on the setup screen after leaving a match.
       if (launch.soundOn && !_paused && _visible && !widget.autoStart) unawaited(audio.music(true));
-      if (_onlinePicking) return _onlinePick();
-      return _setupScreen(context);
+      final Widget pre = _setupScreen(context);
+      if (!online || !_stalled) return pre;
+      return Stack(fit: StackFit.expand, children: <Widget>[pre, _stallBar()]);
     }
     final double dpr = math.min(MediaQuery.devicePixelRatioOf(context), 1.75);
-    // Layout only: centre the pitch (goals included) in the space between the scoreboard and the
-    // gesture bar, so neither the HUD nor the system bars cover it.
+    // v9 layout: the top bar and the bottom strip are outside the pitch; the pitch art is fitted between them.
     final EdgeInsets pad = MediaQuery.paddingOf(context);
-    view.insetTop = pad.top + kBmScoreboardHeight;
-    view.insetBottom = pad.bottom + 8;
+    view.insetTop = pad.top + kFsTopBarHeight;
+    view.insetBottom = pad.bottom + (online ? kFsBottomStripHeight : kFsBottomStripCompact);
     final bool fancy = launch.fancyEffects && !launch.reducedMotion;
+    final FsFlameGame game = _flame ??= FsFlameGame(
+      painter: BmPainter(e, im, view, () => _nowMs, dpr, fancy, repaint: _frame),
+      onFrame: _flameFrame,
+      pointer: FsPointerSink(
+        down: e.pointerDown,
+        move: e.pointerMove,
+        up: e.pointerUp,
+        cancel: e.pointerCancel,
+      ),
+    );
+    _syncImmersive(true);
     return Directionality(
       textDirection: TextDirection.ltr,
       child: ColoredBox(
         color: const Color(0xFF03060D),
         child: Stack(children: <Widget>[
-          Positioned.fill(
-            child: Listener(
-              behavior: HitTestBehavior.opaque,
-              onPointerDown: (PointerDownEvent ev) {
-                final Offset w = view.toWorld(ev.localPosition);
-                e.pointerDown(w.dx, w.dy);
-              },
-              onPointerMove: (PointerMoveEvent ev) {
-                final Offset w = view.toWorld(ev.localPosition);
-                e.pointerMove(w.dx, w.dy);
-              },
-              onPointerUp: (_) => e.pointerUp(),
-              onPointerCancel: (_) => e.pointerCancel(),
-              child: CustomPaint(
-                painter: BmPainter(e, im, view, () => _nowMs, dpr, fancy,
-                    repaint: _frame),
-                size: Size.infinite,
-              ),
-            ),
-          ),
-          // vignette (#vig)
-          const Positioned.fill(
-            child: IgnorePointer(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    radius: .95,
-                    colors: <Color>[
-                      Color(0x00000000),
-                      Color(0x00000000),
-                      Color(0x94050316)
-                    ],
-                    stops: <double>[0, .52, 1],
-                  ),
+          // The playfield: a Flame scene (pitch, discs, ball, goals, score displays and touch input).
+          Positioned.fill(child: GameWidget<FsFlameGame>(game: game)),
+          Positioned.fill(child: IgnorePointer(child: _overlays())),
+          // Top bar: the match clock, the menu and the formation button, nothing else.
+          Positioned(
+            left: 0,
+            right: 0,
+            top: pad.top,
+            height: kFsTopBarHeight,
+            child: RepaintBoundary(
+              child: ValueListenableBuilder<FsHudData>(
+                valueListenable: _hud,
+                builder: (BuildContext context, FsHudData h, Widget? __) => FsMatchTopBar(
+                  clock: h.clock,
+                  red: h.red,
+                  turn: h.turn,
+                  turnMine: h.turnMine,
+                  scores: <int>[h.score0, h.score1],
+                  names: <String>[h.name0, h.name1],
+                  crests: <ui.Image?>[h.crest0, h.crest1],
+                  pulse: <double>[h.pulse0, h.pulse1],
+                  fa: launch.isFa,
+                  menuLabel: launch.tx('منو', 'Menu'),
+                  formLabel: launch.tx('تغییر ترکیب', 'Formation'),
+                  onMenu: _pause,
+                  onFormation: h.formation ? _changeFormation : null,
                 ),
               ),
             ),
           ),
+          // Bottom strip (outside the pitch): the v6 "one minute left" toast; online the host page centres the voice
+          // controls here.
           Positioned(
-              left: 0, right: 0, top: 0, child: SafeArea(child: _scoreboard())),
-          Positioned.fill(child: IgnorePointer(child: _overlays())),
-          if (_tableT >= 0) Positioned.fill(child: _scoreTable()),
-          Positioned(
-            left: 0,
-            bottom: 12 + MediaQuery.paddingOf(context).bottom,
-            child: FsBarHandle(players: cfg?.names.length ?? 2, onTap: _pause),
-          ),
-          // v6 reference toast "یک دقیقه تا پایان بازی" (dark pill beside the game bar handle, ~3 s).
-          Positioned(
-            left: 100,
+            left: 8,
             right: 8,
-            bottom: 12 + MediaQuery.paddingOf(context).bottom,
+            bottom: pad.bottom,
+            height: kFsBottomStripHeight,
             child: IgnorePointer(
               child: ValueListenableBuilder<int>(
                 valueListenable: _frame,
                 builder: (BuildContext context, int _, Widget? __) => _minuteT > 0 && _tableT < 0
                     ? Align(
-                        alignment: Alignment.centerLeft,
+                        alignment: online ? Alignment.centerLeft : Alignment.center,
                         child: BmMinuteToast(
                             text: launch.tx('یک دقیقه تا پایان بازی', 'One minute left'),
                             opacity: (_minuteT / .25).clamp(0.0, 1.0).toDouble()))
@@ -1075,16 +1342,50 @@ class _BermudaViewState extends State<BermudaView>
               ),
             ),
           ),
-          // Reference in-match "تغییر ترکیب" button (above the game bar handle, bottom left); not over the score table.
-          if (_tableT < 0)
-          Positioned(
-            left: 6,
-            bottom: 12 + MediaQuery.paddingOf(context).bottom + 48,
-            child: BmChangeFormButton(label: launch.tx('تغییر ترکیب', 'Formation'), onTap: _changeFormation),
-          ),
+          if (_tableT >= 0) Positioned.fill(child: _scoreTable()),
+          if (_tableT >= 0 && _rematch != null)
+            Positioned(
+              left: 24,
+              right: 24,
+              bottom: pad.bottom + 96,
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 360),
+                  child: FsRematchPanel(c: _rematch!, fa: launch.isFa),
+                ),
+              ),
+            ),
         ]),
       ),
     );
+  }
+
+  FsFlameGame? _flame;
+
+  /// Tests: the Flame scene of the running match (null before the match screen is built).
+  @visibleForTesting
+  FsFlameGame? get flameGame => _flame;
+
+  bool _immersiveSent = false;
+
+  /// Tells the host page (GameLaunch.immersive) that the match screen draws its own chrome, after this frame.
+  void _syncImmersive(bool on) {
+    if (_immersiveSent == on) return;
+    _immersiveSent = on;
+    final ValueNotifier<bool>? n = launch.immersive;
+    if (n == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_disposed) n.value = on;
+    });
+  }
+
+  /// The match clock: played time counting up (v3), "GOLDEN" in golden goal, empty for goal-limit matches.
+  String _clockText() {
+    if (e.mt <= 0) return '';
+    if (e.sd) return launch.tx('گل طلایی', 'GOLDEN');
+    final int el = math.min(e.mt, math.max(0, (e.mt - e.mleft).floor()));
+    final String c = '${(el ~/ 60).toString().padLeft(2, '0')}:${(el % 60).toString().padLeft(2, '0')}';
+    return launch.isFa ? fsFa(c) : c;
   }
 
   Widget _overlays() {
@@ -1203,296 +1504,201 @@ class _BermudaViewState extends State<BermudaView>
     return rows;
   }
 
-  Widget _scoreboard() {
-    return ValueListenableBuilder<int>(
-      valueListenable: _frame,
-      builder: (BuildContext context, int _, Widget? __) {
-        final NxThemeColors visual = NxThemeColors.of(context);
-        final double screenWidth = MediaQuery.sizeOf(context).width;
-        // A wide, shallow HUD gives names and scores room without covering the pitch.
-        // The host's exit + ORACLE buttons (48dp at 6dp from each edge) sit in the top corners:
-        // keep the scoreboard between them instead of under them.
-        final double sw = math.max(0, math.min(screenWidth - 2 * kBmHostButtonLane, 620));
-        final bool aim = e.phase == 'aim';
-        String clock = '';
-        // v6 reference banner: 0 = white plates / yellow clock, 1 = red; flashes over the last minute and stays red
-        // once the time is up (and in golden goal).
-        double red = 0;
-        if (e.mt > 0) {
-          if (e.sd) {
-            clock = launch.tx('گل طلایی', 'GOLDEN');
-            red = 1;
-          } else {
-            // v3 (owner request 2026-11-20): a natural match clock that counts the played time up in real
-            // seconds (00:00 -> match length) instead of counting down.
-            final int el = math.min(e.mt, math.max(0, (e.mt - e.mleft).floor()));
-            clock = '${(el ~/ 60).toString().padLeft(2, '0')}:${(el % 60).toString().padLeft(2, '0')}';
-            if (launch.isFa) clock = fsFa(clock);
-            red = bmClockRed(e.mleft, e.mt);
-          }
-        }
-        final int tl = math.max(0, e.tleft.ceil());
-
-        Widget team(int t) {
-          final bool on = aim && e.turn == t;
-          final Color accent = t == 0 ? visual.accent : visual.accentSecondary;
-          final Widget logo = Container(
-            width: 26,
-            height: 26,
-            padding: const EdgeInsets.all(2),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: visual.background.withValues(alpha: .78),
-              border: Border.all(
-                  color: on ? accent : visual.border.withValues(alpha: .56),
-                  width: on ? 1.6 : 1),
-              boxShadow: on
-                  ? <BoxShadow>[
-                      BoxShadow(
-                          color: accent.withValues(alpha: .42), blurRadius: 12)
-                    ]
-                  : null,
-            ),
-            child: ClipOval(
-                child: Image.asset(bmTeam(e.sel[e.ct(t)]).asset,
-                    cacheWidth: 96, fit: BoxFit.contain)),
-          );
-          final Widget identity = Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment:
-                  t == 0 ? CrossAxisAlignment.start : CrossAxisAlignment.end,
-              children: <Widget>[
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: <Widget>[
-                    if (on && t == 0) _TurnDot(color: accent),
-                    if (on && t == 0) const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(
-                        e.nm(t),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: t == 0 ? TextAlign.left : TextAlign.right,
-                        style: TextStyle(
-                            color: visual.text,
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w800),
-                      ),
-                    ),
-                    if (on && t == 1) const SizedBox(width: 4),
-                    if (on && t == 1) _TurnDot(color: accent),
-                  ],
-                ),
-              ],
-            ),
-          );
-          final List<Widget> children = t == 0
-              ? <Widget>[logo, const SizedBox(width: 6), identity]
-              : <Widget>[identity, const SizedBox(width: 6), logo];
-          return Expanded(
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 180),
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-              decoration: BoxDecoration(
-                color: on ? accent.withValues(alpha: .13) : Colors.transparent,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: on
-                        ? accent.withValues(alpha: .72)
-                        : Colors.transparent),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  // v6: on a narrow phone the chip keeps the name (the crest is on every disc) so the banner fits.
-                  LayoutBuilder(
-                      builder: (BuildContext context, BoxConstraints box) =>
-                          Row(children: box.maxWidth >= 84 ? children : <Widget>[identity])),
-                  // Reference turn clock: an orange bar under each name, full while waiting, draining toward the
-                  // left on the side whose turn it is.
-                  if (e.tt > 0)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 3),
-                      child: Container(
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: .45),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                        alignment: Alignment.centerLeft,
-                        child: FractionallySizedBox(
-                          widthFactor: on ? (e.tleft / e.tt).clamp(0.0, 1.0).toDouble() : 1,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(2),
-                              gradient: const LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: <Color>[Color(0xFFFFC23A), Color(0xFFFF8A00)],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          );
-        }
-
-        return Center(
-          child: SizedBox(
-            width: sw,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Container(
-                  padding: const EdgeInsets.all(5),
-                  decoration: BoxDecoration(
-                    color: visual.surface.withValues(alpha: .96),
-                    borderRadius: BorderRadius.circular(20),
-                    border:
-                        Border.all(color: visual.border.withValues(alpha: .78)),
-                    boxShadow: <BoxShadow>[
-                      BoxShadow(
-                          color: Colors.black.withValues(alpha: .34),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8)),
-                      BoxShadow(
-                          color: visual.accent.withValues(alpha: .10),
-                          blurRadius: 20),
-                    ],
-                  ),
-                  child: Row(
-                    children: <Widget>[
-                      team(0),
-                      // v6: the reference's score banner (white score plates either side of a yellow clock).
-                      BmScoreBanner(
-                        left: launch.isFa ? fsFa(e.score[0]) : '${e.score[0]}',
-                        right: launch.isFa ? fsFa(e.score[1]) : '${e.score[1]}',
-                        clock: clock,
-                        red: red,
-                      ),
-                      team(1),
-                    ],
-                  ),
-                ),
-                if (aim && e.tt > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 5),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: visual.surfaceRaised.withValues(alpha: .94),
-                        borderRadius: BorderRadius.circular(99),
-                        border: Border.all(
-                            color: (e.tleft < 5
-                                    ? const Color(0xFFFF697A)
-                                    : visual.border)
-                                .withValues(alpha: .8)),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 3),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            _TurnDot(
-                                color: e.tleft < 5
-                                    ? const Color(0xFFFF697A)
-                                    : visual.accent),
-                            const SizedBox(width: 5),
-                            Text(
-                              '${launch.tx('نوبت', 'TURN')} ${e.turn + 1}',
-                              style: TextStyle(
-                                  color: visual.muted,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: .5),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${tl}s',
-                              style: TextStyle(
-                                color: e.tleft < 5
-                                    ? const Color(0xFFFF8794)
-                                    : visual.text,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w900,
-                                fontFeatures: const <ui.FontFeature>[
-                                  ui.FontFeature.tabularFigures()
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  /// Locked team: confirm + buy with gems (server-side deduct and unlock). True when the team is now owned.
-  Future<bool> _buyTeam(BmTeam t) async {
-    final GemShop shop = GemShop.instance;
-    final int price = shop.teamPrice(t.id);
-    final bool fa = Localizations.localeOf(context).languageCode == 'fa';
+  /// Black-gold gem purchase confirmation (the app's Luxe look). True when the player confirmed.
+  Future<bool> _confirmGems({required Widget art, required String title, required String body, required int price}) async {
+    final bool fa = launch.isFa;
     final int bal = ProfileService.current?.gems ?? 0;
     final bool? ok = await showDialog<bool>(
       context: context,
-      builder: (BuildContext c) => AlertDialog(
-        backgroundColor: const Color(0xFF120A33),
-        title: Row(children: <Widget>[
-          SizedBox(width: 40, height: 40, child: Image.asset(t.asset, cacheWidth: 96)),
-          const SizedBox(width: 10),
-          Expanded(child: Text(t.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900))),
-        ]),
-        content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.asset(AnixAssets.sceneArenaPortal, height: 110, width: double.infinity, fit: BoxFit.cover, cacheWidth: 600),
-          ),
-          const SizedBox(height: 10),
-          Text(fa ? 'این تیم قفل است. با $price الماس بازش کن؟' : 'This team is locked. Unlock it for $price gems?',
-              style: const TextStyle(color: Colors.white)),
-          const SizedBox(height: 6),
-          Row(children: <Widget>[
-            const Icon(Icons.diamond_rounded, size: 16, color: Color(0xFF3BD0FF)),
-            const SizedBox(width: 4),
-            Text(fa ? 'موجودی: $bal' : 'Balance: $bal', style: const TextStyle(color: Color(0xFFBFB3E6))),
+      builder: (BuildContext c) => Directionality(
+        textDirection: fa ? TextDirection.rtl : TextDirection.ltr,
+        child: AlertDialog(
+          backgroundColor: Luxe.panel,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(LuxeRadius.md), side: const BorderSide(color: Luxe.gold3)),
+          title: Row(children: <Widget>[
+            SizedBox(width: 40, height: 40, child: art),
+            const SizedBox(width: 10),
+            Expanded(child: Text(title, style: const TextStyle(color: Luxe.ink, fontWeight: FontWeight.w900))),
           ]),
-        ]),
-        actions: <Widget>[
-          TextButton(onPressed: () => Navigator.pop(c, false), child: Text(fa ? 'انصراف' : 'Cancel')),
-          FilledButton.icon(
-            onPressed: bal >= price ? () => Navigator.pop(c, true) : null,
-            icon: const Icon(Icons.diamond_rounded, size: 16),
-            label: Text(fa ? 'خرید با $price' : 'Buy for $price'),
-          ),
-        ],
+          content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
+            Text(body, style: const TextStyle(color: Luxe.ink, height: 1.4)),
+            const SizedBox(height: 8),
+            Row(children: <Widget>[
+              const Icon(Icons.diamond_rounded, size: 16, color: Luxe.gold),
+              const SizedBox(width: 4),
+              Text(fa ? 'موجودی: ${fsFa(bal)}' : 'Balance: $bal', style: const TextStyle(color: Luxe.mute)),
+            ]),
+          ]),
+          actions: <Widget>[
+            TextButton(
+                style: TextButton.styleFrom(foregroundColor: Luxe.mute),
+                onPressed: () => Navigator.pop(c, false),
+                child: Text(fa ? 'انصراف' : 'Cancel')),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(backgroundColor: Luxe.gold, foregroundColor: Luxe.bg),
+              onPressed: bal >= price ? () => Navigator.pop(c, true) : null,
+              icon: const Icon(Icons.diamond_rounded, size: 16),
+              label: Text(fa ? 'خرید با ${fsFa(price)}' : 'Buy for $price'),
+            ),
+          ],
+        ),
       ),
     );
-    if (ok != true) return false;
+    return ok == true;
+  }
+
+  Future<bool> _buyTeam(BmTeam t) async {
+    final GemShop shop = GemShop.instance;
+    final int price = shop.teamPrice(t.id);
+    final bool fa = launch.isFa;
+    final String name = fa ? t.faName : t.name;
+    final bool custom = bmIsCustomTeamId(t.id);
+    final bool ok = await _confirmGems(
+      art: _crest(t),
+      title: name,
+      body: custom
+          ? (fa
+              ? 'تیم اختصاصی «$name» را یک بازیکن ساخته است (قدرت ۱۰). با ${fsFa(price)} الماس برای همیشه مال تو می‌شود.'
+              : 'A player made the custom team "$name" (power 10). Own it forever for $price gems.')
+          : (fa ? 'این تیم قفل است. با ${fsFa(price)} الماس بازش کن؟' : 'This team is locked. Unlock it for $price gems?'),
+      price: price,
+    );
+    if (!ok || !mounted) return false;
     final GemBuyResult r = await shop.buyTeam(t.id);
     if (!mounted) return r.ok;
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
-        content: Text(r.ok ? (fa ? '${t.name} باز شد ✓' : '${t.name} unlocked ✓') : gemErrorText(r.error, fa))));
+    luxeToast(context, r.ok ? (fa ? '$name باز شد ✓' : '$name unlocked ✓') : gemErrorText(r.error, fa));
     if (r.ok) setState(() {});
     return r.ok;
+  }
+
+  /// A team's round crest: the uploaded network crest of a shared custom team (fallback disc on error), else its art.
+  Widget _crest(BmTeam t, {double? cache = 128}) {
+    final String? url = t.crestUrl;
+    final Widget art = Image.asset(t.asset, cacheWidth: cache?.toInt());
+    if (url == null || url.isEmpty) return art;
+    return AspectRatio(
+        aspectRatio: 1,
+        child: Image.network(url, fit: BoxFit.contain, gaplessPlayback: true, errorBuilder: (_, __, ___) => art));
+  }
+
+  /// Optional custom team name (defaults to the player's name). Null when cancelled.
+  Future<String?> _askTeamName(String initial) async {
+    final bool fa = launch.isFa;
+    final TextEditingController ctl = TextEditingController(text: initial);
+    final String? name = await showDialog<String>(
+      context: context,
+      builder: (BuildContext c) => Directionality(
+        textDirection: fa ? TextDirection.rtl : TextDirection.ltr,
+        child: AlertDialog(
+          backgroundColor: Luxe.panel,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(LuxeRadius.md), side: const BorderSide(color: Luxe.gold3)),
+          title: Text(fa ? 'نام تیم اختصاصی' : 'Custom team name',
+              style: const TextStyle(color: Luxe.ink, fontWeight: FontWeight.w900)),
+          content: TextField(
+            controller: ctl,
+            autofocus: true,
+            maxLength: kFsCustomTeamNameMax,
+            style: const TextStyle(color: Luxe.ink),
+            cursorColor: Luxe.gold,
+            decoration: InputDecoration(
+              hintText: fa ? 'نام تیم' : 'Team name',
+              hintStyle: const TextStyle(color: Luxe.mute),
+              counterStyle: const TextStyle(color: Luxe.mute),
+              enabledBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Luxe.gold3)),
+              focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Luxe.gold)),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+                style: TextButton.styleFrom(foregroundColor: Luxe.mute),
+                onPressed: () => Navigator.pop(c),
+                child: Text(fa ? 'انصراف' : 'Cancel')),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: Luxe.gold, foregroundColor: Luxe.bg),
+              onPressed: () => Navigator.pop(c, ctl.text.trim()),
+              child: Text(fa ? 'ادامه' : 'Continue'),
+            ),
+          ],
+        ),
+      ),
+    );
+    ctl.dispose();
+    return name;
+  }
+
+  /// Custom team (تیم اختصاصی): buys the 1000-gem entitlement once, then the player picks a photo; the app cuts it to
+  /// a round crest and the server creates the shared team (power 10; free for its owner forever, 250 gems for
+  /// everyone else). Called again (long-press) it replaces the crest. True when the player's custom team exists.
+  Future<bool> _customTeam() async {
+    final bool fa = launch.isFa;
+    final OnlineService? net = OnlineService.current;
+    final GemShop shop = GemShop.instance;
+    if (net == null || !net.isOnline || net.isGuest || !shop.online) {
+      luxeToast(context, launch.tx('برای ساخت تیم اختصاصی باید آنلاین وارد حساب باشی', 'Sign in online to create a custom team'));
+      return false;
+    }
+    final bool creating = shop.myCustomTeam == null;
+    if (creating && !shop.ownsCustomTeam()) {
+      final int price = shop.customTeamPrice;
+      final bool ok = await _confirmGems(
+        art: const Icon(Icons.add_a_photo_rounded, color: Luxe.gold, size: 30),
+        title: launch.tx('تیم اختصاصی', 'Custom team'),
+        body: fa
+            ? 'با عکس دلخواهت تیم اختصاصی خودت را بساز (قدرت ۱۰). ساخت تیم ${fsFa(price)} الماس است؛ تیمت برای همیشه برای خودت رایگان است و در فهرست «تیم‌های اختصاصی» به بقیه با ${fsFa(kFsCustomTeamBuyPrice)} الماس فروخته می‌شود. عکس را هر زمان می‌توانی عوض کنی (نگه داشتن انگشت روی تیم).'
+            : 'Make your own team from a photo (power 10). Creating it costs $price gems; it is free for you forever and '
+                'other players can buy it in the Custom teams list for $kFsCustomTeamBuyPrice gems. Change the photo any time (long-press the team).',
+        price: price,
+      );
+      if (!ok || !mounted) return false;
+      final GemBuyResult r = await shop.buyCustomTeam();
+      if (!mounted) return false;
+      if (!r.ok) {
+        luxeToast(context, gemErrorText(r.error, fa));
+        return false;
+      }
+    }
+    String? name;
+    if (creating) {
+      name = await _askTeamName(ProfileService.current?.username.trim() ?? '');
+      if (name == null || !mounted) return false;
+    }
+    final XFile? file =
+        await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 1024, maxHeight: 1024, imageQuality: 92);
+    if (file == null || !mounted) return false;
+    final CustomTeamResult r = await shop.saveCustomTeam(await file.readAsBytes(), name: name);
+    if (!mounted) return false;
+    if (!r.ok) {
+      luxeToast(context, gemErrorText(r.error, fa));
+      return false;
+    }
+    // the opponent's phone learns the new crest with the avatar event
+    _announceAvatar();
+    luxeToast(context, launch.tx('تیم اختصاصی ذخیره شد ✓', 'Custom team saved ✓'));
+    setState(() {});
+    return true;
   }
 
   // ------------------------------------------------------------------ setup screen
   Widget _setupScreen(BuildContext context) {
     final bool waiting = stage == 'waiting' || (online && !_netReady);
     final bool chooseArena = !online || isHostSeat;
-    final List<BmTeam> teams =
-        kBmTeams.where((BmTeam t) => t.cat == kBmCats[_cat][0]).toList();
+    // pass-and-play: the lobby picks for team one or team two (side two needs no owned team)
+    final int pickSide = _localTwo ? _pickSide : 0;
+    final String sideTeam = pickSide == 1 ? (_oppTeam ?? '') : my.team;
+    final int sideForm = pickSide == 1 ? (_oppForm ?? -1) : my.form;
+    final String waitText = online && !_netReady
+        ? launch.tx('در حال اتصال به بازی…', 'Connecting to the match…')
+        : (online && mySeat > 1
+            ? launch.tx('هم‌تیمی‌ها تیم و ترکیب را انتخاب می‌کنند…', 'Your teammates are picking…')
+            : launch.tx('در انتظار حریف…', 'Waiting for the opponent…'));
+    final bool oppReady = online && _setups.containsKey(1 - _mySide);
+    // custom category: the "create" tile until the player made their team, then every shared custom team
+    final bool madeCustom = GemShop.instance.myCustomTeam != null;
+    final List<BmTeam> teams = kBmTeams
+        .where((BmTeam t) => t.cat == kBmCats[_cat][0] && !(madeCustom && t.id == kCustomTeamId))
+        .toList();
     final NxThemeColors visual = NxThemeColors.of(context);
 
     Widget sectionTitle(String title, String hint, IconData icon) => Padding(
@@ -1602,7 +1808,7 @@ class _BermudaViewState extends State<BermudaView>
                           Icon(Icons.sports_soccer_rounded,
                               size: 15, color: visual.accent),
                           const SizedBox(width: 6),
-                          Text('ANIX  /  MATCH LOBBY',
+                          Text('NEXORA  /  MATCH LOBBY',
                               style: TextStyle(
                                   color: visual.accent,
                                   fontSize: 9,
@@ -1633,6 +1839,26 @@ class _BermudaViewState extends State<BermudaView>
                             fontSize: 12,
                             fontWeight: FontWeight.w500),
                       ),
+                      if (online && _netReady && stage != 'match') ...<Widget>[
+                        const SizedBox(height: 8),
+                        Container(
+                          key: const ValueKey<String>('online-opp-status'),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(99),
+                            color: visual.background.withValues(alpha: .6),
+                            border: Border.all(color: (oppReady ? visual.accent : visual.border).withValues(alpha: .6)),
+                          ),
+                          child: Text(
+                              oppReady
+                                  ? launch.tx('حریف آماده است ✓', 'Opponent is ready ✓')
+                                  : launch.tx('حریف در حال انتخاب…', 'Opponent is picking…'),
+                              style: TextStyle(
+                                  color: oppReady ? visual.accent : visual.muted,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800)),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -1644,6 +1870,24 @@ class _BermudaViewState extends State<BermudaView>
                           launch.tx('تیم', 'YOUR TEAM'),
                           launch.tx('یک نشان را انتخاب کن', 'Choose your club'),
                           Icons.shield_outlined),
+                      if (_localTwo) ...<Widget>[
+                        SizedBox(
+                          height: 38,
+                          child: Row(children: <Widget>[
+                            for (int sd = 0; sd < 2; sd++)
+                              _Chip(
+                                key: ValueKey<String>('side-$sd'),
+                                label: sd == 0 ? launch.tx('تیم یک', 'Team one') : launch.tx('تیم دو', 'Team two'),
+                                on: pickSide == sd,
+                                onTap: () => setState(() {
+                                  _pickSide = sd;
+                                  audio.sfx('ui');
+                                }),
+                              ),
+                          ]),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                       SizedBox(
                         height: 38,
                         child: ListView(
@@ -1669,16 +1913,41 @@ class _BermudaViewState extends State<BermudaView>
                           itemCount: teams.length,
                           itemBuilder: (BuildContext c, int i) {
                             final BmTeam t = teams[i];
-                            final bool on = t.id == my.team;
-                            final bool owned = GemShop.instance.ownsTeam(t.id);
+                            final GemShop shop = GemShop.instance;
+                            // the "create your custom team" tile (1000 gems + a photo); the shared custom teams
+                            // (cx_..., power 10) follow it: free for their owner, 250 gems for everyone else
+                            final bool create = t.id == kCustomTeamId;
+                            final FsCustomTeam? mine = shop.myCustomTeam;
+                            final bool myTeam = create ? mine != null : shop.isMyCustomTeam(t.id);
+                            final BmTeam shown = create && mine != null ? bmTeam(mine.teamId) : t;
+                            final bool on = shown.id == sideTeam;
+                            // side two (pass-and-play) fields any team; side one needs it owned
+                            final bool owned = create ? mine != null : (pickSide == 1 || shop.ownsTeam(t.id));
                             return GestureDetector(
+                              key: ValueKey<String>('team-${t.id}'),
+                              onLongPress: myTeam && pickSide == 0 ? () => unawaited(_customTeam()) : null,
                               onTap: () async {
-                                if (!owned && !await _buyTeam(t)) return;
+                                if (create && pickSide == 1) {
+                                  luxeToast(context, launch.tx('ساخت تیم اختصاصی فقط برای تیم یک است', 'Create a custom team for team one'));
+                                  return;
+                                }
+                                if (!owned) {
+                                  final bool ok = create ? await _customTeam() : await _buyTeam(t);
+                                  if (!ok) return;
+                                }
                                 if (!mounted) return;
+                                final String pick = create ? (GemShop.instance.myCustomTeam?.teamId ?? '') : t.id;
+                                if (pick.isEmpty) return;
                                 setState(() {
-                                  my.team = t.id;
+                                  if (pickSide == 1) {
+                                    _oppTeam = pick;
+                                  } else {
+                                    my.team = pick;
+                                    _savedTeam = pick;
+                                    unawaited(_savePrefs());
+                                    if (online) _announceAvatar();
+                                  }
                                   audio.sfx('ui');
-                                  unawaited(_savePrefs());
                                 });
                               },
                               child: AnimatedContainer(
@@ -1715,35 +1984,41 @@ class _BermudaViewState extends State<BermudaView>
                                       children: <Widget>[
                                         Opacity(
                                             opacity: owned ? 1 : .45,
-                                            child: Image.asset(t.asset, cacheWidth: 128)),
-                                        if (!owned)
+                                            child: create && mine == null
+                                                ? const FittedBox(
+                                                    child: Icon(Icons.add_a_photo_rounded, color: Luxe.gold, size: 40))
+                                                : _crest(shown)),
+                                        if (!owned && pickSide == 0)
                                           Positioned(
                                             bottom: 0,
                                             child: Container(
                                               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                                               decoration: BoxDecoration(
-                                                color: const Color(0xE60B1230),
+                                                color: const Color(0xE607080C),
                                                 borderRadius: BorderRadius.circular(8),
-                                                border: Border.all(color: const Color(0xFF3BD0FF)),
+                                                border: Border.all(color: Luxe.gold),
                                               ),
                                               child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
-                                                const Icon(Icons.diamond_rounded, size: 10, color: Color(0xFF3BD0FF)),
+                                                const Icon(Icons.diamond_rounded, size: 10, color: Luxe.gold),
                                                 const SizedBox(width: 2),
-                                                Text('${GemShop.instance.teamPrice(t.id)}',
+                                                Text(
+                                                    create && shop.ownsCustomTeam()
+                                                        ? launch.tx('عکس', 'Photo')
+                                                        : '${shop.teamPrice(t.id)}',
                                                     style: const TextStyle(
                                                         color: Colors.white, fontSize: 9.5, fontWeight: FontWeight.w900)),
                                               ]),
                                             ),
                                           ),
-                                        if (!owned)
+                                        if (!owned && pickSide == 0)
                                           const Positioned(
                                               top: 0,
                                               right: 0,
-                                              child: Icon(Icons.lock_rounded, size: 14, color: Color(0xFFE2B04A))),
+                                              child: Icon(Icons.lock_rounded, size: 14, color: Luxe.gold)),
                                       ],
                                     )),
                                     const SizedBox(height: 3),
-                                    Text(t.name,
+                                    Text('${myTeam && !create ? '★ ' : ''}${launch.isFa ? shown.faName : shown.name}',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
@@ -1788,13 +2063,17 @@ class _BermudaViewState extends State<BermudaView>
                                   width: w,
                                   child: BmFormationCard(
                                     form: kBmForms[i],
-                                    on: my.form == i,
+                                    on: sideForm == i,
                                     selectLabel: launch.tx('انتخاب', 'Select'),
                                     selectedLabel: launch.tx('انتخاب شده', 'Selected'),
                                     onTap: () => setState(() {
-                                      my.form = i;
+                                      if (pickSide == 1) {
+                                        _oppForm = i;
+                                      } else {
+                                        my.form = i;
+                                        unawaited(_savePrefs());
+                                      }
                                       audio.sfx('ui');
-                                      unawaited(_savePrefs());
                                     }),
                                   ),
                                 ),
@@ -1874,7 +2153,7 @@ class _BermudaViewState extends State<BermudaView>
                                                       .withValues(alpha: .88)
                                                 ]),
                                           ),
-                                          child: Text(kBmFields[i].name,
+                                          child: Text(bmFieldName(i, launch.isFa),
                                               textAlign: TextAlign.center,
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
@@ -1987,9 +2266,8 @@ class _BermudaViewState extends State<BermudaView>
                                   child: CircularProgressIndicator(
                                       strokeWidth: 2.5, color: visual.accent)),
                               const SizedBox(height: 9),
-                              Text(
-                                  launch.tx('در انتظار حریف…',
-                                      'Waiting for the opponent…'),
+                              Text(waitText,
+                                  key: const ValueKey<String>('online-wait'),
                                   style: TextStyle(
                                       color: visual.text,
                                       fontSize: 12.5,
@@ -2000,6 +2278,7 @@ class _BermudaViewState extends State<BermudaView>
                       : SizedBox(
                           height: 54,
                           child: FilledButton.icon(
+                            key: const ValueKey<String>('setup-ready'),
                             style: FilledButton.styleFrom(
                               backgroundColor: visual.accent,
                               foregroundColor: visual.background,
@@ -2026,7 +2305,7 @@ class _BermudaViewState extends State<BermudaView>
                             icon:
                                 const Icon(Icons.play_arrow_rounded, size: 24),
                             label: Text(online
-                                ? launch.tx('آماده‌ام', 'READY')
+                                ? '${launch.tx('آماده‌ام', 'READY')}  ·  ${launch.isFa ? fsFa(_pickLeft) : '$_pickLeft'}'
                                 : launch.tx('شروع بازی', 'START MATCH')),
                           ),
                         ),
@@ -2040,42 +2319,316 @@ class _BermudaViewState extends State<BermudaView>
   }
 }
 
-/// The reference's in-match "تغییر ترکیب" button: a dark pill with the label and a small green pitch icon.
-class BmChangeFormButton extends StatelessWidget {
-  const BmChangeFormButton({super.key, required this.label, required this.onTap});
-  final String label;
-  final VoidCallback onTap;
+/// Height of the in-match formation button (v9: in the top bar).
+const double kBmFormButtonHeight = 44;
+
+/// v12: what the match scoreboard shows. Values are quantised by the caller, so == only changes a few times a second
+/// and the scoreboard (a ValueListenableBuilder on this) does not rebuild every frame.
+@immutable
+class FsHudData {
+  const FsHudData({
+    required this.clock,
+    required this.red,
+    required this.turn,
+    required this.turnMine,
+    required this.score0,
+    required this.score1,
+    required this.name0,
+    required this.name1,
+    required this.crest0,
+    required this.crest1,
+    required this.pulse0,
+    required this.pulse1,
+    required this.formation,
+  });
+  static const FsHudData empty = FsHudData(
+      clock: '', red: 0, turn: -1, turnMine: true, score0: 0, score1: 0, name0: '', name1: '',
+      crest0: null, crest1: null, pulse0: 0, pulse1: 0, formation: false);
+  final String clock, name0, name1;
+  final double red, turn, pulse0, pulse1;
+  final bool turnMine, formation;
+  final int score0, score1;
+  final ui.Image? crest0, crest1;
+
+  @override
+  bool operator ==(Object other) =>
+      other is FsHudData &&
+      other.clock == clock &&
+      other.red == red &&
+      other.turn == turn &&
+      other.turnMine == turnMine &&
+      other.score0 == score0 &&
+      other.score1 == score1 &&
+      other.name0 == name0 &&
+      other.name1 == name1 &&
+      identical(other.crest0, crest0) &&
+      identical(other.crest1, crest1) &&
+      other.pulse0 == pulse0 &&
+      other.pulse1 == pulse1 &&
+      other.formation == formation;
+
+  @override
+  int get hashCode => Object.hash(clock, red, turn, turnMine, score0, score1, name0, name1, crest0, crest1, pulse0,
+      pulse1, formation);
+}
+
+/// v12 match scoreboard (rebuilt HUD), above the pitch, never on it: the menu button, the local side (crest, name,
+/// score; green), the match clock with the turn clock under it, the other side (score, name, crest; gold) and the
+/// formation button. Every tap target is at least 44 dp.
+class FsMatchTopBar extends StatelessWidget {
+  const FsMatchTopBar({
+    super.key,
+    required this.clock,
+    required this.red,
+    required this.turn,
+    required this.turnMine,
+    required this.menuLabel,
+    required this.formLabel,
+    required this.onMenu,
+    required this.onFormation,
+    this.scores = const <int>[0, 0],
+    this.names = const <String>['', ''],
+    this.crests = const <ui.Image?>[null, null],
+    this.pulse = const <double>[0, 0],
+    this.fa = true,
+  });
+
+  final String clock;
+  /// 0 = normal clock, 1 = red (last-minute pulse / final whistle / golden goal), see [bmClockRed].
+  final double red;
+  /// Share of the turn clock left (0..1), or < 0 when no turn clock runs.
+  final double turn;
+  /// The turn being timed is the local side's (green) or the other side's (gold).
+  final bool turnMine;
+  /// Goals of the local side [0] and the other side [1]; their names and crests; goal pulse 0..1 per side.
+  final List<int> scores;
+  final List<String> names;
+  final List<ui.Image?> crests;
+  final List<double> pulse;
+  /// Persian digits.
+  final bool fa;
+  final String menuLabel, formLabel;
+  final VoidCallback onMenu;
+  final VoidCallback? onFormation;
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: label,
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          height: 36,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          decoration: BoxDecoration(
-            color: const Color(0xE61C1E22),
-            borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Colors.white24),
-            boxShadow: const <BoxShadow>[BoxShadow(color: Color(0x66000000), blurRadius: 6, offset: Offset(0, 2))],
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: <Color>[Color(0xF21A1650), Color(0xF20B0A2A)],
           ),
-          child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
-            Text(label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w700)),
-            const SizedBox(width: 6),
-            Container(
-              width: 30,
-              height: 22,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Luxe.line),
+          boxShadow: const <BoxShadow>[BoxShadow(color: Color(0x80000000), blurRadius: 12, offset: Offset(0, 4))],
+        ),
+        child: Row(children: <Widget>[
+          const SizedBox(width: 2),
+          LuxeIconButton(icon: Icons.menu_rounded, tooltip: menuLabel, size: 44, onTap: onMenu),
+          const SizedBox(width: 4),
+          Expanded(child: _FsHudSide(
+            name: names[0], score: scores[0], crest: crests[0], pulse: pulse[0], fa: fa, mine: true,
+            active: turn >= 0 && turnMine)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: FsClockPill(clock: clock, red: red, turn: turn, turnMine: turnMine),
+          ),
+          Expanded(child: _FsHudSide(
+            name: names[1], score: scores[1], crest: crests[1], pulse: pulse[1], fa: fa, mine: false,
+            active: turn >= 0 && !turnMine)),
+          const SizedBox(width: 4),
+          BmChangeFormButton(label: formLabel, onTap: onFormation),
+          const SizedBox(width: 2),
+        ]),
+      ),
+    );
+  }
+}
+
+/// One side of the scoreboard: crest + name + score (mirrored for the other side, so the scores meet at the clock).
+class _FsHudSide extends StatelessWidget {
+  const _FsHudSide({
+    required this.name,
+    required this.score,
+    required this.crest,
+    required this.pulse,
+    required this.fa,
+    required this.mine,
+    required this.active,
+  });
+  final String name;
+  final int score;
+  final ui.Image? crest;
+  final double pulse;
+  final bool fa, mine, active;
+
+  @override
+  Widget build(BuildContext context) {
+    final Color accent = mine ? kBmRingGreen : kBmRingGold;
+    final ui.Image? c = crest;
+    final Widget badge = Container(
+      width: 26,
+      height: 26,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: const Color(0xFF07080C),
+        border: Border.all(color: active ? accent : Luxe.line, width: active ? 2 : 1),
+      ),
+      child: c == null
+          ? Icon(Icons.shield_rounded, size: 14, color: accent)
+          : ClipOval(child: RawImage(image: c, fit: BoxFit.cover, filterQuality: FilterQuality.medium)),
+    );
+    final Widget label = Flexible(
+      child: Text(
+        name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: mine ? TextAlign.left : TextAlign.right,
+        style: const TextStyle(color: Luxe.mute, fontSize: 10.5, fontWeight: FontWeight.w700, height: 1.1),
+      ),
+    );
+    final String digits = fa ? fsFa(score) : '$score';
+    final Widget value = Transform.scale(
+      scale: 1 + pulse * .35,
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 32),
+        height: 32,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        decoration: BoxDecoration(
+          color: const Color(0xFF07080C),
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: accent.withValues(alpha: .55)),
+        ),
+        child: Text(digits,
+            maxLines: 1,
+            style: TextStyle(
+              color: Color.lerp(Luxe.gold2, accent, pulse)!,
+              fontSize: 20,
+              height: 1,
+              fontWeight: FontWeight.w900,
+              fontFeatures: const <ui.FontFeature>[ui.FontFeature.tabularFigures()],
+            )),
+      ),
+    );
+    return Semantics(
+      label: '$name $digits',
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: LayoutBuilder(builder: (BuildContext context, BoxConstraints box) {
+          // Narrow phones: the score always shows; the crest and then the name give way first.
+          final double w = box.maxWidth;
+          final List<Widget> row = <Widget>[
+            if (w >= 72) ...<Widget>[badge, const SizedBox(width: 5)],
+            if (w >= 104) ...<Widget>[label, const SizedBox(width: 5)],
+            value,
+          ];
+          return Row(
+            mainAxisAlignment: mine ? MainAxisAlignment.end : MainAxisAlignment.start,
+            children: mine ? row : row.reversed.toList(growable: false),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+/// The match clock pill (Luxe gold hairline); it warms to red with [red] and carries the turn clock underneath.
+class FsClockPill extends StatelessWidget {
+  const FsClockPill({super.key, required this.clock, required this.red, required this.turn, required this.turnMine});
+  final String clock;
+  final double red;
+  final double turn;
+  final bool turnMine;
+
+  @override
+  Widget build(BuildContext context) {
+    final double k = red.clamp(0.0, 1.0).toDouble();
+    final Color ink = Color.lerp(Luxe.gold2, const Color(0xFFFF6B6B), k)!;
+    return Container(
+      constraints: const BoxConstraints(minWidth: 92),
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: const Color(0xE6101014),
+        borderRadius: BorderRadius.circular(LuxeRadius.pill),
+        border: Border.all(color: Color.lerp(Luxe.line, const Color(0x99FF6B6B), k)!),
+        boxShadow: const <BoxShadow>[BoxShadow(color: Color(0x66000000), blurRadius: 10, offset: Offset(0, 3))],
+      ),
+      child: Column(mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: <Widget>[
+        Text(clock.isEmpty ? '--:--' : clock,
+            maxLines: 1,
+            style: TextStyle(
+              color: ink,
+              fontSize: 17,
+              height: 1.1,
+              fontWeight: FontWeight.w800,
+              letterSpacing: .6,
+              fontFeatures: const <ui.FontFeature>[ui.FontFeature.tabularFigures()],
+            )),
+        if (turn >= 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: SizedBox(
+              width: 56,
+              height: 3,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(2),
+                child: Stack(children: <Widget>[
+                  const Positioned.fill(child: ColoredBox(color: Color(0x33FFFFFF))),
+                  FractionallySizedBox(
+                    widthFactor: turn,
+                    child: ColoredBox(color: turnMine ? kBmRingGreen : kBmRingGold),
+                  ),
+                ]),
+              ),
+            ),
+          ),
+      ]),
+    );
+  }
+}
+
+/// The in-match "تغییر ترکیب" button. v12: a compact 44 dp scoreboard button (the pitch icon), its label read by
+/// screen readers and shown as a tooltip; dimmed and inert while the formation cannot change.
+class BmChangeFormButton extends StatelessWidget {
+  const BmChangeFormButton({super.key, required this.label, required this.onTap});
+  final String label;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: label,
+      child: Opacity(
+        opacity: onTap == null ? .45 : 1,
+        child: LuxePress(
+          onTap: onTap,
+          semantics: label,
+          child: Container(
+            width: 44,
+            height: 44,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color(0x0FFFFFFF),
+              shape: BoxShape.circle,
+              border: Border.all(color: Luxe.line),
+            ),
+            child: Container(
+              width: 24,
+              height: 18,
               decoration: BoxDecoration(
                 color: const Color(0xFF2E9B32),
-                borderRadius: BorderRadius.circular(3),
+                borderRadius: BorderRadius.circular(4),
                 border: Border.all(color: const Color(0xFF9CFF7A)),
               ),
-              child: const Icon(Icons.grid_view_rounded, size: 14, color: Colors.white),
+              child: const Icon(Icons.grid_view_rounded, size: 12, color: Colors.white),
             ),
-          ]),
+          ),
         ),
       ),
     );
@@ -2255,7 +2808,7 @@ class BmFormationMiniPainter extends CustomPainter {
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({required this.label, required this.on, required this.onTap});
+  const _Chip({super.key, required this.label, required this.on, required this.onTap});
   final String label;
   final bool on;
   final VoidCallback onTap;
@@ -2328,25 +2881,6 @@ class _StatBar extends StatelessWidget {
   }
 }
 
-class _TurnDot extends StatelessWidget {
-  const _TurnDot({required this.color});
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 6,
-      height: 6,
-      decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          boxShadow: <BoxShadow>[
-            BoxShadow(color: color.withValues(alpha: .62), blurRadius: 6)
-          ]),
-    );
-  }
-}
-
 class _ToastPill extends StatelessWidget {
   const _ToastPill({required this.text, required this.big});
   final String text;
@@ -2399,141 +2933,6 @@ double bmClockRed(double mleft, int mt) {
   if (mleft <= 0) return 1;
   if (mleft > 60) return 0;
   return .5 - .5 * math.cos(2 * math.pi * (60 - mleft) / 4);
-}
-
-/// v6: the reference's in-match score banner: a white score plate on each side of a yellow hexagonal clock, all
-/// turning red by [red] (last-minute pulse, solid red at the final whistle / golden goal).
-class BmScoreBanner extends StatelessWidget {
-  const BmScoreBanner({super.key, required this.left, required this.right, required this.clock, this.red = 0});
-  final String left;
-  final String right;
-  final String clock;
-  final double red;
-
-  static const double kWidth = 122;
-  static const double kHeight = 34;
-  static const double kPlate = 30;
-
-  @override
-  Widget build(BuildContext context) {
-    final double k = red.clamp(0.0, 1.0).toDouble();
-    final Color score = Color.lerp(const Color(0xFF1E2230), const Color(0xFF240306), k)!;
-    final Color clockInk = Color.lerp(const Color(0xFF3C3300), const Color(0xFFFFE9EC), k)!;
-    TextStyle st(Color c, double size) => TextStyle(
-      color: c,
-      fontSize: size,
-      height: 1,
-      fontWeight: FontWeight.w900,
-      fontFeatures: const <ui.FontFeature>[ui.FontFeature.tabularFigures()],
-    );
-    return SizedBox(
-      width: kWidth,
-      height: kHeight,
-      child: CustomPaint(
-        painter: _BannerPainter(k),
-        child: Row(
-          children: <Widget>[
-            SizedBox(
-              width: kPlate,
-              child: Padding(
-                padding: const EdgeInsets.only(left: 5),
-                child: Center(
-                  child: FittedBox(child: Text(left, maxLines: 1, style: st(score, 19))),
-                ),
-              ),
-            ),
-            Expanded(
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(clock, maxLines: 1, style: st(clockInk, 14)),
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(
-              width: kPlate,
-              child: Padding(
-                padding: const EdgeInsets.only(right: 5),
-                child: Center(
-                  child: FittedBox(child: Text(right, maxLines: 1, style: st(score, 19))),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BannerPainter extends CustomPainter {
-  _BannerPainter(this.k);
-  final double k;
-
-  Color _l(int a, int b) => Color.lerp(Color(a), Color(b), k)!;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final double w = size.width, h = size.height, p = BmScoreBanner.kPlate, n = 8;
-    final Paint edge = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2
-      ..color = Colors.black.withValues(alpha: .55);
-    Paint fill(Rect r, int top, int bottom, int topR, int bottomR) => Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: <Color>[_l(top, topR), _l(bottom, bottomR)],
-      ).createShader(r);
-    // score plates (pointed outward ends), behind the clock
-    final Path lp = Path()
-      ..moveTo(n, 0)
-      ..lineTo(p + n, 0)
-      ..lineTo(p + n, h)
-      ..lineTo(n, h)
-      ..lineTo(0, h / 2)
-      ..close();
-    final Path rp = Path()
-      ..moveTo(w - n, 0)
-      ..lineTo(w - p - n, 0)
-      ..lineTo(w - p - n, h)
-      ..lineTo(w - n, h)
-      ..lineTo(w, h / 2)
-      ..close();
-    final Rect all = Offset.zero & size;
-    for (final Path q in <Path>[lp, rp]) {
-      canvas.drawPath(q, fill(all, 0xFFFFFFFF, 0xFFCFD3DA, 0xFFFFC2CA, 0xFFF0687A));
-      canvas.drawPath(q, edge);
-    }
-    // clock hexagon
-    final Path c = Path()
-      ..moveTo(p + n, 0)
-      ..lineTo(w - p - n, 0)
-      ..lineTo(w - p, h / 2)
-      ..lineTo(w - p - n, h)
-      ..lineTo(p + n, h)
-      ..lineTo(p, h / 2)
-      ..close();
-    canvas.drawShadow(c, Colors.black, 2, false);
-    canvas.drawPath(c, fill(all, 0xFFFFF35A, 0xFFC9B400, 0xFFF0303A, 0xFFA50E16));
-    // top gloss
-    canvas.drawPath(
-      Path()
-        ..moveTo(p + n + 2, 2)
-        ..lineTo(w - p - n - 2, 2)
-        ..lineTo(w - p - n * .5 - 2, h * .42)
-        ..lineTo(p + n * .5 + 2, h * .42)
-        ..close(),
-      Paint()..color = Colors.white.withValues(alpha: .22),
-    );
-    canvas.drawPath(c, edge);
-  }
-
-  @override
-  bool shouldRepaint(_BannerPainter old) => old.k != k;
 }
 
 /// v6 reference: the dark rounded "یک دقیقه تا پایان بازی" pill.

@@ -92,7 +92,7 @@ class SnlBoardPainter extends CustomPainter {
     required this.isFa,
     this.accent = const Color(0xFF2EE6D6),
     this.accentSecondary = const Color(0xFF9D6BFF),
-    this.surface = const Color(0xFF0A0F2C),
+    this.surface = const Color(0xFF14130F),
   });
   final bool fancy;
   final bool isFa;
@@ -423,7 +423,7 @@ class SnlOverlayPainter extends CustomPainter {
       final Offset eye = Offset(u * 0.08, s * u * 0.09);
       canvas.drawCircle(eye, u * 0.055, Paint()..color = Colors.white);
       canvas.drawCircle(eye + Offset(u * 0.015, 0), u * 0.028,
-          Paint()..color = const Color(0xFF0A0F2C));
+          Paint()..color = const Color(0xFF14130F));
     }
     canvas.restore();
   }
@@ -540,7 +540,7 @@ class SnlTokensPainter extends CustomPainter {
             ..strokeWidth = u * 0.025
             ..color = Colors.white.withValues(alpha: 0.8));
       canvas.drawCircle(c, r * 0.32,
-          Paint()..color = const Color(0xFF0A0F2C).withValues(alpha: 0.55));
+          Paint()..color = const Color(0xFF14130F).withValues(alpha: 0.55));
       canvas.drawCircle(c, r * 0.18, Paint()..color = tk.color);
     }
   }
@@ -685,7 +685,7 @@ class _SnlDiePainter extends CustomPainter {
         text: TextSpan(
           text: '?',
           style: TextStyle(
-              color: const Color(0xFF0A0F2C),
+              color: const Color(0xFF14130F),
               fontSize: s * 0.5,
               fontWeight: FontWeight.w900),
         ),
@@ -697,7 +697,7 @@ class _SnlDiePainter extends CustomPainter {
     final double pr = s * 0.085;
     for (final Offset o in _pips(face)) {
       final Offset c = Offset(o.dx * s, o.dy * s);
-      canvas.drawCircle(c, pr, Paint()..color = const Color(0xFF0A0F2C));
+      canvas.drawCircle(c, pr, Paint()..color = const Color(0xFF14130F));
       canvas.drawCircle(c.translate(-pr * 0.3, -pr * 0.3), pr * 0.35,
           Paint()..color = color.withValues(alpha: 0.8));
     }

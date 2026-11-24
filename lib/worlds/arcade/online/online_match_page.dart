@@ -66,20 +66,35 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
       setState(() => _error = 'offline');
       return;
     }
-    try {
-      final SupabaseMatchLink link =
-          await SupabaseMatchLink.open(client, widget.matchId, uid: uid);
-      if (!mounted) {
-        link.dispose();
+    if (_error != null) setState(() => _error = null);
+    // The match row is read once to build the game: a single network blip used to leave the player on
+    // "Could not open the match" with no way back in while the others waited. Retry with back-off first.
+    Object? last;
+    for (int attempt = 0; attempt < 4; attempt++) {
+      try {
+        final SupabaseMatchLink link =
+            await SupabaseMatchLink.open(client, widget.matchId, uid: uid);
+        if (!mounted) {
+          link.dispose();
+          return;
+        }
+        if (link.mySeat < 0) {
+          link.dispose();
+          setState(() => _error = 'not_player');
+          return;
+        }
+        link.addListener(_onLinkChanged);
+        link.resyncRequests.addListener(_onResync);
+        setState(() => _link = link);
+        if (link.isOver) _onLinkChanged();
         return;
+      } catch (e) {
+        last = e;
+        await Future<void>.delayed(Duration(milliseconds: 700 * (attempt + 1)));
+        if (!mounted) return;
       }
-      link.addListener(_onLinkChanged);
-      link.resyncRequests.addListener(_onResync);
-      setState(() => _link = link);
-      if (link.isOver) _onLinkChanged();
-    } catch (e) {
-      if (mounted) setState(() => _error = '$e');
     }
+    if (mounted) setState(() => _error = '$last');
   }
 
   @override
@@ -99,6 +114,16 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
     final SupabaseMatchLink? l = _link;
     if (l == null || !mounted) return;
     final MatchEnd? end = l.end;
+    if (end != null && !_finished && end.isAbandoned) {
+      // The match was called off before it began (a player backed out of matchmaking at the same instant):
+      // no result, no rewards — straight back to the lobby, which looks for a new match.
+      _finished = true;
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+          content: Text(context.tx('حریف قبل از شروع خارج شد؛ بازی لغو شد',
+              'A player left before the start — match cancelled'))));
+      Navigator.of(context).pop('abandoned');
+      return;
+    }
     if (end != null && !_finished && !end.isForfeit && !_graceStarted) {
       // Another phone reported the normal end first: our deterministic game ends the same way in a moment.
       _graceStarted = true;
@@ -180,9 +205,13 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
             score: r.score,
           );
     }
-    Future<void>.delayed(Duration(milliseconds: report ? (r.holdMs ?? 900) : 200), () {
+    final Future<void> hold = Future<void>.delayed(Duration(milliseconds: report ? (r.holdMs ?? 900) : 200));
+    // a game may keep its end screen up a little longer (GameResult.holdUntil, e.g. a pending rematch request);
+    // capped so the result overlay always comes up
+    final Future<void>? extra = report ? r.holdUntil?.timeout(const Duration(seconds: 90), onTimeout: () {}).catchError((Object _) {}) : null;
+    unawaited((extra == null ? hold : Future.wait(<Future<void>>[hold, extra])).then((_) {
       if (mounted) setState(() => _result = r);
-    });
+    }));
   }
 
   /// Tournament: this phone's own report of the game (seat 0 = home). Retries a few times on bad network.
@@ -250,8 +279,13 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
     return false;
   }
 
+  /// A game that draws its own chrome during the match (GameLaunch.immersive): the corner buttons, presence dots and
+  /// tutorial banner hide, and the voice controls move to the bottom centre, below the game's playfield.
+  final ValueNotifier<bool> _immersive = ValueNotifier<bool>(false);
+
   @override
   void dispose() {
+    _immersive.dispose();
     WidgetsBinding.instance.removeObserver(this);
     final SupabaseMatchLink? l = _link;
     if (l != null) {
@@ -271,8 +305,17 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
     Widget body;
     if (_error != null) {
       body = Center(
-          child: Text(
-              context.tx('ورود به بازی ممکن نشد', 'Could not open the match')));
+          child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+        Text(context.tx('ورود به بازی ممکن نشد', 'Could not open the match')),
+        if (_error != 'not_player' && _error != 'offline') ...<Widget>[
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: () => unawaited(_open()),
+            icon: const Icon(Icons.refresh_rounded),
+            label: Text(context.tx('تلاش دوباره', 'Try again')),
+          ),
+        ],
+      ]));
     } else if (l == null || game == null) {
       body = const Center(child: CircularProgressIndicator());
     } else {
@@ -292,6 +335,7 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
         seed: l.seed,
         net: l,
         onFinish: _onGameFinish,
+        immersive: _immersive,
       );
       final Widget gameView = KeyedSubtree(
         key: ValueKey<int>(_generation),
@@ -307,9 +351,15 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
         if (await _confirmLeave()) nav.pop();
       },
       child: Scaffold(
-        backgroundColor: NxColors.navyDeep,
+        backgroundColor: NxColors.luxeBg,
         body: Stack(children: <Widget>[
           Positioned.fill(child: body),
+          Positioned.fill(
+            child: ValueListenableBuilder<bool>(
+              valueListenable: _immersive,
+              builder: (BuildContext context, bool hide, Widget? chrome) =>
+                  hide && _result == null ? const SizedBox.shrink() : chrome!,
+              child: Stack(children: <Widget>[
           PositionedDirectional(
             top: MediaQuery.paddingOf(context).top + 6,
             start: 6,
@@ -337,11 +387,24 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
               right: 0,
               child: OracleTutorialBanner(gameId: widget.gameId),
             ),
-          // In-match voice: mic mute/unmute + speaker on/off (same LiveKit room as the lobby).
+              ]),
+            ),
+          ),
+          // In-match voice: mic mute/unmute + speaker on/off (same LiveKit room as the lobby). An immersive game keeps
+          // a bottom strip free of play for it, so it sits centred there.
           if (_result == null)
-            PositionedDirectional(
-              bottom: MediaQuery.paddingOf(context).bottom + 10,
-              end: 10,
+            ValueListenableBuilder<bool>(
+              valueListenable: _immersive,
+              // One stable tree in both modes (only the alignment changes), so the voice bar keeps its connection.
+              builder: (BuildContext context, bool immersive, Widget? bar) => Positioned(
+                left: 10,
+                right: 10,
+                bottom: MediaQuery.paddingOf(context).bottom + (immersive ? 8 : 10),
+                child: Align(
+                  alignment: immersive ? Alignment.center : AlignmentDirectional.centerEnd,
+                  child: bar,
+                ),
+              ),
               child: RoomVoiceBar(id: widget.matchId, match: true, compact: true),
             ),
           if (_result != null)
@@ -386,7 +449,7 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
         ),
       GameOutcome.draw => (
           context.tx('مساوی', 'Draw'),
-          NxColors.turquoise,
+          NxColors.champagne,
           Icons.handshake_rounded
         ),
       GameOutcome.loss => (
@@ -415,7 +478,7 @@ class _OnlineMatchPageState extends ConsumerState<OnlineMatchPage>
           const SizedBox(height: 8),
           Text(summary,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: NxColors.iceWhite)),
+              style: const TextStyle(color: NxColors.ink)),
         ],
         if (_oracleLine != null) OracleResultLine(text: _oracleLine!),
         const SizedBox(height: 10),

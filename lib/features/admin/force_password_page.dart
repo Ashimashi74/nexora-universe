@@ -6,6 +6,7 @@ import '../../core/online/online_service.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/theme/nx_theme.dart';
 import 'admin_access.dart';
+import '../../core/ui2/luxe.dart';
 
 /// Shown (and not dismissible) while the account must change its password — e.g. the default main admin login
 /// `admin` / `admin` on first sign-in. Admin RPCs refuse until the password is changed (server side).
@@ -54,8 +55,7 @@ class _ForcePasswordPageState extends ConsumerState<ForcePasswordPage> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (ok && !ref.read(adminAccessProvider).mustChangePassword) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.tx('رمز عوض شد ✓', 'Password changed ✓'))));
+      luxeToast(context, context.tx('رمز عوض شد ✓', 'Password changed ✓'));
       context.go('/hub');
     } else {
       setState(() => _msg = o.lastError ?? context.tx('تغییر رمز انجام نشد', 'Could not change the password'));
@@ -68,7 +68,7 @@ class _ForcePasswordPageState extends ConsumerState<ForcePasswordPage> {
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: NxColors.navyDeep,
+        backgroundColor: NxColors.luxeBg,
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(

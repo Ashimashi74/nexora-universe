@@ -169,7 +169,7 @@ class _StarPainter extends CustomPainter {
       final double x = r.nextDouble() * size.width;
       final double y = r.nextDouble() * size.height;
       final double s = r.nextDouble() * 1.6 + 0.3;
-      p.color = (i % 7 == 0 ? accent : const Color(0xFFEAF6FF))
+      p.color = (i % 7 == 0 ? accent : const Color(0xFFF4EAD2))
           .withValues(alpha: 0.25 + r.nextDouble() * 0.6);
       canvas.drawCircle(Offset(x, y), s, p);
     }

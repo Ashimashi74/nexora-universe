@@ -408,7 +408,7 @@ const Map<String, dynamic> kOraclePersonaDefaults = <String, dynamic>{
   // (or null for a centred card). Shown once per section per account; replayable from Settings.
   'tours': <String, dynamic>{
     'home': <Map<String, dynamic>>[
-      <String, dynamic>{'target': null, 'title': 'خوش اومدی به ANIX!', 'text': '{jan} من اوراکلم، راهنمای شیطون این‌جا! بیا یه دور سریع بزنیم که گم نشی.'},
+      <String, dynamic>{'target': null, 'title': 'خوش اومدی به نیکسورا!', 'text': '{jan} من اوراکلم، راهنمای شیطون این‌جا! بیا یه دور سریع بزنیم که گم نشی.'},
       <String, dynamic>{'target': 'area:top', 'title': 'بالای صفحه', 'text': 'این بالا اسم و سطح و سکه‌هاته. سکه‌ها رو با بازی و جایزه‌ی روزانه جمع می‌کنی، نه با گریه!'},
       <String, dynamic>{'target': 'key:dock', 'title': 'داک پایین', 'text': 'این نوار پایین راه همه‌جاست: چت و رسانه، اوراکل، فروشگاه، تورنمنت و جایزه‌ها.'},
       <String, dynamic>{'target': 'key:dock.games', 'title': 'دکمه‌ی بزرگ بازی', 'text': 'این دکمه‌ی گنده‌ی وسط، اتاق‌ها و بازی‌هاست. {jan} از این‌جا می‌ری تو دل ماجرا!'},
@@ -434,7 +434,7 @@ const Map<String, dynamic> kOraclePersonaDefaults = <String, dynamic>{
       <String, dynamic>{'target': 'area:bottom', 'title': 'شروع', 'text': '{jan} دکمه‌ی شروع یا «ورود به لابی آنلاین» رو بزن و بترکون!'},
     ],
     'tournaments': <Map<String, dynamic>>[
-      <String, dynamic>{'target': 'area:top', 'title': 'جام‌های انیکس', 'text': 'تب‌ها: ثبت‌نام، به‌زودی، زنده، تمام‌شده و مال من. هر جامی که ثبت‌نامش بازه رو ببین.'},
+      <String, dynamic>{'target': 'area:top', 'title': 'جام‌های نیکسورا', 'text': 'تب‌ها: ثبت‌نام، به‌زودی، زنده، تمام‌شده و مال من. هر جامی که ثبت‌نامش بازه رو ببین.'},
       <String, dynamic>{'target': 'area:center', 'title': 'ثبت‌نام و کد دعوت', 'text': 'روی جام بزن تا جزئیات، جایزه‌ها و جدول رو ببینی. جام خصوصی؟ با «کد دعوت» وارد شو.'},
       <String, dynamic>{'target': 'area:bottom', 'title': 'اعلان‌ها', 'text': '۱۰ دقیقه قبل از شروع خبرت می‌کنم که چک‌این کنی. {jan} دیر کنی، قرعه بی‌تو کشیده می‌شه!'},
     ],

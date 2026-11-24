@@ -12,11 +12,17 @@
 //    stop()+resume()d: SoundPool never reports completion, so a plain resume() on a finished stream was a
 //    no-op and every pooled hit played only once.
 //  * A small round-robin of preloaded players per sound lets rapid collisions overlap.
+//  * 2026-11-24 (voice rooms): the session is configured through NxAudioMix, which never touches it while a LiveKit
+//    call is live (audioplayers used to reset Android to MODE_NORMAL / earpiece and iOS to .playback on every
+//    setAudioContext, breaking the call), and every sound is ducked by NxAudioMix.gain while the call is live / while
+//    somebody speaks. Goal / whistle effects are de-duplicated (a goal seen by the local simulation and confirmed by
+//    the network no longer plays twice) and the crowd ambience can never run two loops at once.
 import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:nexora/core/audio/audio_mix.dart';
 
 /// Asset folder of the sounds (relative to `assets/`, as AssetSource wants it).
 const String kBmSfxDir = 'games/bermuda/sfx/';
@@ -67,15 +73,46 @@ int _voices(String k) {
 
 bool get _android => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
-/// Mix with every other player of the game instead of taking audio focus from it.
-AudioContext _mixCtx() => AudioContextConfig(focus: AudioContextConfigFocus.mixWithOthers).build();
+/// Minimum gap between two plays of an event sound (ms): a goal / whistle reported twice (local simulation + the
+/// opponent's logged event, or a replayed snapshot) plays once.
+const Map<String, int> _kEventGapMs = <String, int>{'goal': 1500, 'whs': 900, 'fin': 1500, 'post': 120};
+
+/// Voices are released on real completion ([onPlayerComplete]) or, for platforms whose SoundPool does not
+/// report completion, after this generous cap. Pooled effects are short, so the cap only ever fires on a
+/// sound that has long finished — it never cuts a still-playing clip, but it does guarantee a stuck voice is
+/// reused eventually instead of starving the pool.
+const Duration kBmPoolFreeCap = Duration(milliseconds: 3000);
 
 class _Pool {
   _Pool(this.low);
   final bool low;
   final List<AudioPlayer> players = <AudioPlayer>[];
   final List<bool> busy = <bool>[];
+  final List<StreamSubscription<void>> _doneSubs = <StreamSubscription<void>>[];
+  final List<Timer?> _caps = <Timer?>[];
   int next = 0;
+
+  /// Starts [i]'s completion listener: the voice is released only when its sound actually finishes,
+  /// not when [resume] returns. Clearing `busy` right after `resume()` made the next rapid hit take the
+  /// same voice and `stop()` the still-playing sound — the garbled / cut-off audio the player reported.
+  void _armDone(int i, AudioPlayer p) {
+    final StreamSubscription<void> sub =
+        p.onPlayerComplete.listen((_) {
+      if (i < busy.length) busy[i] = false;
+      _freeCap(i);
+    }, onError: (Object _) {});
+    _doneSubs.add(sub);
+  }
+
+  void _freeCap(int i) {
+    if (i < _caps.length) {
+      final Timer? t = _caps[i];
+      if (t != null) {
+        t.cancel();
+        _caps[i] = null;
+      }
+    }
+  }
 
   Future<void> play(double vol, double rate) async {
     if (players.isEmpty) return;
@@ -87,7 +124,7 @@ class _Pool {
         break;
       }
     }
-    if (i < 0) return; // every voice is still being (re)started; drop like a saturated mixer would
+    if (i < 0) return; // every voice is still playing; drop like a saturated mixer would
     next = (i + 1) % players.length;
     busy[i] = true;
     final AudioPlayer p = players[i];
@@ -96,14 +133,33 @@ class _Pool {
       await p.setVolume(vol);
       if (low && _android) await p.setPlaybackRate(rate);
       await p.resume();
+      // Safety net for SoundPool voices that never emit onPlayerComplete: free after the cap so the pool
+      // keeps rotating. onPlayerComplete (armed at init) frees the voice promptly on platforms that do.
+      if (i < _caps.length) {
+        _freeCap(i);
+        _caps[i] = Timer(kBmPoolFreeCap, () {
+          if (busy[i]) {
+            busy[i] = false;
+            _freeCap(i);
+          }
+        });
+      }
     } catch (e) {
       debugPrint('bermuda sfx play: $e');
-    } finally {
-      busy[i] = false;
+      busy[i] = false; // a failed start frees the voice immediately
+      _freeCap(i);
     }
   }
 
   void dispose() {
+    for (final StreamSubscription<void> s in _doneSubs) {
+      s.cancel();
+    }
+    _doneSubs.clear();
+    for (final Timer? t in _caps) {
+      t?.cancel();
+    }
+    _caps.clear();
     for (final AudioPlayer p in players) {
       unawaited(p.dispose().then((_) {}, onError: (Object _) {}));
     }
@@ -139,7 +195,8 @@ class BmAudio {
 
   Future<void> init() async {
     if (!enabled) return;
-    final AudioContext ctx = _mixCtx();
+    NxAudioMix.voice.addListener(_onMix);
+    NxAudioMix.talking.addListener(_onMix);
     await Future.wait(kBmSfx.entries.map((MapEntry<String, List<Object>> e) async {
       final bool low = _android && !_long.contains(e.key);
       final _Pool pool = _Pool(low);
@@ -147,7 +204,7 @@ class BmAudio {
       for (int n = _voices(e.key); n > 0; n--) {
         final AudioPlayer p = AudioPlayer();
         try {
-          await p.setAudioContext(ctx);
+          await NxAudioMix.apply(p);
           // ignore: deprecated_member_use
           if (low) await p.setPlayerMode(PlayerMode.lowLatency);
           await p.setReleaseMode(ReleaseMode.stop);
@@ -158,6 +215,8 @@ class BmAudio {
           }
           pool.players.add(p);
           pool.busy.add(false);
+          pool._caps.add(null);
+          pool._armDone(pool.players.length - 1, p);
         } catch (err) {
           debugPrint('bermuda sfx ${e.key}: $err');
           unawaited(p.dispose().then((_) {}, onError: (Object _) {}));
@@ -171,7 +230,7 @@ class BmAudio {
     if (!enabled || muted || _disposed) return;
     final _Pool? p = _pools[k];
     if (p == null) return;
-    unawaited(p.play((vol * master).clamp(0.0, 1.0).toDouble(), rate));
+    unawaited(p.play((vol * master * NxAudioMix.gain).clamp(0.0, 1.0).toDouble(), rate));
   }
 
   double _b(String key) => (kBmSfx[key]![1] as num).toDouble();
@@ -181,7 +240,7 @@ class BmAudio {
     if (!enabled || muted) return;
     final int n = DateTime.now().millisecondsSinceEpoch;
     v = math.min(1.0, v);
-    if (k != 'goal' && n - (_ts[k] ?? 0) < 45) return;
+    if (n - (_ts[k] ?? 0) < (_kEventGapMs[k] ?? 45)) return;
     _ts[k] = n;
     switch (k) {
       case 'hitb':
@@ -241,6 +300,17 @@ class BmAudio {
   /// player when music(false) arrives (the setup frame right before an auto-started match) checks [_musicWant]
   /// after every await and stops instead of starting the soundtrack under the match.
   bool _musicWant = false;
+  static const double _musicVol = .4;
+
+  /// The call started / ended or somebody started / stopped talking: re-level the music now (the crowd follows on
+  /// the next frame, pooled effects on their next play).
+  void _onMix() {
+    if (_disposed) return;
+    final AudioPlayer? m = _music;
+    if (m != null && m.state == PlayerState.playing) {
+      unawaited(m.setVolume(_musicVol * NxAudioMix.gain).then((_) {}, onError: (Object _) {}));
+    }
+  }
   Future<void> music(bool on) async {
     _musicWant = on;
     if (!enabled || _disposed) return;
@@ -250,12 +320,12 @@ class BmAudio {
         if (m == null) {
           m = AudioPlayer();
           _music = m;
-          await m.setAudioContext(_mixCtx());
+          await NxAudioMix.apply(m);
           await m.setReleaseMode(ReleaseMode.loop);
         }
         if (!_musicWant || _disposed) return;
         if (m.state == PlayerState.playing) return;
-        await m.setVolume(.4);
+        await m.setVolume(_musicVol * NxAudioMix.gain);
         if (!_musicWant || _disposed) return;
         await m.play(AssetSource('$kBmSfxDir$kBmMusic'));
         if (!_musicWant || _disposed) await m.pause();
@@ -274,6 +344,11 @@ class BmAudio {
   final List<_CrowdClip> _crowdLive = <_CrowdClip>[];
   bool _crowdOn = false;
   double _crowdNextAt = -1;
+
+  /// Bumped on every crowd on/off switch: a [_crowdNext] still loading a clip from an older switch never starts it
+  /// (a quick off -> on used to leave two ambience loops playing over each other).
+  int _crowdGen = 0;
+  bool _crowdLoading = false;
   int _crowdSlot = 0;
 
   /// Crowd ambience while a match is on and not paused.
@@ -282,6 +357,7 @@ class BmAudio {
     on = on && !muted;
     if (on == _crowdOn) return;
     _crowdOn = on;
+    _crowdGen++;
     if (on) {
       _crowdNextAt = _clock; // start now
     } else {
@@ -296,7 +372,7 @@ class BmAudio {
 
   void _crowdFrame() {
     if (_disposed) return;
-    if (_crowdOn && _crowdNextAt >= 0 && _clock >= _crowdNextAt) {
+    if (_crowdOn && !_crowdLoading && _crowdNextAt >= 0 && _clock >= _crowdNextAt) {
       _crowdNextAt = -1;
       unawaited(_crowdNext());
     }
@@ -307,7 +383,7 @@ class BmAudio {
         continue;
       }
       // gain: 0 -> V over fd, hold, V -> 0 over the last fd seconds
-      final double v = _crowdVol * math.max(0.0, math.min(1.0, math.min(t / _crowdFade, (c.d - t) / _crowdFade)));
+      final double v = _crowdVol * NxAudioMix.gain * math.max(0.0, math.min(1.0, math.min(t / _crowdFade, (c.d - t) / _crowdFade)));
       if ((v - c.lastV).abs() >= .01) {
         c.lastV = v;
         unawaited(c.p.setVolume(v).then((_) {}, onError: (Object _) {}));
@@ -317,11 +393,13 @@ class BmAudio {
 
   Future<void> _crowdNext() async {
     if (!_crowdOn || _disposed) return;
+    final int gen = _crowdGen;
+    _crowdLoading = true;
     try {
       while (_crowdPlayers.length < 2) {
         final AudioPlayer p = AudioPlayer();
         _crowdPlayers.add(p);
-        await p.setAudioContext(_mixCtx());
+        await NxAudioMix.apply(p);
         await p.setReleaseMode(ReleaseMode.stop);
       }
       final String f = kBmCrowd.keys.elementAt(_r.nextInt(kBmCrowd.length));
@@ -333,13 +411,15 @@ class BmAudio {
       await p.setSource(AssetSource('$kBmSfxDir$f'));
       final Duration? dur = await p.getDuration();
       final double d = (dur != null && dur.inMilliseconds > 0) ? dur.inMilliseconds / 1000 : kBmCrowd[f]!;
-      if (!_crowdOn || _disposed) return;
+      if (!_crowdOn || _disposed || gen != _crowdGen) return;
       await p.resume();
       _crowdLive.add(_CrowdClip(p, _clock, d));
       _crowdNextAt = _clock + math.max(.6, d - _crowdFade);
     } catch (e) {
       debugPrint('bermuda crowd: $e');
       if (_crowdOn) _crowdNextAt = _clock + 1.5;
+    } finally {
+      _crowdLoading = false;
     }
   }
 
@@ -354,6 +434,9 @@ class BmAudio {
   void dispose() {
     _disposed = true;
     _crowdOn = false;
+    _crowdGen++;
+    NxAudioMix.voice.removeListener(_onMix);
+    NxAudioMix.talking.removeListener(_onMix);
     _q.clear();
     for (final _Pool p in _pools.values) {
       p.dispose();

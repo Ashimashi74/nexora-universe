@@ -10,6 +10,8 @@ import '../../core/theme/nx_theme.dart';
 import 'admin_access.dart';
 
 import '../../core/ui2/anix_kit.dart';
+import '../../core/ui2/luxe.dart';
+
 /// Admin panel. Tabs appear only for the permissions the signed-in admin holds; the server checks every call again
 /// (auth project: users/bans, grants, admins, announcements, moderation, ORACLE · games project: rooms, tournaments)
 /// and writes an audit entry.
@@ -53,11 +55,11 @@ class _AdminPageState extends ConsumerState<AdminPage> {
       if (a.can(AdminPerm.admins)) const _Tab('audit', 'گزارش', 'Audit log', Icons.receipt_long_rounded),
     ];
     if (!a.loaded) {
-      return const Scaffold(backgroundColor: NxColors.navyDeep, body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(backgroundColor: NxColors.luxeBg, body: Center(child: CircularProgressIndicator()));
     }
     if (!a.isAdmin) {
       return Scaffold(
-        backgroundColor: NxColors.navyDeep,
+        backgroundColor: NxColors.luxeBg,
         appBar: AppBar(title: Text(context.tx('پنل مدیریت', 'Admin panel'))),
         body: Center(child: Text(context.tx('این بخش فقط برای ادمین‌هاست.', 'Admins only.'))),
       );
@@ -65,9 +67,9 @@ class _AdminPageState extends ConsumerState<AdminPage> {
     return DefaultTabController(
       length: tabs.length,
       child: Scaffold(
-        backgroundColor: NxColors.navyDeep,
+        backgroundColor: NxColors.luxeBg,
         appBar: AppBar(
-          backgroundColor: NxColors.navy,
+          backgroundColor: NxColors.panel,
           title: Text(a.owner ? context.tx('پنل مدیر اصلی', 'Main admin panel') : context.tx('پنل مدیریت', 'Admin panel')),
           bottom: TabBar(
             isScrollable: true,
@@ -107,9 +109,10 @@ AdminApi _api(WidgetRef ref) => AdminApi(ref.read(onlineProvider));
 Future<void> _toast(BuildContext context, Map<String, dynamic> r, {String? okFa, String? okEn}) async {
   if (!context.mounted) return;
   final bool fa = context.isFa;
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-    content: Text(r['ok'] == true ? (fa ? (okFa ?? 'انجام شد ✓') : (okEn ?? 'Done ✓')) : adminErrorText(r['error'] as String?, fa)),
-  ));
+  luxeToast(
+      context,
+      r['ok'] == true ? (fa ? (okFa ?? 'انجام شد ✓') : (okEn ?? 'Done ✓')) : adminErrorText(r['error'] as String?, fa),
+  );
 }
 
 Future<String?> _ask(BuildContext context, String title, {String hint = '', String initial = ''}) async {
@@ -135,7 +138,7 @@ Widget _card({required Widget child}) => Container(
       decoration: BoxDecoration(
         color: const Color(0x1AFFFFFF),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: NxColors.glassBorder),
+        border: Border.all(color: NxColors.goldLine),
       ),
       child: child,
     );
@@ -421,7 +424,7 @@ class _UsersTabState extends ConsumerState<_UsersTab> {
             return _card(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
               Row(children: <Widget>[
-                Icon(banned ? Icons.block_rounded : Icons.person_rounded, color: banned ? NxColors.danger : NxColors.turquoise),
+                Icon(banned ? Icons.block_rounded : Icons.person_rounded, color: banned ? NxColors.danger : NxColors.champagne),
                 const SizedBox(width: 8),
                 Expanded(
                     child: Text('${u['username'] ?? 'Pilot'}', style: const TextStyle(fontWeight: FontWeight.w900))),
@@ -594,7 +597,7 @@ class _AdminsTab extends ConsumerWidget {
                 return _card(
                     child: Row(children: <Widget>[
                   Icon(u['owner'] == true ? Icons.workspace_premium_rounded : Icons.shield_rounded,
-                      color: u['owner'] == true ? NxColors.gold : NxColors.turquoise),
+                      color: u['owner'] == true ? NxColors.gold : NxColors.champagne),
                   const SizedBox(width: 10),
                   Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
@@ -677,7 +680,7 @@ class _ModerationTab extends ConsumerWidget {
 
           Widget item(String kind, Map<String, dynamic> m) => _card(
                   child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-                Icon(kind == 'post' ? Icons.photo_rounded : Icons.chat_bubble_rounded, color: NxColors.turquoise),
+                Icon(kind == 'post' ? Icons.photo_rounded : Icons.chat_bubble_rounded, color: NxColors.champagne),
                 const SizedBox(width: 10),
                 Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
@@ -744,7 +747,7 @@ class _RoomsTab extends ConsumerWidget {
                   ])),
                   PopupMenuButton<String>(
                     tooltip: context.tx('بیشتر', 'More'),
-                    icon: const Icon(Icons.more_vert_rounded, color: NxColors.turquoise),
+                    icon: const Icon(Icons.more_vert_rounded, color: NxColors.champagne),
                     onSelected: (String v) async {
                       final AdminApi api = _api(ref);
                       final String id = '${r['id']}';
@@ -778,7 +781,7 @@ class _RoomsTab extends ConsumerWidget {
                   ),
                   IconButton(
                     tooltip: context.tx('اعضا / اخراج', 'Members / kick'),
-                    icon: const Icon(Icons.group_rounded, color: NxColors.turquoise),
+                    icon: const Icon(Icons.group_rounded, color: NxColors.champagne),
                     onPressed: () => _showMembers(context, ref, '${r['id']}'),
                   ),
                   IconButton(
@@ -1305,7 +1308,7 @@ Future<void> showPlayerSheet(BuildContext context, WidgetRef ref, String userId)
   await showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    backgroundColor: NxColors.navyDeep,
+    backgroundColor: NxColors.luxeBg,
     builder: (BuildContext c) => SizedBox(
       height: MediaQuery.sizeOf(c).height * .88,
       child: _PlayerSheet(userId: userId),
@@ -1392,7 +1395,7 @@ class _PlayerSheetState extends ConsumerState<_PlayerSheet> {
     final bool banned = d['banned'] == true;
     return ListView(padding: const EdgeInsets.only(bottom: 30), children: <Widget>[
       ListTile(
-        leading: Icon(banned ? Icons.block_rounded : Icons.person_rounded, color: banned ? NxColors.danger : NxColors.turquoise),
+        leading: Icon(banned ? Icons.block_rounded : Icons.person_rounded, color: banned ? NxColors.danger : NxColors.champagne),
         title: Text('${d['username'] ?? 'Pilot'}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
         subtitle: Text('${d['email'] ?? (d['guest'] == true ? 'guest' : '')} · ${d['role']} · ${_shortTime(d['created_at'])}'),
         trailing: IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _load),

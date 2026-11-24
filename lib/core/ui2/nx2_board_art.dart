@@ -130,15 +130,6 @@ class _Nx2ArtCanvasState extends State<Nx2ArtCanvas> {
   }
 }
 
-/// A board skin choice shown in the in-game board picker.
-class Nx2BoardChoice {
-  const Nx2BoardChoice(this.id, this.nameFa, this.nameEn, this.thumb);
-  final String id;
-  final String nameFa;
-  final String nameEn;
-  final String thumb;
-}
-
 /// Round neon "change table/board" button used in every game HUD.
 class Nx2BoardButton extends StatelessWidget {
   const Nx2BoardButton({super.key, required this.onTap, this.color = const Color(0xFF39E1FF), this.size = 30});

@@ -77,7 +77,7 @@ final kCatalog = <CatalogItem>[
   _decor('satellite', 'ماهواره', 'Satellite', 220),
   _decor('spire_tower', 'برج نوک‌تیز', 'Spire Tower', 420, lvl: 7, r: 'epic'),
   _decor('tablet_stand', 'پایه‌ی تبلت', 'Tablet Stand', 90),
-  _decor('banner', 'پرچم ANIX', 'ANIX Banner', 60),
+  _decor('banner', 'پرچم نیکسورا', 'NEXORA Banner', 60),
   // Finger Soccer pucks
   _puck('nx_green', 'NX سبز', 'NX Green', 0),
   _puck('tech_nx', 'تک NX', 'Tech NX', 0),

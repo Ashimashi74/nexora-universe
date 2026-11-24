@@ -35,7 +35,11 @@ void main() {
   test('daily seed and target are stable', () {
     expect(ArcadeDaily.seed('kart_racing', '2026-11-18'), ArcadeDaily.seed('kart_racing', '2026-11-18'));
     expect(ArcadeDaily.target('stack_tower', '2026-11-18') > 0, isTrue);
-    expect(kArcadeIds.length, 20);
-    expect(kArcadeDefs.length, 20);
+    // The arcade is exactly the multi-player set plus the solo set; every id has a def.
+    expect(kArcadeIds.length, kArcadeMultiIds.length + kArcadeSoloIds.length);
+    expect(kArcadeDefs.length, kArcadeIds.length);
+    for (final String id in kArcadeIds) {
+      expect(kArcadeDefs.containsKey(id), isTrue, reason: id);
+    }
   });
 }

@@ -51,8 +51,12 @@ class _GameHostPageState extends ConsumerState<GameHostPage> {
   @override
   void dispose() {
     MusicService.instance.exitGame();
+    _immersive.dispose();
     super.dispose();
   }
+
+  /// A game that draws its own chrome during the match (GameLaunch.immersive) hides the host's corner buttons.
+  final ValueNotifier<bool> _immersive = ValueNotifier<bool>(false);
 
   int _round = 0;
   GameResult? _result;
@@ -150,6 +154,7 @@ class _GameHostPageState extends ConsumerState<GameHostPage> {
       seed: widget.daily ? ArcadeDaily.seed(widget.game.id) : DateTime.now().millisecondsSinceEpoch ^ _round,
       daily: widget.daily,
       onFinish: _onFinish,
+      immersive: _immersive,
     );
     final Widget gameView = KeyedSubtree(
       key: ValueKey('round_$_round'),
@@ -163,11 +168,17 @@ class _GameHostPageState extends ConsumerState<GameHostPage> {
         if (await _confirmExit()) nav.pop();
       },
       child: Scaffold(
-        backgroundColor: NxColors.navyDeep,
+        backgroundColor: NxColors.luxeBg,
         body: Stack(children: [
           Positioned.fill(
             child: gameView,
           ),
+          Positioned.fill(
+            child: ValueListenableBuilder<bool>(
+              valueListenable: _immersive,
+              builder: (BuildContext context, bool hide, Widget? chrome) =>
+                  hide && _result == null ? const SizedBox.shrink() : chrome!,
+              child: Stack(children: <Widget>[
           PositionedDirectional(
             top: MediaQuery.paddingOf(context).top + 6,
             start: 6,
@@ -191,7 +202,7 @@ class _GameHostPageState extends ConsumerState<GameHostPage> {
               shape: const CircleBorder(),
               child: IconButton(
                 tooltip: 'ORACLE',
-                icon: const Icon(Icons.smart_toy_rounded, color: Color(0xFF8FF3FF)),
+                icon: const Icon(Icons.smart_toy_rounded, color: Color(0xFFF6E7BD)),
                 onPressed: () => OracleGameSheet.show(context, widget.game),
               ),
             ),
@@ -203,6 +214,9 @@ class _GameHostPageState extends ConsumerState<GameHostPage> {
               right: 0,
               child: OracleTutorialBanner(key: ValueKey<String>('tut_${widget.game.id}_$_round'), gameId: widget.game.id),
             ),
+              ]),
+            ),
+          ),
           if (_result != null)
             Positioned.fill(child: _resultOverlay(context, _result!, _award)),
         ]),
@@ -276,7 +290,7 @@ class _GameHostPageState extends ConsumerState<GameHostPage> {
                 NxPill(
                     label: '+${a.xp} XP',
                     icon: Icons.bolt_rounded,
-                    color: NxColors.turquoise),
+                    color: NxColors.champagne),
                 const SizedBox(width: 8),
                 NxPill(
                     label: '+${a.coins}',
@@ -289,7 +303,7 @@ class _GameHostPageState extends ConsumerState<GameHostPage> {
                   child: Text(
                       context.tx('سطح ${a.newLevel}!', 'Level ${a.newLevel}!'),
                       style: const TextStyle(
-                          color: NxColors.turquoise,
+                          color: NxColors.champagne,
                           fontWeight: FontWeight.w900,
                           fontSize: 18)),
                 ),
@@ -338,7 +352,7 @@ class _GameHostPageState extends ConsumerState<GameHostPage> {
     }
     if (a.dailyJustDone) {
       chips.add(NxPill(label: context.tx('چالش روزانه +۸۰ XP', 'Daily challenge +80 XP'), icon: Icons.today_rounded,
-          color: NxColors.turquoise));
+          color: NxColors.champagne));
     }
     if (chips.isEmpty) return const SizedBox.shrink();
     return Padding(

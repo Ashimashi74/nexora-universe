@@ -1,7 +1,7 @@
 name: nexora
 description: ANIX — a connected cosmic games + social universe.
 publish_to: none
-version: 1.0.0+1
+version: 2.0.0+2
 
 environment:
   sdk: ">=3.10.0 <4.0.0"
@@ -15,6 +15,7 @@ dependencies:
   go_router: ^14.6.2
   shared_preferences: ^2.3.3
   flame: ^1.22.0
+  flame_forge2d: ^0.18.2+2
   supabase_flutter: ^2.15.4
   livekit_client: ^2.13.2
   image_picker: ^1.2.0
@@ -54,6 +55,8 @@ flutter:
       fonts:
         - asset: assets/fonts/Lalezar-Regular.ttf
   assets:
+    - assets/luxe/
+    - assets/luxe/icons/
     - assets/arcade/pedestals/
     - assets/avatar/gear/
     - assets/characters/oracle/
@@ -64,13 +67,17 @@ flutter:
     - assets/games/backgammon/
     - assets/games/billiards/
     - assets/games/carrom/
-    - assets/games/bermuda/balls/
-    - assets/games/bermuda/discs/
+    - assets/games/snakes_ladders/
+    - assets/games/shared/
+    - assets/games/bermuda/balls/v9/
+    - assets/games/bermuda/discs/v9/
+    - assets/games/bermuda/discs/v10/
+    - assets/games/bermuda/discs/v11/
+    - assets/basketball/
     - assets/games/bermuda/fields/
     - assets/games/bermuda/goals/
     - assets/games/bermuda/intro/
     - assets/games/bermuda/sfx/
-    - assets/games/bermuda/teams/
     - assets/games/bermuda/thumbs/
     - assets/games/bermuda/ui/
     - assets/games/finger_soccer/
@@ -110,7 +117,6 @@ flutter:
     - assets/media/
     - assets/sfx/ui/
     - assets/ui/nx2/badges/
-    - assets/ui/nx2/bars/
     - assets/ui/nx2/bg/
     - assets/ui/nx2/boards/
     - assets/ui/nx2/chests/

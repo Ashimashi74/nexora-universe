@@ -16,12 +16,14 @@ void main() {
       }
     }
     expect(defaultTeamPrice('lux0'), 500);
-    expect(defaultTeamPrice('club0'), greaterThan(defaultTeamPrice('club38')));
+    expect(defaultTeamPrice('realmadrid'), greaterThan(defaultTeamPrice('everton')));
     expect(teamItemId('club0'), 'fs_team:club0');
   });
 
   test('locked teams fall back to the default free team when signed out', () {
-    expect(GemShop.instance.ownsTeam('club32'), isTrue);
+    expect(GemShop.instance.ownsTeam('nx_core'), isTrue);
+    // a retired v9 starter (its art no longer ships) is never fielded, even if the server still lists it
+    expect(GemShop.instance.usableTeam('club32'), kDefaultTeam);
     expect(GemShop.instance.ownsTeam('lux0'), isFalse);
     expect(GemShop.instance.usableTeam('lux0'), kDefaultTeam);
   });

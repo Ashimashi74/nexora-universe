@@ -858,7 +858,7 @@ class _SnlStars extends CustomPainter {
     final Random r = Random(23);
     final Paint p = Paint();
     for (int i = 0; i < count; i++) {
-      p.color = (i % 6 == 0 ? accent : const Color(0xFFEAF6FF))
+      p.color = (i % 6 == 0 ? accent : const Color(0xFFF4EAD2))
           .withValues(alpha: 0.2 + r.nextDouble() * 0.6);
       canvas.drawCircle(
           Offset(r.nextDouble() * size.width, r.nextDouble() * size.height),

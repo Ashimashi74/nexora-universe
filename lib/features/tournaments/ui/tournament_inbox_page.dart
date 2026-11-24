@@ -55,7 +55,7 @@ class _TournamentInboxPageState extends ConsumerState<TournamentInboxPage> {
           Icons.schedule_rounded,
         'prize' => Icons.emoji_events_rounded,
         'refund' => Icons.currency_exchange_rounded,
-        'eliminated' || 'rejected' || 'cancelled' => Icons.cancel_rounded,
+        'eliminated' || 'rejected' || 'cancelled' || 'disqualified' => Icons.cancel_rounded,
         'dispute' => Icons.gavel_rounded,
         _ => Icons.notifications_rounded,
       };

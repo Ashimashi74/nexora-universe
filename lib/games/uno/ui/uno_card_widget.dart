@@ -11,7 +11,7 @@ Color unoColorValue(UnoColor c) {
     case UnoColor.turquoise:
       return NxColors.turquoise;
     case UnoColor.violet:
-      return NxColors.violet;
+      return NxColors.goldDeep;
     case UnoColor.gold:
       return NxColors.gold;
     case UnoColor.pink:
@@ -109,7 +109,7 @@ class _UnoCardPainter extends CustomPainter {
     final UnoCard? maybe = faceUp ? card : null;
     final UnoColor? suit = maybe?.color;
     if (glow) {
-      final Color gc = suit == null ? NxColors.iceWhite : unoColorValue(suit);
+      final Color gc = suit == null ? NxColors.ink : unoColorValue(suit);
       canvas.drawRRect(
         rr.inflate(size.width * 0.03),
         Paint()
@@ -128,7 +128,7 @@ class _UnoCardPainter extends CustomPainter {
     canvas.drawRRect(rr, Paint()..color = const Color(0xFFF4F8FF));
     final RRect inner = rr.deflate(size.width * 0.055);
     final Color light = Color.lerp(base, Colors.white, 0.35)!;
-    final Color dark = Color.lerp(base, const Color(0xFF050818), 0.45)!;
+    final Color dark = Color.lerp(base, const Color(0xFF07080C), 0.45)!;
     canvas.drawRRect(
       inner,
       Paint()
@@ -154,7 +154,7 @@ class _UnoCardPainter extends CustomPainter {
           ..shader = const SweepGradient(
             colors: <Color>[
               NxColors.turquoise,
-              NxColors.violet,
+              NxColors.goldDeep,
               NxColors.pink,
               NxColors.gold,
               NxColors.turquoise,
@@ -189,7 +189,7 @@ class _UnoCardPainter extends CustomPainter {
     canvas.restore();
 
     // Central symbol.
-    final Color symColor = c.isWild ? NxColors.iceWhite : dark;
+    final Color symColor = c.isWild ? NxColors.ink : dark;
     _paintSymbol(canvas, c, center, size.width * 0.40, symColor, true);
 
     // Corner indices.
@@ -225,7 +225,7 @@ class _UnoCardPainter extends CustomPainter {
         ..shader = const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: <Color>[Color(0xFF1B1060), Color(0xFF0A0F2C), Color(0xFF041A33)],
+          colors: <Color>[Color(0xFF2A210F), Color(0xFF14130F), Color(0xFF120F08)],
         ).createShader(inner.outerRect),
     );
     final Offset c = rr.center;
@@ -247,7 +247,7 @@ class _UnoCardPainter extends CustomPainter {
         ..style = PaintingStyle.stroke
         ..strokeWidth = size.width * 0.03
         ..shader = const SweepGradient(
-          colors: <Color>[NxColors.turquoise, NxColors.violet, NxColors.pink, NxColors.gold, NxColors.turquoise],
+          colors: <Color>[NxColors.turquoise, NxColors.goldDeep, NxColors.pink, NxColors.gold, NxColors.turquoise],
         ).createShader(oval),
     );
     canvas.drawOval(
@@ -257,7 +257,7 @@ class _UnoCardPainter extends CustomPainter {
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, size.width * 0.05),
     );
     canvas.restore();
-    _text(canvas, 'NX', c, size.width * 0.30, NxColors.iceWhite, FontWeight.w900, shadow: NxColors.electricBlue);
+    _text(canvas, 'NX', c, size.width * 0.30, NxColors.ink, FontWeight.w900, shadow: NxColors.gold);
   }
 
   void _paintSymbol(Canvas canvas, UnoCard c, Offset at, double s, Color color, bool big) {
@@ -301,7 +301,7 @@ class _UnoCardPainter extends CustomPainter {
       case UnoKind.wildDrawFour:
         if (big) {
           _paintWildDiamond(canvas, at - Offset(0, s * 0.18), s * 0.6);
-          _text(canvas, '+4', at + Offset(0, s * 0.42), s * 0.6, NxColors.iceWhite, FontWeight.w900,
+          _text(canvas, '+4', at + Offset(0, s * 0.42), s * 0.6, NxColors.ink, FontWeight.w900,
               shadow: const Color(0xAA000000));
         } else {
           _text(canvas, '+4', at, s * 0.8, color, FontWeight.w900);
@@ -339,7 +339,7 @@ class _UnoCardPainter extends CustomPainter {
   }
 
   void _paintWildDiamond(Canvas canvas, Offset at, double s) {
-    const List<Color> cols = <Color>[NxColors.turquoise, NxColors.violet, NxColors.gold, NxColors.pink];
+    const List<Color> cols = <Color>[NxColors.turquoise, NxColors.goldDeep, NxColors.gold, NxColors.pink];
     final double h = s * 0.55;
     final List<Offset> pts = <Offset>[
       at + Offset(0, -h),

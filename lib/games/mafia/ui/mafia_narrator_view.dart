@@ -448,7 +448,7 @@ class _MafiaNarratorViewState extends State<MafiaNarratorView> {
       ),
       const SizedBox(height: 16),
       MafiaPanel(
-        accent: NxColors.electricBlue,
+        accent: NxColors.gold,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
           Row(children: <Widget>[
             Expanded(child: Text(_t('تعداد بازیکنان', 'Players'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800))),
@@ -464,7 +464,7 @@ class _MafiaNarratorViewState extends State<MafiaNarratorView> {
       ),
       const SizedBox(height: 12),
       MafiaPanel(
-        accent: NxColors.violet,
+        accent: NxColors.goldDeep,
         child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
           Text(_t('نام بازیکنان', 'Player names'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
           const SizedBox(height: 8),
@@ -539,14 +539,14 @@ class _MafiaNarratorViewState extends State<MafiaNarratorView> {
 
   Widget _stepper(int value, VoidCallback onMinus, VoidCallback onPlus) {
     return Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
-      IconButton(onPressed: onMinus, icon: const Icon(Icons.remove_circle_outline, color: NxColors.iceWhite)),
+      IconButton(onPressed: onMinus, icon: const Icon(Icons.remove_circle_outline, color: NxColors.ink)),
       SizedBox(
         width: 30,
         child: Text('$value',
             textAlign: TextAlign.center,
             style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900)),
       ),
-      IconButton(onPressed: onPlus, icon: const Icon(Icons.add_circle_outline, color: NxColors.iceWhite)),
+      IconButton(onPressed: onPlus, icon: const Icon(Icons.add_circle_outline, color: NxColors.ink)),
     ]);
   }
 
@@ -574,7 +574,7 @@ class _MafiaNarratorViewState extends State<MafiaNarratorView> {
     return _scroll(Column(children: <Widget>[
       Text('${_passIdx + 1} / ${_e.playerCount}', style: _dim),
       const SizedBox(height: 8),
-      CrewAvatar(name: p.name, hue: _hue(p.id), size: 64, glow: NxColors.violet),
+      CrewAvatar(name: p.name, hue: _hue(p.id), size: 64, glow: NxColors.goldDeep),
       const SizedBox(height: 10),
       Text(_t('گوشی را به ${p.name} بده', 'Pass the phone to ${p.name}'), textAlign: TextAlign.center, style: _h1),
       const SizedBox(height: 6),
@@ -610,7 +610,7 @@ class _MafiaNarratorViewState extends State<MafiaNarratorView> {
       GlowButton(
         label: _passIdx + 1 < _e.playerCount ? _t('پنهان کن و رد کن', 'Hide & pass on') : _t('همه نقششان را دیدند', 'Everyone has seen their role'),
         icon: Icons.visibility_off,
-        color: NxColors.violet,
+        color: NxColors.goldDeep,
         onTap: _peekedOnce && !_peeking ? _nextPass : null,
       ),
     ]));
@@ -623,11 +623,11 @@ class _MafiaNarratorViewState extends State<MafiaNarratorView> {
         title: _t('شب ${_e.day}', 'Night ${_e.day}'),
         subtitle: _t('گوشی را وسط میز بگذارید. همه چشم‌ها را ببندند.', 'Put the phone in the middle. Everyone, close your eyes.'),
         icon: Icons.nightlight_round,
-        color: NxColors.violet,
+        color: NxColors.goldDeep,
         animate: _fx,
       ),
       const SizedBox(height: 22),
-      GlowButton(label: _t('شروع شب', 'Begin the night'), icon: Icons.play_arrow, color: NxColors.violet, onTap: _beginNight),
+      GlowButton(label: _t('شروع شب', 'Begin the night'), icon: Icons.play_arrow, color: NxColors.goldDeep, onTap: _beginNight),
     ]));
   }
 
@@ -754,7 +754,7 @@ class _MafiaNarratorViewState extends State<MafiaNarratorView> {
       Text(mafia ? _t('مافیا است', 'is MAFIA') : _t('بی‌گناه است', 'is innocent'),
           style: TextStyle(color: c, fontSize: 22, fontWeight: FontWeight.w900)),
       const SizedBox(height: 22),
-      GlowButton(label: _t('پنهان کن و بخواب', 'Hide & sleep'), icon: Icons.visibility_off, color: NxColors.violet, onTap: _advanceStep),
+      GlowButton(label: _t('پنهان کن و بخواب', 'Hide & sleep'), icon: Icons.visibility_off, color: NxColors.goldDeep, onTap: _advanceStep),
     ]));
   }
 
@@ -855,7 +855,7 @@ class _MafiaNarratorViewState extends State<MafiaNarratorView> {
           IconButton(
             tooltip: _t('گزارش', 'Log'),
             onPressed: () => showMafiaLog(context, _e.log.where((GameLogEntry g) => g.visibleTo == null).toList(), _fa),
-            icon: const Icon(Icons.receipt_long, color: NxColors.iceWhite),
+            icon: const Icon(Icons.receipt_long, color: NxColors.ink),
           ),
           const SizedBox(width: 4),
         ]),
@@ -929,7 +929,7 @@ class _MafiaNarratorViewState extends State<MafiaNarratorView> {
       IconButton(
         tooltip: _paused ? _t('ادامه', 'Resume') : _t('توقف', 'Pause'),
         onPressed: () => setState(() => _paused = !_paused),
-        icon: Icon(_paused ? Icons.play_circle : Icons.pause_circle, color: NxColors.iceWhite, size: 30),
+        icon: Icon(_paused ? Icons.play_circle : Icons.pause_circle, color: NxColors.ink, size: 30),
       ),
       IconButton(
         tooltip: _t('۳۰ ثانیه بیشتر', '+30 seconds'),
@@ -937,7 +937,7 @@ class _MafiaNarratorViewState extends State<MafiaNarratorView> {
           _secondsLeft += 30;
           _secondsTotal = max(_secondsTotal, _secondsLeft);
         }),
-        icon: const Icon(Icons.more_time, color: NxColors.iceWhite, size: 28),
+        icon: const Icon(Icons.more_time, color: NxColors.ink, size: 28),
       ),
     ]);
   }
@@ -1033,7 +1033,7 @@ class _MafiaNarratorViewState extends State<MafiaNarratorView> {
           GlowButton(
             label: _e.isOver ? _t('پایان بازی', 'Game over') : _t('شب فرا می‌رسد', 'Night falls'),
             icon: _e.isOver ? Icons.flag : Icons.nightlight_round,
-            color: NxColors.violet,
+            color: NxColors.goldDeep,
             onTap: _afterVerdict,
           ),
         ]);

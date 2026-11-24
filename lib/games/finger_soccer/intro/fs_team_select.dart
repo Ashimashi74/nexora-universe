@@ -6,6 +6,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nexora/core/economy/gem_shop.dart';
 
+import '../core/bm_data.dart';
 import '../core/bm_engine.dart';
 import 'fs_intro_data.dart';
 import 'fs_intro_ui.dart';
@@ -75,6 +76,9 @@ class _FsTeamSelectState extends State<FsTeamSelect> {
   late final List<int> _browse = <int>[
     for (final String t in widget.teams) kBmTeams.indexWhere((BmTeam x) => x.id == t).clamp(0, kBmTeams.length - 1),
   ];
+  late final List<String> _categories = <String>[
+    for (final String t in widget.teams) bmTeam(t).cat,
+  ];
   late int _left = widget.countdown;
   Timer? _timer;
   bool _done = false;
@@ -125,19 +129,77 @@ class _FsTeamSelectState extends State<FsTeamSelect> {
   }
 
   BmTeam get _t => kBmTeams[_browse[_side]];
+  String get _category => _categories[_side];
+  List<BmTeam> get _categoryTeams => kBmTeams.where((BmTeam t) => t.cat == _category).toList(growable: false);
 
-  /// Browsing with the arrows also picks the team shown when it can be fielded (owned, or the opponent side), so the
-  /// team on screen is the team that plays; a locked team still needs the buy button (or a tap on the disc).
+  /// Browse only the active category. A category change can no longer silently skip national / club catalogs.
+  /// Browsing picks an owned team for the player, or any team for the opponent; locked teams remain purchasable.
   void _step(int d) => setState(() {
-        _browse[_side] = (_browse[_side] + d) % kBmTeams.length;
-        final BmTeam t = kBmTeams[_browse[_side]];
+        final List<BmTeam> group = _categoryTeams;
+        if (group.isEmpty) return;
+        int at = group.indexWhere((BmTeam t) => t.id == _t.id);
+        if (at < 0) at = d > 0 ? -1 : 0;
+        at = (at + d + group.length) % group.length;
+        final BmTeam t = group[at];
+        _browse[_side] = kBmTeams.indexOf(t);
         if (!_needsOwn || GemShop.instance.ownsTeam(t.id)) widget.teams[_side] = t.id;
       });
+
+  Future<void> _showCategories() async {
+    final String? category = await showDialog<String>(
+      context: context,
+      builder: (BuildContext c) => Directionality(
+        textDirection: widget.fa ? TextDirection.rtl : TextDirection.ltr,
+        child: AlertDialog(
+          backgroundColor: kFsNavy,
+          title: Text(widget.fa ? 'دسته‌بندی تیم‌ها' : 'Team categories', style: fsText(18, weight: FontWeight.w900)),
+          contentPadding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+          content: SizedBox(
+            width: 340,
+            child: ListView(
+              shrinkWrap: true,
+              children: <Widget>[
+                for (final List<Object> row in kBmCats)
+                  ListTile(
+                    dense: true,
+                    selected: row[0] == _category,
+                    selectedTileColor: const Color(0x3322C3A2),
+                    leading: Icon(row[0] == _category ? Icons.radio_button_checked : Icons.radio_button_off,
+                        color: row[0] == _category ? kFsLime : const Color(0xFF9EA3C7)),
+                    title: Text(fsTeamCategoryName(row[0] as String, widget.fa), style: fsText(14, weight: FontWeight.w800)),
+                    trailing: Text(
+                      fsFa(kBmTeams.where((BmTeam t) => t.cat == row[0]).length),
+                      style: fsText(12, color: const Color(0xFF9EA3C7)),
+                    ),
+                    onTap: () => Navigator.pop(c, row[0] as String),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    if (category == null || !mounted) return;
+    setState(() {
+      _categories[_side] = category;
+      final List<BmTeam> group = _categoryTeams;
+      if (group.isEmpty) return;
+      final int currentIndex = group.indexWhere((BmTeam t) => t.id == widget.teams[_side]);
+      final BmTeam selected = currentIndex < 0 ? group.first : group[currentIndex];
+      _browse[_side] = kBmTeams.indexOf(selected);
+      if (!_needsOwn || GemShop.instance.ownsTeam(selected.id)) widget.teams[_side] = selected.id;
+    });
+  }
 
   bool get _needsOwn => _side == 0 && widget.ownedOnlySide0;
 
   Future<void> _selectOrBuy() async {
     final BmTeam t = _t;
+    if (t.id == kCustomTeamId) {
+      // the "create" tile is not a team: the player's own custom team is listed with the shared ones
+      _say(widget.fa ? 'تیم اختصاصی را در لابی بساز' : 'Create your custom team in the lobby');
+      return;
+    }
     if (_needsOwn && !GemShop.instance.ownsTeam(t.id)) {
       final bool ok = await fsBuyTeam(context, t, widget.fa);
       if (!ok || !mounted) return;
@@ -353,19 +415,26 @@ class _FsTeamSelectState extends State<FsTeamSelect> {
       Positioned(left: 262, top: 44, child: _corner(Icons.leaderboard_rounded, 'جدول تیم ها', _showTable)),
       Positioned(
         left: 112,
-        top: 49,
+        top: 45,
         width: 136,
-        height: 28,
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            gradient: const LinearGradient(
-                begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: <Color>[Color(0xFF1FAE8F), Color(0xFF0E7B64)]),
-            border: Border.all(color: const Color(0xFF0A5E4D)),
-          ),
-          child: Center(
-            child: Text(fsTeamName(t, widget.fa),
-                maxLines: 1, overflow: TextOverflow.ellipsis, style: fsText(13.5, weight: FontWeight.w900, height: 1)),
+        height: 38,
+        child: FsPress(
+          onTap: _showCategories,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(10),
+              gradient: const LinearGradient(
+                  begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: <Color>[Color(0xFF1FAE8F), Color(0xFF0E7B64)]),
+              border: Border.all(color: const Color(0xFF0A5E4D)),
+            ),
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: <Widget>[
+              Text('${fsTeamCategoryName(_category, widget.fa)}  ▾',
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: fsText(9.5, weight: FontWeight.w800, height: 1)),
+              const SizedBox(height: 2),
+              Text(fsTeamName(t, widget.fa),
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: fsText(12.5, weight: FontWeight.w900, height: 1)),
+            ]),
           ),
         ),
       ),
@@ -383,7 +452,8 @@ class _FsTeamSelectState extends State<FsTeamSelect> {
               key: ValueKey<String>(t.id),
               behavior: HitTestBehavior.opaque,
               onTap: _selectOrBuy,
-              child: FsDisc3D(asset: t.asset, r: 56),
+              child: FsDisc3D(asset: t.asset, r: 56,
+                  networkUrl: t.crestUrl),
             ),
           ),
         ),

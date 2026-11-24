@@ -74,7 +74,7 @@ class _BilliardsGameState extends State<BilliardsGame>
 
   // banner
   String _bannerText = '';
-  Color _bannerColor = NxColors.iceWhite;
+  Color _bannerColor = NxColors.ink;
   int _bannerId = 0;
   double _bannerLeft = 0;
 
@@ -211,12 +211,12 @@ class _BilliardsGameState extends State<BilliardsGame>
     }
     if (_l.vsBot) {
       if (_l.difficulty == BotDifficulty.easy) {
-        return _l.tx('ربات انیکس · آسان', 'ANIX Bot · Easy');
+        return _l.tx('ربات نیکسورا · آسان', 'NEXORA Bot · Easy');
       }
       if (_l.difficulty == BotDifficulty.hard) {
-        return _l.tx('ربات انیکس · سخت', 'ANIX Bot · Hard');
+        return _l.tx('ربات نیکسورا · سخت', 'NEXORA Bot · Hard');
       }
-      return _l.tx('ربات انیکس · معمولی', 'ANIX Bot · Normal');
+      return _l.tx('ربات نیکسورا · معمولی', 'NEXORA Bot · Normal');
     }
     return _l.tx('بازیکن ۲', 'Player 2');
   }
@@ -299,7 +299,7 @@ class _BilliardsGameState extends State<BilliardsGame>
   void _onImpact(double x, double y, double strength, bool cushion) {
     if (strength < 140) return;
     _scene.spark(
-        x, y, strength, cushion ? NxColors.gold : NxColors.iceWhite, _rng);
+        x, y, strength, cushion ? NxColors.gold : NxColors.ink, _rng);
     _haptic(0);
   }
 
@@ -308,7 +308,7 @@ class _BilliardsGameState extends State<BilliardsGame>
         pocket,
         id == 0
             ? NxColors.danger
-            : (id == 8 ? NxColors.violet : NxColors.electricBlue)));
+            : (id == 8 ? NxColors.goldDeep : NxColors.gold)));
     _scene.sinks.add(PoolSink(
         id, PoolConfig.pockets[pocket][0], PoolConfig.pockets[pocket][1]));
     if (id != 0) _pottedOrder.add(id);
@@ -552,7 +552,7 @@ class _BilliardsGameState extends State<BilliardsGame>
           c.x - math.cos(_scene.aimAngle) * PoolConfig.ballR,
           c.y - math.sin(_scene.aimAngle) * PoolConfig.ballR,
           shot.power * 2600,
-          NxColors.electricBlue,
+          NxColors.gold,
           _rng);
     }
     _acc = 0;
@@ -637,7 +637,7 @@ class _BilliardsGameState extends State<BilliardsGame>
       _showBanner(
           _l.tx('توپ ۸ در بریک افتاد و برگشت',
               '8-ball potted on the break — re-spotted'),
-          NxColors.violet);
+          NxColors.goldDeep);
     } else if (r.continues) {
       _showBanner(_l.tx('عالی! دوباره بزن', 'Nice! Shoot again'), nextColor,
           seconds: 1.4);

@@ -15,8 +15,8 @@ import 'tournament_bracket_view.dart';
 import '../../../core/ui2/anix_kit.dart';
 /// The shareable invitation text for a community.
 String inviteText(BuildContext context, Community c) => context.tx(
-      'به جامعه «${c.name}» در ANIX بپیوند! 🚀\nکد دعوت: ${c.inviteCode}\nدر Social Station روی «ورود با کد دعوت» بزن.',
-      'Join "${c.name}" on ANIX! 🚀\nInvite code: ${c.inviteCode}\nIn Social Station tap "Join with code".',
+      'به جامعه «${c.name}» در نیکسورا بپیوند! 🚀\nکد دعوت: ${c.inviteCode}\nدر Social Station روی «ورود با کد دعوت» بزن.',
+      'Join "${c.name}" on NEXORA! 🚀\nInvite code: ${c.inviteCode}\nIn Social Station tap "Join with code".',
     );
 
 /// Invite sheet: copy code, copy shareable text, drop the card into ORBIT NETWORK.
@@ -238,7 +238,7 @@ class _CommunityDetailPageState extends ConsumerState<CommunityDetailPage>
       body: Column(children: <Widget>[
         Padding(
           padding: const EdgeInsets.fromLTRB(
-              NxSpace.md, kToolbarHeight + NxSpace.sm, NxSpace.md, 0),
+              NxSpace.md, NxSpace.sm, NxSpace.md, 0),
           child: GlassPanel(
             tint: accent.withValues(alpha: 0.10),
             borderColor: accent.withValues(alpha: 0.45),

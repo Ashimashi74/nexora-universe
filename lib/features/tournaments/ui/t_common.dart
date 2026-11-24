@@ -146,6 +146,26 @@ String momentLabel(BuildContext context, String code) => switch (code) {
       _ => '',
     };
 
+/// Length of one online game, as the server passes it to the game (nx_matches.settings):
+/// first to N goals, or 3 / 5 / 7 minutes (0 = the game's default, 5 minutes for finger soccer).
+String matchLengthName(BuildContext context, Tournament t) {
+  final int goals = t.cfg('goal_target', 0);
+  if (goals > 0) {
+    return context.tx('طول هر بازی: هر کس زودتر $goals گل بزند', 'Game length: first to $goals goals');
+  }
+  final int m = t.cfg('match_minutes', 0);
+  final int mins = (m == 3 || m == 5 || m == 7) ? m : 5;
+  return context.tx('طول هر بازی: $mins دقیقه', 'Game length: $mins minutes');
+}
+
+/// Short form for chips: "5′" or "⚽3".
+String matchLengthShort(Tournament t) {
+  final int goals = t.cfg('goal_target', 0);
+  if (goals > 0) return '⚽$goals';
+  final int m = t.cfg('match_minutes', 0);
+  return "${(m == 3 || m == 5 || m == 7) ? m : 5}′";
+}
+
 String regModeName(BuildContext context, String m) => switch (m) {
       'approval' => context.tx('با تأیید برگزارکننده', 'Manual approval'),
       'code' => context.tx('فقط با کد دعوت', 'Invite code only'),
@@ -206,8 +226,12 @@ String notifText(BuildContext context, TNotification n) {
         'از لیست انتظار وارد تورنمنت شدی', 'A place opened up — you are in'),
     'rejected' =>
       context.tx('ثبت‌نامت رد شد', 'Your registration was declined'),
-    'refund' => context.tx('ورودیه برگشت داده شد (${d['coins'] ?? 0} سکه)',
-        'Entry fee refunded (${d['coins'] ?? 0} coins)'),
+    'refund' => context.tx(
+        'ورودیه برگشت داده شد (${d['coins'] ?? 0} سکه${(d['gems'] ?? 0) != 0 ? ' و ${d['gems']} جم' : ''})',
+        'Entry fee refunded (${d['coins'] ?? 0} coins${(d['gems'] ?? 0) != 0 ? ' and ${d['gems']} gems' : ''})'),
+    'disqualified' => context.tx(
+        'برگزارکننده تو را از تورنمنت حذف (محروم) کرد${(d['note'] ?? '').toString().isNotEmpty ? ': ${d['note']}' : ''}',
+        'An organizer disqualified you${(d['note'] ?? '').toString().isNotEmpty ? ': ${d['note']}' : ''}'),
     'drawn' => context.tx('قرعه‌کشی انجام شد؛ براکت را ببین',
         'The draw is done — check the bracket'),
     'starting_soon' => context.tx('تورنمنت ۱۰ دقیقه‌ی دیگر شروع می‌شود',
@@ -237,8 +261,9 @@ String notifText(BuildContext context, TNotification n) {
         'Result disputed — an organizer will review'),
     'result_corrected' => context.tx(
         'نتیجه توسط برگزارکننده اصلاح شد', 'An organizer corrected the result'),
-    'prize' => context.tx('جایزه‌ات واریز شد: ${d['coins'] ?? d['gems'] ?? 0}',
-        'Prize paid: ${d['coins'] ?? d['gems'] ?? 0}'),
+    'prize' => context.tx(
+        'جایزه‌ات واریز شد: ${d['coins'] != null ? '${d['coins']} سکه' : '${d['gems'] ?? 0} جم'}${d['place'] != null ? ' (رتبه‌ی ${d['place']})' : ''}',
+        'Prize paid: ${d['coins'] != null ? '${d['coins']} coins' : '${d['gems'] ?? 0} gems'}${d['place'] != null ? ' (place ${d['place']})' : ''}'),
     'time_changed' =>
       context.tx('زمان تورنمنت تغییر کرد', 'The tournament schedule changed'),
     'cancelled' => context.tx('تورنمنت لغو شد؛ ورودیه‌ها برگشت داده شد',
@@ -276,7 +301,7 @@ class TAvatar extends StatelessWidget {
           style: TextStyle(
               fontSize: size * 0.48,
               fontWeight: FontWeight.w900,
-              color: NxColors.navyDeep)),
+              color: NxColors.luxeBg)),
     );
   }
 }

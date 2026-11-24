@@ -122,6 +122,13 @@ class TournamentRepository {
     return rows.map((dynamic r) => Map<String, dynamic>.from(r as Map)).toList();
   }
 
+  /// Runners (per-tournament staff) of a tournament.
+  Future<List<String>> runners(String t) async {
+    final SupabaseClient c = await _client();
+    final List<dynamic> rows = await c.from('nx_t_staff').select('user_id').eq('tournament_id', t).limit(100);
+    return rows.map((dynamic r) => '${(r as Map)['user_id']}').toList();
+  }
+
   Future<List<TNotification>> notifications() async {
     final SupabaseClient c = await _client();
     final String? me = uid;
@@ -193,6 +200,16 @@ class TournamentRepository {
   Future<TResult> register(String t, [String? code]) =>
       _call('nx_t_register', <String, dynamic>{'p_t': t, 'p_code': code});
   Future<TResult> joinCode(String code) => _call('nx_t_join_code', <String, dynamic>{'p_code': code});
+
+  /// What an invite code joins (title, fees, my status) without registering or charging anything.
+  /// `error == 'peek_unavailable'` when the server does not have nx_t_code_peek yet.
+  Future<TResult> peekCode(String code) async {
+    final TResult r = await _call('nx_t_code_peek', <String, dynamic>{'p_code': code});
+    if (!r.ok && (r.error ?? '').contains('nx_t_code_peek')) {
+      return const TResult(false, 'peek_unavailable', <String, dynamic>{});
+    }
+    return r;
+  }
   Future<TResult> withdraw(String t) => _call('nx_t_withdraw', <String, dynamic>{'p_t': t});
   Future<TResult> decide(String t, String user, bool approve, [String? note]) => _call('nx_t_decide',
       <String, dynamic>{'p_t': t, 'p_user': user, 'p_approve': approve, 'p_note': note});
@@ -302,6 +319,28 @@ String tErrorText(String? code, bool fa) {
     'bad_distribution' => t('جمع درصد جوایز بیشتر از ۱۰۰ است', 'Prize percentages add up to more than 100'),
     'downstream_started' => t('بازی بعدی شروع شده؛ اصلاح ممکن نیست', 'The next match already started'),
     'groups_need_4' => t('حالت گروهی حداقل ۴ نفر لازم دارد', 'Groups need at least 4 players'),
+    'not_found' => t('پیدا نشد', 'Not found'),
+    'not_pending' => t('این ثبت‌نام دیگر در صف نیست', 'This registration is no longer waiting'),
+    'bad_status' => t('در این وضعیت تورنمنت ممکن نیست', 'Not possible in the tournament\'s current state'),
+    'not_draft' => t('فقط پیش‌نویس منتشر می‌شود', 'Only a draft can be published'),
+    'not_deletable' => t('قابل حذف نیست', 'Cannot be deleted'),
+    'locked' => t('تورنمنت تمام یا لغو شده', 'The tournament is finished or cancelled'),
+    'bad_winner' => t('برنده باید یکی از دو بازیکن باشد', 'The winner must be one of the two players'),
+    'knockout_needs_winner' => t('در حذفی مساوی ممکن نیست؛ برنده را انتخاب کن', 'A knockout match needs a winner'),
+    'players_unknown' => t('بازیکن‌های این بازی هنوز مشخص نیستند', 'The players of this match are not known yet'),
+    'already_started' => t('این بازی شروع شده', 'This match has already started'),
+    'bad_players' => t('بازیکن‌ها معتبر نیستند', 'Invalid players'),
+    'custom_only' => t('فقط در براکت دستی', 'Only in a custom bracket'),
+    'draw_first' => t('اول قرعه‌کشی کن', 'Run the draw first'),
+    'not_a_player' => t('بازیکن این بازی نیستی', 'You are not in this match'),
+    'bad_title' => t('عنوان حداقل ۳ حرف', 'The title needs at least 3 letters'),
+    'bad_format' => t('فرمت نامعتبر', 'Invalid format'),
+    'bad_capacity' => t('ظرفیت باید بین ۲ و ۶۴ باشد', 'Capacity must be 2–64'),
+    'bad_game' => t('این بازی برای تورنمنت پشتیبانی نمی‌شود', 'This game is not supported for tournaments'),
+    'bad_action' => t('عملیات نامعتبر', 'Invalid action'),
+    'bad_report' || 'inconsistent_report' => t('گزارش نتیجه نامعتبر', 'Invalid result report'),
+    'no_profile' => t('پروفایل بازی هنوز آماده نیست؛ دوباره امتحان کن', 'Your game profile is not ready yet; try again'),
+    'network' => t('خطای شبکه', 'Network error'),
     _ => code ?? t('خطا', 'Error'),
   };
 }

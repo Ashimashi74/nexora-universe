@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/profile/profile_service.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/theme/nx_theme.dart';
+import '../../core/ui2/luxe.dart';
 import '../../core/widgets/nx_widgets.dart';
 import '../../games/game_registry.dart';
 import '../../games/arcade_kit/arcade_icon.dart';
@@ -180,7 +181,7 @@ class _GameSetupPageState extends ConsumerState<GameSetupPage> {
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                const Icon(Icons.menu_book_rounded, color: NxColors.turquoise),
+                const Icon(Icons.menu_book_rounded, color: NxColors.champagne),
                 const SizedBox(width: 8),
                 Text(context.tx('قوانین', 'Rules'),
                     style: const TextStyle(fontWeight: FontWeight.w800)),
@@ -191,33 +192,35 @@ class _GameSetupPageState extends ConsumerState<GameSetupPage> {
             ]),
           ),
           const SizedBox(height: NxSpace.lg),
-          FilledButton.icon(
-            style: FilledButton.styleFrom(
-              backgroundColor: game.accent,
-              minimumSize: const Size.fromHeight(58),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(NxRadius.md)),
-            ),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(
+          LuxeButton(
+            label: _mode == GameMode.online
+                ? context.tx('ورود به لابی آنلاین', 'Enter online lobby')
+                : game.solo
+                    ? context.tx('شروع سریع', 'Quick start')
+                    : context.tx('شروع بازی', 'Start match'),
+            icon: _mode == GameMode.online ? Icons.public_rounded : Icons.play_arrow_rounded,
+            height: 58,
+            fontSize: 15,
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
               builder: (_) => _mode == GameMode.online
                   ? OnlineLobbyPage(gameId: game.id)
-                  : GameHostPage(
-                      game: game,
-                      mode: _mode,
-                      difficulty: _difficulty,
-                      players: _players),
+                  : GameHostPage(game: game, mode: _mode, difficulty: _difficulty, players: _players),
             )),
-            icon: Icon(_mode == GameMode.online
-                ? Icons.public_rounded
-                : Icons.play_arrow_rounded),
-            label: Text(
-                _mode == GameMode.online
-                    ? context.tx('ورود به لابی آنلاین', 'Enter online lobby')
-                    : game.solo
-                        ? context.tx('شروع سریع', 'Quick start')
-                        : context.tx('شروع بازی', 'Start match'),
-                style: const TextStyle(fontSize: 17)),
           ),
+          if (game.solo && kArcadeDefs.containsKey(game.id)) ...<Widget>[
+            const SizedBox(height: NxSpace.sm),
+            LuxeButton(
+              label: context.tx('چالش امروز', "Today's challenge"),
+              icon: Icons.today_rounded,
+              kind: LuxeButtonKind.ghost,
+              height: 50,
+              fontSize: 13,
+              onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(
+                builder: (_) => GameHostPage(
+                    game: game, mode: GameMode.vsBot, difficulty: BotDifficulty.normal, players: 1, daily: true),
+              )),
+            ),
+          ],
           if (game.supportsOnline &&
               (game.maxPlayers == 2 || (kArcadeDefs.containsKey(game.id) && game.minPlayers == 2)) &&
               game.id != 'mafia' && game.id != 'spy_mafia') ...[
@@ -249,7 +252,8 @@ class _GameSetupPageState extends ConsumerState<GameSetupPage> {
           builder: (_) => GameHostPage(
               game: game,
               mode: GameMode.vsBot,
-              difficulty: BotDifficulty.hard,
+              // Solo scores are compared against today's target; there are no bots to beat.
+              difficulty: BotDifficulty.normal,
               players: game.solo ? 1 : game.defaultPlayers,
               daily: true),
         ));
@@ -270,12 +274,14 @@ class _GameSetupPageState extends ConsumerState<GameSetupPage> {
             ]),
           ),
           if (done)
-            const NxPill(label: '✓', color: NxColors.turquoise)
+            const NxPill(label: '✓', color: NxColors.champagne)
           else
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: game.accent),
-              onPressed: daily,
-              child: Text(context.tx('شروع', 'Play')),
+            LuxeButton(
+              label: context.tx('شروع', 'Play'),
+              height: 42,
+              fontSize: 12,
+              expand: false,
+              onTap: daily,
             ),
         ]),
         if (game.solo) ...[

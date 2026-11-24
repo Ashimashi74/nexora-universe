@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -77,6 +78,9 @@ class ProfileService extends ChangeNotifier {
   String avatarCore = 'hero_front';
   String? avatarUrl;
   String? avatarPath;
+  /// Custom finger-soccer team crest unlocked with the 1000-gem custom-team item.
+  String? customTeamUrl;
+  String? customTeamPath;
 
   /// Portrait from the ANIX avatar base set (assets/ui/anix/avatars), shown in the rank frame.
   String portrait = '01-vanguard';
@@ -101,6 +105,20 @@ class ProfileService extends ChangeNotifier {
 
   bool get hasIdentity => username.isNotEmpty;
 
+  /// A signed-in account already chose its username at sign-up: that IS the digital identity, so the identity page
+  /// must never ask for it again. Adopts [accountName] when no local identity exists yet (fresh install, new phone,
+  /// first launch after sign-up, local data cleared). Returns whether an identity exists afterwards.
+  /// Safe to call from a router redirect: listeners are notified after the current frame's work.
+  bool adoptAccountName(String? accountName) {
+    if (hasIdentity) return true;
+    final String n = (accountName ?? '').trim();
+    if (n.length < 2) return false;
+    username = n;
+    unawaited(_saveLocal());
+    scheduleMicrotask(notifyListeners);
+    return true;
+  }
+
   void _load() {
     final j = _store.getJson(_key);
     if (j == null) {
@@ -119,6 +137,8 @@ class ProfileService extends ChangeNotifier {
     avatarCore = j['avatar'] as String? ?? 'hero_front';
     avatarUrl = j['avatarUrl'] as String?;
     avatarPath = j['avatarPath'] as String?;
+    customTeamUrl = j['customTeamUrl'] as String?;
+    customTeamPath = j['customTeamPath'] as String?;
     portrait = j['portrait'] as String? ?? '01-vanguard';
     xp = (j['xp'] as num?)?.toInt() ?? 0;
     coins = (j['coins'] as num?)?.toInt() ?? 0;
@@ -151,6 +171,8 @@ class ProfileService extends ChangeNotifier {
         'avatar': avatarCore,
         'avatarUrl': avatarUrl,
         'avatarPath': avatarPath,
+        'customTeamUrl': customTeamUrl,
+        'customTeamPath': customTeamPath,
         'portrait': portrait,
         'xp': xp,
         'coins': coins,
@@ -200,6 +222,8 @@ class ProfileService extends ChangeNotifier {
   Map<String, dynamic> cloudBlob() => <String, dynamic>{
         'bio': bio,
         'portrait': portrait,
+        'customTeamUrl': customTeamUrl,
+        'customTeamPath': customTeamPath,
         'orbitTheme': orbitTheme,
         'claimedDaily': claimedDaily,
         'streak': streak,
@@ -225,6 +249,8 @@ class ProfileService extends ChangeNotifier {
       activity.clear();
       bio = j['bio'] as String? ?? '';
       portrait = j['portrait'] as String? ?? portrait;
+      customTeamUrl = j['customTeamUrl'] as String? ?? customTeamUrl;
+      customTeamPath = j['customTeamPath'] as String? ?? customTeamPath;
       orbitTheme = j['orbitTheme'] as String? ?? 'aurora';
       claimedDaily = j['claimedDaily'] as String? ?? '';
       streak = (j['streak'] as num?)?.toInt() ?? 0;
@@ -237,6 +263,9 @@ class ProfileService extends ChangeNotifier {
       if (cd.compareTo(claimedDaily) > 0) claimedDaily = cd;
     }
     if (serverName != null && serverName.isNotEmpty && (replace || username.isEmpty)) username = serverName;
+    if (username.isEmpty && j['username'] is String && (j['username'] as String).isNotEmpty) {
+      username = j['username'] as String;
+    }
     if (avatar != null && avatar.isNotEmpty && replace) avatarCore = avatar;
     (j['equipped'] as Map?)?.forEach((k, v) => equipped.putIfAbsent('$k', () => '$v'));
     inventory.addAll(((j['inv'] as List?) ?? const []).map((e) => '$e'));
@@ -513,6 +542,11 @@ class ProfileService extends ChangeNotifier {
   void grantItem(String itemId) {
     inventory.add(itemId);
     _save();
+    notifyListeners();
+  }
+
+  Future<void> saveCustomTeam() async {
+    await _save();
     notifyListeners();
   }
 

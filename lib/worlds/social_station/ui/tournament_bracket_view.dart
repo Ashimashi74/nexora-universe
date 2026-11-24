@@ -53,7 +53,7 @@ Future<void> createCommunityTournament(BuildContext context, WidgetRef ref, Comm
                   label: Text(sc.tx(g.nameFa, g.nameEn)),
                   selectedColor: NxColors.gold,
                   showCheckmark: false,
-                  labelStyle: TextStyle(color: gameId == g.id ? NxColors.navyDeep : NxColors.iceWhite, fontWeight: FontWeight.w700),
+                  labelStyle: TextStyle(color: gameId == g.id ? NxColors.luxeBg : NxColors.ink, fontWeight: FontWeight.w700),
                 ),
             ]),
             SocialSectionTitle('${sc.tx('شرکت‌کنندگان', 'Players')} (${picked.length})'),
@@ -88,7 +88,7 @@ Future<void> createCommunityTournament(BuildContext context, WidgetRef ref, Comm
               ),
             const SizedBox(height: 16),
             FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: NxColors.gold, foregroundColor: NxColors.navyDeep, padding: const EdgeInsets.symmetric(vertical: 14)),
+              style: FilledButton.styleFrom(backgroundColor: NxColors.gold, foregroundColor: NxColors.luxeBg, padding: const EdgeInsets.symmetric(vertical: 14)),
               onPressed: picked.length >= TournamentBracket.minPlayers ? () => Navigator.pop(bc, true) : null,
               icon: const Icon(Icons.account_tree_rounded),
               label: Text(sc.tx('ساخت جدول', 'Build bracket'), style: const TextStyle(fontWeight: FontWeight.w900)),
@@ -436,7 +436,7 @@ class _MatchCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontWeight: won ? FontWeight.w900 : FontWeight.w600,
-                  color: name == null ? NxColors.textDim : (won ? NxColors.gold : NxColors.iceWhite),
+                  color: name == null ? NxColors.textDim : (won ? NxColors.gold : NxColors.ink),
                   fontSize: 13,
                 )),
           ),
@@ -464,7 +464,7 @@ class _MatchCard extends StatelessWidget {
               color: const Color(0x1AFFFFFF),
               borderRadius: BorderRadius.circular(NxRadius.sm),
               border: Border.all(
-                color: live ? kSocialPalette.secondary : (match.done ? NxColors.gold.withValues(alpha: 0.5) : NxColors.glassBorder),
+                color: live ? kSocialPalette.secondary : (match.done ? NxColors.gold.withValues(alpha: 0.5) : NxColors.goldLine),
                 width: live ? 1.6 : 1,
               ),
               boxShadow: live ? <BoxShadow>[BoxShadow(color: kSocialPalette.secondary.withValues(alpha: 0.35), blurRadius: 10)] : null,
@@ -472,7 +472,7 @@ class _MatchCard extends StatelessWidget {
             clipBehavior: Clip.antiAlias,
             child: Column(children: <Widget>[
               _slot(context, match.a, false),
-              Container(height: 1, color: NxColors.glassBorder),
+              Container(height: 1, color: NxColors.goldLine),
               _slot(context, match.b, bye),
             ]),
           ),

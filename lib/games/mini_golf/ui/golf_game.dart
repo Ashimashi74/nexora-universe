@@ -63,7 +63,7 @@ class _GolfGameState extends ArcadeLoopState<GolfGame> {
 
   GameLaunch get l => widget.launch;
   int get me => l.mySeat;
-  int get seats => l.net?.seatCount ?? l.playerCount.clamp(2, 4);
+  int get seats => (l.net?.seatCount ?? l.playerCount).clamp(2, 4);
   bool get _local => !l.online && l.mode == GameMode.local;
   bool _isBot(int s) => !l.online && !_local && s != me;
 

@@ -179,7 +179,7 @@ class _SocialStationPageState extends ConsumerState<SocialStationPage> {
           : CustomScrollView(slivers: <Widget>[
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(
-                    NxSpace.md, kToolbarHeight + NxSpace.sm, NxSpace.md, 0),
+                    NxSpace.md, NxSpace.sm, NxSpace.md, 0),
                 sliver: SliverToBoxAdapter(
                   child: _Hero(
                     communities: all.length,

@@ -65,7 +65,7 @@ class _UnoGameViewState extends State<UnoGameView>
   int? _dragId;
   Offset _drag = Offset.zero;
   String? _toast;
-  Color _toastColor = NxColors.electricBlue;
+  Color _toastColor = NxColors.gold;
   int _toastSerial = 0;
 
   final List<_Flight> _flights = <_Flight>[];
@@ -212,11 +212,11 @@ class _UnoGameViewState extends State<UnoGameView>
     'Altair Bot'
   ];
   static const List<Color> _seatColors = <Color>[
-    NxColors.electricBlue,
+    NxColors.gold,
     NxColors.pink,
     NxColors.turquoise,
     NxColors.gold,
-    NxColors.violet,
+    NxColors.goldDeep,
     NxColors.success,
   ];
 
@@ -451,7 +451,7 @@ class _UnoGameViewState extends State<UnoGameView>
   void _consume() {
     final List<UnoEvent> evs = _game.events;
     final List<String> notes = <String>[];
-    Color noteColor = NxColors.electricBlue;
+    Color noteColor = NxColors.gold;
     int drawDelay = 0;
     while (_cursor < evs.length) {
       final UnoEvent e = evs[_cursor++];
@@ -1004,7 +1004,7 @@ class _UnoGameViewState extends State<UnoGameView>
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: myDrawTurn
-                                ? NxColors.iceWhite
+                                ? NxColors.ink
                                 : NxColors.textDim,
                           ),
                         ),
@@ -1037,7 +1037,7 @@ class _UnoGameViewState extends State<UnoGameView>
                           style: const TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w800,
-                              color: NxColors.iceWhite),
+                              color: NxColors.ink),
                         ),
                       ),
                     ],

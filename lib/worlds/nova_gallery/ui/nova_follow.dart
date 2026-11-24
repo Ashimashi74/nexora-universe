@@ -6,6 +6,7 @@ import '../../../core/theme/nx_theme.dart';
 import '../data/supabase_nova_repository.dart';
 import '../state/nova_controller.dart';
 import 'nova_visuals.dart';
+import '../../../core/ui2/luxe.dart';
 
 /// Followers / following of a real account (shared `follows` table), with a follow toggle for other people.
 class NovaFollowBar extends ConsumerStatefulWidget {
@@ -88,8 +89,7 @@ class _NovaFollowBarState extends ConsumerState<NovaFollowBar> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(context.tx('عملیات دنبال‌کردن ناموفق بود.', 'Follow action failed.'))));
+        luxeToast(context, context.tx('عملیات دنبال‌کردن ناموفق بود.', 'Follow action failed.'));
       }
     } finally {
       if (mounted) setState(() => _busy = false);

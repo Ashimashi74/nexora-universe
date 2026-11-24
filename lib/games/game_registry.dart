@@ -5,6 +5,7 @@ import 'backgammon/backgammon_entry.dart';
 import 'billiards/billiards_entry.dart';
 import 'carrom/carrom_entry.dart';
 import 'core/game_contract.dart';
+import 'solo/solo_registry.dart';
 import 'finger_soccer/finger_soccer_entry.dart';
 import 'ludo/ludo_entry.dart';
 import 'mafia/mafia_entry.dart';
@@ -14,7 +15,8 @@ import 'uno/uno_entry.dart';
 
 export 'core/game_contract.dart';
 
-/// GameRegistry (STEP_16): the nine ANIX ARCADE games.
+/// GameRegistry (STEP_16): the ANIX ARCADE catalogue — the nine original games, the seven
+/// multiplayer arcade games and the ten solo arcade games (26 in total).
 final List<GameInfo> kGames = <GameInfo>[
   GameInfo(
     id: 'finger_soccer',
@@ -22,14 +24,17 @@ final List<GameInfo> kGames = <GameInfo>[
     nameEn: 'Finger Soccer',
     taglineFa: 'فلاخن بکش، شوت بزن، گل کن',
     taglineEn: 'Pull, flick, score',
-    rulesFa: 'تیم، ترکیب (۶ ترکیب)، زمین و توپ را انتخاب کن. نوبتی یکی از مهره‌های خودت را بکش و رها کن؛ هرچه بیشتر بکشی ضربه محکم‌تر است. '
+    rulesFa: 'تیم، ترکیب (۹ ترکیب)، زمین و توپ را انتخاب کن. نوبتی یکی از مهره‌های خودت را بکش و رها کن؛ هرچه بیشتر بکشی ضربه محکم‌تر است. '
         'وقتی همه‌چیز ایستاد نوبت عوض می‌شود. توپ باید از خط دروازه رد شود؛ گلِ مستقیم از ضربه‌ی شروع حساب نمی‌شود. '
-        'هر بازی ۵ دقیقه است و در تساوی، گل طلایی برنده را تعیین می‌کند. در بازی آنلاین هر نوبت ۱۵ ثانیه است.',
-    rulesEn: 'Pick your team, formation (6 shapes), field and ball. On your turn drag one of your discs back and release; the longer the pull, the harder the shot. '
+        'هر بازی ۵ دقیقه است و در تساوی، گل طلایی برنده را تعیین می‌کند. در بازی آنلاین هر نوبت ۱۰ ثانیه است.',
+    rulesEn: 'Pick your team, formation (9 shapes), field and ball. On your turn drag one of your discs back and release; the longer the pull, the harder the shot. '
         'Turns swap when everything stops. The ball must cross the goal line; a direct goal from the kick-off shot does not count. '
-        'Matches last 5 minutes and a golden goal decides a tie. Online turns are 15 seconds.',
+        'Matches last 5 minutes and a golden goal decides a tie. Online turns are 10 seconds.',
     minPlayers: 2,
     maxPlayers: 2,
+    // Online the match is played 1v1, 2v2 or 3v3 (two equal sides, turns rotate inside each side);
+    // offline pass-and-play stays a single duel because one finger drives one disc.
+    onlineMax: 6,
     accent: const Color(0xFF3DDC97),
     builder: buildFingerSoccerGame,
     supportsOnline: true,
@@ -143,8 +148,8 @@ final List<GameInfo> kGames = <GameInfo>[
   ),
   GameInfo(
     id: 'quiz',
-    nameFa: 'کوییز انیکس',
-    nameEn: 'ANIX Quiz',
+    nameFa: 'کوییز نیکسورا',
+    nameEn: 'NEXORA Quiz',
     taglineFa: 'دوئل دانش در ۱۰ راند',
     taglineEn: '10-round knowledge duel',
     rulesFa: '۱۰ سؤال، هر کدام ۱۵ ثانیه. پاسخ درست امتیاز دارد و سرعت جایزه‌ی اضافه. دسته را انتخاب کن و حریف را شکست بده.',
@@ -167,13 +172,18 @@ final List<GameInfo> kGames = <GameInfo>[
         '(the Godfather appears innocent). Days are for debate and voting. Narrator mode runs a party game for friends on one phone.',
     minPlayers: 6,
     maxPlayers: 12,
+    onlineMin: 6,
+    onlineMax: 12,
     defaultPlayers: 8,
     accent: const Color(0xFFFF5A6E),
     builder: buildMafiaGame,
     supportsOnline: true,
   ),
-  // redesign-2: 20 new arcade games, added alongside the nine above.
+  // redesign-2: the seven multiplayer arcade games, added alongside the nine above.
   ...kArcadeGames,
+  // The ten single-player arcade games: real gameplay (lib/games/solo/), same medals,
+  // daily challenge and global score board as the rest of the arcade.
+  ...buildSoloGameInfos(),
 ];
 
 GameInfo? gameById(String id) {

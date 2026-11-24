@@ -4,6 +4,7 @@
 // recording (2026-11-20, see the comments on each constant). Retune only from new measurements.
 // World = the field image's own pixel space scaled by FS (see geo()).
 import 'dart:math' as math;
+import 'dart:ui' show Color, Offset;
 
 import 'bm_data.dart';
 
@@ -29,12 +30,15 @@ const double kBmGoalArtScale = 0.92; // mouth = 0.34 of the playing width (refer
 /// keep matching the art. Before: 1.
 const double kBmGoalMouthScale = 0.965;
 /// Match balls: 0-3 the owner's animated balls (kBmAnimBalls), 4 the classic black / white ball of the reference
-/// recordings (kBmClassicBall, v6).
-const int NB = 5;
+/// recordings (kBmClassicBall, v6), 5 NX Spin (v7 default) and 6 NX Star, the owner's GIF balls played with the
+/// GIF's own frames and timing (kBmAnimBalls, gifTimed).
+final int NB = kBmBallN.length;
 /// Weighty pieces (owner request 2026-11): discs are heavy (mass 8) and the ball lighter (2.6) but not a ping-pong
 /// ball. BKICK keeps a disc striking the ball launching it 5% harder than plain elastic transfer.
-const double DISC_M = 8.0;
-const double BALL_M = 2.6;
+/// v13 (owner request 2026-11-24): a touch heavier for softer, less twitchy contacts. Ball +13%, disc +7.5%
+/// (ball a bit heavier relative to the discs so it leaves a strike ~3% softer). Before: DISC_M 8, BALL_M 2.6.
+const double DISC_M = 8.6;
+const double BALL_M = 2.95;
 const double BKICK = 1.05;
 /// Disc sliding friction (constant + speed-proportional part), disc<->disc restitution and the disc speed cap after
 /// touching the ball: heavier felt so shots stop where they are aimed instead of skating around.
@@ -68,11 +72,13 @@ const double kBmBallHitDiscK = 1.0;
 /// how far a struck disc could travel).
 const double kBmStruckDiscK = 1.0;
 /// Wall / post restitution of a disc (a heavy wooden puck loses most of its speed into the rail).
-const double kBmDiscWallE = .48; // reference: .45 - .5 normal restitution off the rail
+const double kBmDiscWallE = .48; // reference: .45 - .5 normal restitution off the rail (unused since v7, kept for docs)
 /// Rail restitution (owner request 2026-11-20, v3): a bank shot keeps its power. Every body (ball and discs) comes
 /// off the side rails, the end lines beside the goals and the round corners with this normal restitution and no
-/// tangential loss. Before: ball .62-.72 (speed dependent), disc .48 (kBmDiscWallE). Goal posts and the inside of the
-/// goal keep their old values.
+/// tangential loss. Before: ball .62-.72 (speed dependent), disc .48 (kBmDiscWallE).
+/// v7 (owner request 2026-11-20): the goal posts and the inside of the goal (side nets and back net) rebound exactly
+/// like the rails too, for the ball and every disc: same normal restitution [kBmRailE], no tangential loss. Only the
+/// ball settling in the net after a goal (phase 'goal', play already stopped) keeps its soft damping.
 const double kBmRailE = .9;
 /// Ball curl per unit of spin (rad/s). v3: 0, the ball travels in straight lines (owner request 2026-11-20: no sudden
 /// bends after a wall or a glancing hit). Spin is still kept and drawn (the ball still turns round in the corners).
@@ -81,7 +87,7 @@ const double kBmBallCurve = 0;
 /// Mass of a disc when the BALL strikes it (ball faster than the disc). v3: lighter pieces (owner request
 /// 2026-11-20) so a hard ball knocks a disc back further. A disc striking the ball, and disc<->disc hits, keep
 /// DISC_M, so shot power and the ball's speed off a strike are unchanged. Before: DISC_M (8).
-const double kBmDiscLightM = 5.5;
+const double kBmDiscLightM = 5.9; // v13: was 5.5 (scaled with DISC_M)
 /// Global playback rate of the simulation (owner request 2026-11-20, v3): the whole scene runs 5% slower. Only the
 /// rate real time feeds the fixed-step accumulator changes; every step is the same STEP, so paths, distances and
 /// outcomes are identical (and online phones still run the same steps), just 5% slower to watch. Before: 1.
@@ -107,7 +113,25 @@ const double kBmMaxAimError = 0.11;
 /// (strikeOf / powerShare).
 const double kBmLaunch = 1.97;
 /// Ball rolling friction: constant part (world/s^2 / K) and linear drag (1/s), see sim().
-const double kBmBallF0 = 23, kBmBallDrag = 1.08;
+/// v12 (owner request 2026-11-24: "the ball rolls far too long, halve it"): the roll time is halved. A pure x2 drag
+/// would also halve every pass, so the cut comes mostly from a much stronger constant (rolling) part that kills the
+/// slow creeping tail: from a hard strike the ball now settles in ~2.0-2.6 s instead of ~4.2-5.1 s, while still
+/// covering ~60-70% of the old distance. The constant part ramps in over [kBmBallF0Ramp] (was 300).
+/// Before: kBmBallF0 23, kBmBallDrag 1.08, ramp 300.
+const double kBmBallF0 = 150, kBmBallDrag = 1.4, kBmBallF0Ramp = 40;
+/// v12 (owner request 2026-11-24: "the ball must roll round the corners"): every corner of the pitch is a round
+/// cushion of this radius (world units, > the disc radius [PR]) instead of the near-square art corner, so the ball and
+/// the discs are never wedged in a corner: a glancing body rolls round the cushion onto the next rail.
+const double kBmCornerR = 128;
+/// A body meeting a corner cushion within this angle of its tangent (tan^2 of ~35 deg) rolls round it: its normal
+/// speed is absorbed (no bounce) and its tangential speed is kept, so it follows the curve. A steeper hit bounces off
+/// with the rail restitution [kBmRailE].
+const double kBmCornerHug2 = .49;
+/// v12 (owner request 2026-11-24: "a bigger, longer pitch"): the world is stretched along the length of the pitch
+/// (the art is drawn stretched to match, see BmFieldS.H), so there is more room between the goals. The same constant
+/// on every phone keeps online lock-step. 1.06 keeps the pitch's full width on a 20:9 phone (more would only make it
+/// narrower on screen) while the art's circles stay round to the eye.
+const double kBmFieldStretchY = 1.06;
 /// Speed caps (world/s / K): the reference ball leaves a hard strike at up to ~1725 px/s (4970 world/s).
 /// v2: the disc cap is above the strongest launch (power 10 full pull ~4250 world/s / K), so it never limits a
 /// shot or a disc that is struck by another body (was 4200, just under the v2 launch).
@@ -129,50 +153,94 @@ const Map<String, int> kBmRefPower = <String, int>{
 /// Field size factor (game.js line 12).
 const double FS = 1.12 * 1.215;
 
-/// A field after the FS scale (game.js line 12: W,H,L,R,T,B,cs rounded, g = 169).
+/// v13 (owner report 2026-11-24: "on some pitches the discs and goals are not standard size"): the pitch arts come
+/// in three measuring frames (1086 x 1448, 1216 x 1622, 837 x 1536), so the raw touch-line width differs per art
+/// (660..789 raw px). With the old single [FS] the wider arts made a wider world, and the fixed-size discs, ball and
+/// goal ([PR], [BR], [BmFieldS.g]) looked small on them. Every pitch is now scaled so its playing width (r0 - l0)
+/// equals [kBmStdRawWidth] raw px (the 1086-frame arts, e.g. Tropical), so discs, ball and goal mouth are the same
+/// share of the pitch on every art. Pure geometry: friction, launch and restitution are untouched, and the
+/// same constants run on every phone, so online lock-step is unaffected.
+const double kBmStdRawWidth = 660;
+double bmFieldScale(BmField f) => FS * kBmStdRawWidth / (f.r0 - f.l0);
+
+/// A field after the FS scale (game.js line 12: W,H,L,R,T,B,cs rounded, g = 169), per-pitch since v13.
 class BmFieldS {
-  BmFieldS(BmField f)
+  BmFieldS(BmField f) : this._(f, bmFieldScale(f));
+  BmFieldS._(BmField f, double fs)
       : id = f.id,
         name = f.name,
+        faName = f.faName,
         gs = f.gs,
-        W = _r(f.w0),
-        H = _r(f.h0),
-        L = _r(f.l0),
-        R = _r(f.r0),
-        T = _r(f.t0),
-        B = _r(f.b0),
-        cs = _r(f.cs0),
+        W = _r(f.w0, fs),
+        H = _ry(f.h0, fs),
+        L = _r(f.l0, fs),
+        R = _r(f.r0, fs),
+        T = _ry(f.t0, fs),
+        B = _ry(f.b0, fs),
+        cs = _ry(f.cs0, fs),
         g = 169,
-        rc = f.rc,
+        rc = math.max(f.rc, kBmCornerR),
         builtInGoals = f.builtInGoals,
-        gh = f.gh0 * FS,
-        gr = f.gr0 * FS,
-        gd = f.gd0 * FS,
+        gh = f.gh0 * fs,
+        gr = f.gr0 * fs,
+        gd = f.gd0 * fs * kBmFieldStretchY,
+        score = f.score,
+        scoreLeft = f.scoreLeft,
+        scoreRight = f.scoreRight,
         asset = f.asset ?? 'assets/games/bermuda/fields/${f.id}.webp';
-  static double _r(int v) => (v * FS).round().toDouble(); // Math.round on positive values
-  final String id, name, gs;
+  static double _r(int v, double fs) => (v * fs).round().toDouble(); // Math.round on positive values
+  /// Lengthwise values (v12): also stretched by [kBmFieldStretchY].
+  static double _ry(int v, double fs) => (v * fs * kBmFieldStretchY).round().toDouble();
+  /// Art px -> world along the length of the pitch (the art is drawn stretched by [kBmFieldStretchY]).
+  static const double stretchY = kBmFieldStretchY;
+  final String id, name, faName, gs;
   final double W, H, L, R, T, B, cs, g;
   /// Corner radius (world), built-in goal geometry (world): post-centre half width, post radius, net depth.
   final double rc, gh, gr, gd;
   final bool builtInGoals;
   final String asset;
+  /// v9: the score displays drawn into the art (null = none) and their digit colours (v11: both per art).
+  final BmScoreDisplay? score;
+  final Color scoreLeft, scoreRight;
+  bool get fullArt => score != null;
 }
 
 final List<BmFieldS> kBmFields = kBmFieldsRaw.map(BmFieldS.new).toList(growable: false);
 
 class BmTeam {
-  const BmTeam(this.id, this.cat, this.name, this.asset, this.power, this.accuracy);
-  final String id, cat, name, asset;
+  const BmTeam(this.id, this.cat, this.name, this.faName, this.asset, this.power, this.accuracy, {this.crestUrl});
+  final String id, cat, name, faName, asset;
   /// 1..10: shot impulse multiplier (see [BmEngine.fire]) and aim precision.
   final int power, accuracy;
+  /// Shared custom teams (`cx_<hex>`, fs_custom_teams.dart): the uploaded round crest. [asset] is the fallback disc
+  /// drawn while the network crest loads or when it fails.
+  final String? crestUrl;
 }
 
-/// Every piece set, in picker order (see kBmTeamDefs: Club, National, Luxury).
-final List<BmTeam> kBmTeams = kBmTeamDefs
-    .map((BmTeamDef d) => BmTeam(d.id, d.cat, d.name, 'assets/games/bermuda/${d.art}.webp', d.power, d.accuracy))
-    .toList(growable: false);
+/// Prefix of a shared custom team id (`cx_` + the fs_custom_teams row uuid without dashes).
+const String kBmCustomTeamPrefix = 'cx_';
 
-BmTeam bmTeam(String id) => kBmTeams.firstWhere((BmTeam t) => t.id == id, orElse: () => kBmTeams.first);
+/// Fallback disc art of a custom team whose crest is not loaded.
+const String kBmCustomTeamFallbackAsset = 'assets/games/bermuda/discs/v10/nx_core_green.webp';
+
+/// Every custom team plays at this power / accuracy (owner spec 2026-11-24).
+const int kBmCustomTeamStat = 10;
+
+bool bmIsCustomTeamId(String id) => id.startsWith(kBmCustomTeamPrefix) && id.length > kBmCustomTeamPrefix.length;
+
+/// Every piece set, in picker order (see kBmTeamDefs: Club, National, Luxury). Growable: the shared custom teams
+/// (FsCustomTeams) are appended at runtime in the 'custom' category, so every picker / lookup sees them.
+final List<BmTeam> kBmTeams = kBmTeamDefs
+    .map((BmTeamDef d) => BmTeam(d.id, d.cat, d.name, d.faName, 'assets/games/bermuda/${d.art}.webp', d.power, d.accuracy))
+    .toList();
+
+/// The team [id]. An unknown custom id (e.g. the opponent's team created after this phone loaded the list) plays as
+/// a 10 / 10 custom team with the fallback disc, so both phones simulate the same strength.
+BmTeam bmTeam(String id) => kBmTeams.firstWhere((BmTeam t) => t.id == id,
+    orElse: () => bmIsCustomTeamId(id)
+        ? BmTeam(id, 'custom', 'Custom Team', 'تیم اختصاصی', kBmCustomTeamFallbackAsset, kBmCustomTeamStat,
+            kBmCustomTeamStat)
+        : kBmTeams.first);
 
 /// A team shape: five discs (the keeper first) as [x, d] in the team's own frame. x is the fraction of the playing
 /// width, left to right as the team sees it from its own goal; d is the depth from its own goal line as a fraction of
@@ -248,6 +316,10 @@ class BmBody {
   /// v6: render-only offset (world units) from the kickoff slot back to where the piece stood when the goal was
   /// scored; drawn as gx * BmEngine.glideK so the piece glides home (see kBmResetGlide).
   double gx = 0, gy = 0;
+  /// Render-only interpolation state (ANIX PRO): the position / sprite angle at the start of the last fixed physics
+  /// step. The painter draws `prev + (now - prev) * BmEngine.renderAlpha`, so motion is smooth between 240 Hz steps on
+  /// any frame rate. Never read by sim(), the bot, snapshots or the sync hash.
+  double px = double.nan, py = double.nan, pang = 0;
   BmGoal? gout;
   final List<BmTrailPt> tr = <BmTrailPt>[];
 }
@@ -437,6 +509,36 @@ class BmEngine {
     return u * u * (3 - 2 * u);
   }
 
+  // ---------------------------------------------------------------- render interpolation (visual only)
+  /// Fraction 0..1 of the next fixed step already accumulated: how far the painter blends from each body's previous
+  /// step position to its current one. Pure read of the accumulator; sim() never depends on it.
+  double get renderAlpha => (acc / STEP).clamp(0.0, 1.0).toDouble();
+
+  void _snapPrev() {
+    for (final BmBody b in bodies) {
+      b.px = b.x;
+      b.py = b.y;
+      b.pang = b.ang;
+    }
+  }
+
+  /// Interpolated draw position of [b] (world units). A body that jumped further than a fast step could move it
+  /// (kickoff reset, formation change, snapshot) is drawn where it is, never smeared across the jump.
+  Offset renderPos(BmBody b) {
+    if (b.px.isNaN) return Offset(b.x, b.y);
+    final double dx = b.x - b.px, dy = b.y - b.py;
+    if (dx * dx + dy * dy > b.r * b.r * 4) return Offset(b.x, b.y);
+    final double a = renderAlpha;
+    return Offset(b.px + dx * a, b.py + dy * a);
+  }
+
+  /// Interpolated sprite angle of [b] (render-only spin).
+  double renderAng(BmBody b) {
+    final double d = b.ang - b.pang;
+    if (d.abs() > 1.5) return b.ang;
+    return b.pang + d * renderAlpha;
+  }
+
   void reset(int k, {bool glideIn = false}) {
     final Map<int, List<double>> was = <int, List<double>>{
       if (glideIn)
@@ -572,7 +674,6 @@ class BmEngine {
   double _clock = 0;
   void _later(double sec, void Function() f) => _timers.add(MapEntry<double, void Function()>(_clock + sec, f));
 
-  double _eN(bool bl, double vn) => bl ? .72 - .1 * _mn(1, _mx(0, (vn - 270 * K) / (1350 * K))) : kBmDiscWallE;
 
   void walls(BmBody b) {
     final bool bl = b == ball;
@@ -618,7 +719,7 @@ class BmEngine {
       final bool inside = bl ? (b.x > g.x1 && b.x < g.x2) : (dp > 0 || (b.x >= lo && b.x <= hi));
       if (inside) {
         final bool gl = phase == 'goal' && bl;
-        final double eb = gl ? .2 : _eN(bl, b.vy.abs()), back = g.y + g.d * DEPTH;
+        final double eb = gl ? .2 : kBmRailE, back = g.y + g.d * DEPTH;
         if (!bl && dp > r * .3 && vs < 150 * K && b.gout == null) b.gout = g;
         if (dp + r > DEPTH) {
           b.y = back - g.d * r;
@@ -626,7 +727,7 @@ class BmEngine {
           if (gl) b.vx *= .6;
         }
         if (dp > (bl ? r * .6 : 0)) {
-          final double ee = gl ? .3 : _eN(bl, b.vx.abs());
+          final double ee = gl ? .3 : kBmRailE;
           if (b.x < g.x1 + r) {
             b.x = g.x1 + r;
             if (b.vx < 0) b.vx *= -ee;
@@ -661,9 +762,20 @@ class BmEngine {
           b.x = cx + nx * lim;
           b.y = cy + ny * lim;
           if (vn > 0) {
-            const double ec = kBmRailE;
+            // v12: tangential speed along the cushion; a glancing body rolls round it (normal speed absorbed),
+            // a steep hit bounces off like a rail.
+            final double vt = b.vx * -ny + b.vy * nx;
+            final bool roll = vn * vn < vt * vt * kBmCornerHug2;
+            final double ec = roll ? 0 : kBmRailE;
             b.vx -= (1 + ec) * vn * nx;
             b.vy -= (1 + ec) * vn * ny;
+            if (bl) {
+              if (roll) {
+                b.spin += vt / SPIN_R * .004;
+              } else if (vn > 200) {
+                hooks.sfx('wall', vn / 1800);
+              }
+            }
           }
         }
       }
@@ -677,7 +789,7 @@ class BmEngine {
     b.x = px + nx * m;
     b.y = py + ny * m;
     if (vn < 0) {
-      final double kp = b == ball ? 1.7 - .16 * _mn(1, -vn / (2000 * K)) : 1 + kBmDiscWallE;
+      const double kp = 1 + kBmRailE; // v7: posts rebound like the rails (was ball 1.54-1.7, disc 1.48)
       b.vx -= kp * vn * nx;
       b.vy -= kp * vn * ny;
       if (b == ball) {
@@ -840,7 +952,7 @@ class BmEngine {
       if (sp > 0) {
         if (bl) {
           // Reference: the ball rolls with ~1.08/s linear drag + ~13 px/s^2 (global fit over 14 free rolls, rms 3.8 px).
-          final double f = kBmBallF0 * K * _mn(1, sp / (300 * K)) + sp * kBmBallDrag, ns = sp - f * dt;
+          final double f = kBmBallF0 * K * _mn(1, sp / (kBmBallF0Ramp * K)) + sp * kBmBallDrag, ns = sp - f * dt;
           if (ns < 12 * K) {
             b.vx = 0;
             b.vy = 0;
@@ -1420,6 +1532,7 @@ class BmEngine {
       int n = 0;
       if (phase != 'over') {
         while (acc >= STEP && n++ < 14) {
+          _snapPrev();
           sim(STEP);
           acc -= STEP;
         }
@@ -1499,8 +1612,8 @@ class BmEngine {
     sd = false;
     sel = List<String>.from(cfg.teams);
     form = List<int>.from(cfg.form);
-    setFld = cfg.field;
-    setBall = cfg.ball;
+    setFld = bmFieldIndex(cfg.field);
+    setBall = bmBallIndex(cfg.ball);
     setLim = cfg.matchTime > 0 ? 9999 : (cfg.limit == 0 ? 5 : cfg.limit);
     geo();
     score = <int>[0, 0];

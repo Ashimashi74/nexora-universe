@@ -12,6 +12,7 @@ import '../../core/profile/profile_service.dart';
 import '../../core/settings/app_settings.dart';
 import '../../core/theme/nx_theme.dart';
 import '../../core/widgets/nx_widgets.dart';
+import '../../core/ui2/luxe.dart';
 
 /// Digital identity creation (STEP_08/09, offline guest identity).
 /// Online later: the same identity is linked to a Supabase account.
@@ -45,9 +46,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
   Future<void> _finish() async {
     final name = _name.text.trim();
     if (name.length < 2) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(context.tx('نام کاربری حداقل ۲ حرف باشد',
-              'Username must be at least 2 characters'))));
+      luxeToast(context, context.tx('نام کاربری حداقل ۲ حرف باشد',
+              'Username must be at least 2 characters'));
       return;
     }
     HapticFeedback.mediumImpact();
@@ -170,8 +170,8 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                 color: visual.text)),
         const SizedBox(height: 6),
         Text(
-          context.tx('این هویت در همه‌ی دنیاهای ANIX با تو است.',
-              'This identity follows you across every ANIX world.'),
+          context.tx('این هویت در همه‌ی دنیاهای نیکسورا با تو است.',
+              'This identity follows you across every NEXORA world.'),
           style: TextStyle(color: visual.muted, height: 1.45),
         ),
         const SizedBox(height: NxSpace.lg),
@@ -241,17 +241,17 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
         const SizedBox(height: NxSpace.lg),
         GlassPanel(
           child: Row(children: [
-            const Icon(Icons.cloud_done_rounded, color: NxColors.turquoise),
+            const Icon(Icons.cloud_done_rounded, color: NxColors.champagne),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 context.tx(
                     ref.read(settingsProvider).authMode == 'guest'
                         ? 'حالت مهمان فقط آفلاین است؛ پیشرفت و هویت روی همین دستگاه می‌ماند و به سرور وصل نمی‌شود.'
-                        : 'ایمیل تو تأیید شده و هویتت به حساب آنلاین ANIX متصل می‌شود.',
+                        : 'ایمیل تو تأیید شده و هویتت به حساب آنلاین نیکسورا متصل می‌شود.',
                     ref.read(settingsProvider).authMode == 'guest'
                         ? 'Guest mode is offline-only. Your identity and progress stay on this device and never connect to the server.'
-                        : 'Your email is verified and your identity will be connected to your ANIX account.'),
+                        : 'Your email is verified and your identity will be connected to your NEXORA account.'),
                 style: const TextStyle(fontSize: 13),
               ),
             ),
@@ -261,7 +261,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
         FilledButton.icon(
           onPressed: _finish,
           icon: const Icon(Icons.rocket_launch_rounded),
-          label: Text(context.tx('ورود به ANIX', 'Enter ANIX')),
+          label: Text(context.tx('ورود به نیکسورا', 'Enter NEXORA')),
         ),
       ],
     );

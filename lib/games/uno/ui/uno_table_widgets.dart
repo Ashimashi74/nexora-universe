@@ -80,7 +80,7 @@ class _StarDustPainter extends CustomPainter {
       final double x = r.nextDouble() * size.width;
       final double y = r.nextDouble() * size.height;
       final double a = 0.15 + r.nextDouble() * 0.55;
-      p.color = NxColors.iceWhite.withValues(alpha: a);
+      p.color = NxColors.ink.withValues(alpha: a);
       canvas.drawCircle(Offset(x, y), 0.4 + r.nextDouble() * 1.3, p);
     }
   }
@@ -221,13 +221,13 @@ class UnoSeatView extends StatelessWidget {
                   gradient: LinearGradient(
                     colors: <Color>[
                       seatColor,
-                      Color.lerp(seatColor, NxColors.navyDeep, 0.6)!
+                      Color.lerp(seatColor, NxColors.luxeBg, 0.6)!
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   border: Border.all(
-                      color: active ? NxColors.iceWhite : NxColors.glassBorder,
+                      color: active ? NxColors.ink : NxColors.goldLine,
                       width: active ? 2.2 : 1),
                   boxShadow: <BoxShadow>[
                     BoxShadow(
@@ -240,7 +240,7 @@ class UnoSeatView extends StatelessWidget {
               );
             },
             child: Icon(isBot ? Icons.smart_toy_rounded : Icons.person_rounded,
-                color: NxColors.iceWhite, size: 24),
+                color: NxColors.ink, size: 24),
           ),
           const SizedBox(height: 4),
           Text(
@@ -250,7 +250,7 @@ class UnoSeatView extends StatelessWidget {
             style: TextStyle(
               fontSize: 12,
               fontWeight: active ? FontWeight.w800 : FontWeight.w600,
-              color: active ? NxColors.iceWhite : NxColors.textDim,
+              color: active ? NxColors.ink : NxColors.textDim,
             ),
           ),
           const SizedBox(height: 4),
@@ -281,7 +281,7 @@ class UnoSeatView extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
-                        color: NxColors.navyDeep.withValues(alpha: 0.85),
+                        color: NxColors.luxeBg.withValues(alpha: 0.85),
                         borderRadius: BorderRadius.circular(10),
                         border:
                             Border.all(color: seatColor.withValues(alpha: 0.8)),
@@ -291,7 +291,7 @@ class UnoSeatView extends StatelessWidget {
                         style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w900,
-                            color: NxColors.iceWhite),
+                            color: NxColors.ink),
                       ),
                     ),
                   ),
@@ -311,7 +311,7 @@ class UnoSeatView extends StatelessWidget {
                           style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w900,
-                              color: NxColors.navyDeep),
+                              color: NxColors.luxeBg),
                         ),
                       ),
                     ),
@@ -346,9 +346,9 @@ class UnoColorPicker extends StatelessWidget {
           width: 300,
           padding: const EdgeInsets.all(NxSpace.lg),
           decoration: BoxDecoration(
-            color: NxColors.navySoft.withValues(alpha: 0.95),
+            color: NxColors.panelWarm.withValues(alpha: 0.95),
             borderRadius: BorderRadius.circular(NxRadius.lg),
-            border: Border.all(color: NxColors.glassBorder),
+            border: Border.all(color: NxColors.goldLine),
             boxShadow: const <BoxShadow>[
               BoxShadow(color: Color(0x667B3FF2), blurRadius: 40)
             ],
@@ -361,7 +361,7 @@ class UnoColorPicker extends StatelessWidget {
                 style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
-                    color: NxColors.iceWhite),
+                    color: NxColors.ink),
               ),
               const SizedBox(height: NxSpace.lg),
               Wrap(
@@ -386,7 +386,7 @@ class UnoColorPicker extends StatelessWidget {
                                       unoColorValue(c), Colors.white, 0.35)!,
                                   unoColorValue(c),
                                   Color.lerp(unoColorValue(c),
-                                      NxColors.navyDeep, 0.4)!,
+                                      NxColors.luxeBg, 0.4)!,
                                 ],
                               ),
                               boxShadow: <BoxShadow>[

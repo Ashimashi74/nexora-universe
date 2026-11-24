@@ -7,6 +7,10 @@ import 'package:nexora/core/storage/local_store.dart';
 import 'oracle_persona.dart';
 import 'oracle_persona_store.dart';
 
+/// v13 (owner request 2026-11-24): automatic ORACLE tutorials are off; the banner never shows.
+// ignore: prefer_const_declarations
+final bool kOracleAutoTutorials = false;
+
 /// Funny-but-accurate tutorial card shown at the start of a game (only for mechanics the player has not seen enough;
 /// replayable from the game's ORACLE sheet). Never blocks input: it sits at the top and fades out by itself.
 class OracleTutorialBanner extends StatefulWidget {
@@ -25,6 +29,8 @@ class _OracleTutorialBannerState extends State<OracleTutorialBanner> {
   @override
   void initState() {
     super.initState();
+    // v13 (owner request 2026-11-24): ORACLE tutorials no longer pop up at the start of a game.
+    if (!kOracleAutoTutorials) return;
     // First time only (per game): later matches never show it again; the in-game help button replays it.
     if (gameTutorialSeen(widget.gameId)) return;
     _in = Timer(widget.delay, () {
@@ -149,17 +155,17 @@ class OracleTutorialCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             gradient: const LinearGradient(colors: <Color>[Color(0xF2182A5E), Color(0xF22A1556)]),
-            border: Border.all(color: const Color(0xFF39E6FF)),
-            boxShadow: const <BoxShadow>[BoxShadow(color: Color(0x6639E6FF), blurRadius: 18)],
+            border: Border.all(color: const Color(0xFFD9B872)),
+            boxShadow: const <BoxShadow>[BoxShadow(color: Color(0x66D9B872), blurRadius: 18)],
           ),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
             Image.asset('assets/characters/oracle/moods/laugh.webp',
-                width: 40, height: 40, errorBuilder: (_, __, ___) => const Icon(Icons.smart_toy_rounded, color: Color(0xFF8FF3FF))),
+                width: 40, height: 40, errorBuilder: (_, __, ___) => const Icon(Icons.smart_toy_rounded, color: Color(0xFFF6E7BD))),
             const SizedBox(width: 8),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: <Widget>[
                 Text('ORACLE · ${tutorial.title}',
-                    style: const TextStyle(color: Color(0xFF8FF3FF), fontSize: 11, fontWeight: FontWeight.w800)),
+                    style: const TextStyle(color: Color(0xFFF6E7BD), fontSize: 11, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 2),
                 Text(tutorial.line,
                     style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800, height: 1.35)),
@@ -185,7 +191,7 @@ class OracleResultLine extends StatelessWidget {
       padding: const EdgeInsets.only(top: 12),
       child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
         Image.asset('assets/characters/oracle/moods/laugh.webp',
-            width: 34, height: 34, errorBuilder: (_, __, ___) => const Icon(Icons.smart_toy_rounded, color: Color(0xFF8FF3FF))),
+            width: 34, height: 34, errorBuilder: (_, __, ___) => const Icon(Icons.smart_toy_rounded, color: Color(0xFFF6E7BD))),
         const SizedBox(width: 8),
         Flexible(
           child: Container(
@@ -193,7 +199,7 @@ class OracleResultLine extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               color: const Color(0xCC1B2350),
-              border: Border.all(color: const Color(0xFF39E6FF).withValues(alpha: .7)),
+              border: Border.all(color: const Color(0xFFD9B872).withValues(alpha: .7)),
             ),
             child: Text(text,
                 textDirection: TextDirection.rtl,

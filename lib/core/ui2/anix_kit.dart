@@ -91,7 +91,7 @@ class AnixAssets {
         '/world/social_hub' || '/world/social_station' => icon('chat'),
         '/world/orbit_network' => icon('friends'),
         '/world/nexora_exchange' => icon('shop'),
-        '/journey' => icon('star'),
+        '/onboarding' => icon('star'),
         _ => null,
       };
 
@@ -636,7 +636,7 @@ class AnixDialog extends StatelessWidget {
             if (title != null)
               DefaultTextStyle.merge(
                 style: (t.textTheme.titleLarge ?? const TextStyle()).copyWith(
-                    fontWeight: FontWeight.w900, color: const Color(0xFFF4F0FF), fontSize: 19),
+                    fontWeight: FontWeight.w900, color: const Color(0xFFF4EAD2), fontSize: 19),
                 child: title!,
               ),
             if (title != null && content != null) const SizedBox(height: 12),
@@ -740,7 +740,7 @@ class AnixPopover extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 11, 14, 11 + 42 / scale),
           child: DefaultTextStyle.merge(
-            style: const TextStyle(fontSize: 12.5, height: 1.35, color: Color(0xFFF4F0FF)),
+            style: const TextStyle(fontSize: 12.5, height: 1.35, color: Color(0xFFF4EAD2)),
             child: child,
           ),
         ),
@@ -770,26 +770,6 @@ class AnixNavIcon extends StatelessWidget {
         cacheWidth: (size * 3).round(),
         errorBuilder: (_, __, ___) => Icon(Icons.circle_outlined, size: size * 0.8, color: Colors.white54));
   }
-}
-
-/// A Material icon tinted with the nav pack's steel (normal) / gold (active) gradients, for dock
-/// destinations the pack has no glyph for.
-class AnixTintedIcon extends StatelessWidget {
-  const AnixTintedIcon({super.key, required this.icon, this.active = false, this.size = 26});
-  final IconData icon;
-  final bool active;
-  final double size;
-
-  static const LinearGradient steel = LinearGradient(
-      begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: <Color>[Color(0xFFC9D3E6), Color(0xFF7E8BA6)]);
-  static const LinearGradient gold = LinearGradient(
-      begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: <Color>[Color(0xFFFFE9A6), Color(0xFFF2B21C)]);
-
-  @override
-  Widget build(BuildContext context) => ShaderMask(
-        shaderCallback: (Rect r) => (active ? gold : steel).createShader(r),
-        child: Icon(icon, size: size, color: Colors.white),
-      );
 }
 
 // ------------------------------------------------------------------------------------------ cards
@@ -956,7 +936,7 @@ Future<String?> showAnixAvatarPicker(BuildContext context,
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 2, 18, 8),
             child: Text(fa ? 'انتخاب آواتار' : 'Choose your avatar',
-                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: Color(0xFFF4F0FF))),
+                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 17, color: Color(0xFFF4EAD2))),
           ),
           Expanded(
             child: GridView.builder(

@@ -11,6 +11,10 @@ class OnlineConfig {
   static const String liveKitUrl =
       String.fromEnvironment('LIVEKIT_URL', defaultValue: 'wss://nexora-space-xzjzlfyl.livekit.cloud');
 
+  /// Region of the core project. Edge Functions are pinned to it so their DB / auth calls stay in-region
+  /// (otherwise the nearest edge region answers and every DB read crosses continents).
+  static const String functionsRegion = String.fromEnvironment('SUPABASE_FUNCTIONS_REGION', defaultValue: 'eu-central-1');
+
   /// Games project (rooms, matchmaking, matches, tournaments). It trusts this app's auth JWTs (Third-Party Auth),
   /// so the same signed-in user is `auth.uid()` on both projects.
   static const String gamesUrl = String.fromEnvironment('GAMES_SUPABASE_URL');

@@ -7,9 +7,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:nexora/core/storage/local_store.dart';
 import 'package:nexora/games/core/game_contract.dart';
 import 'package:nexora/games/finger_soccer/core/bm_engine.dart';
-import 'package:nexora/games/finger_soccer/intro/fs_formation_select.dart';
-import 'package:nexora/games/finger_soccer/intro/fs_online_pick.dart';
-import 'package:nexora/games/finger_soccer/intro/fs_team_select.dart';
 import 'package:nexora/games/finger_soccer/ui/bm_view.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -142,71 +139,45 @@ void main() {
 
   Iterable<Map<String, dynamic>> sentOf(_FakeNet n, String a) => n.sent.where((Map<String, dynamic> d) => d['a'] == a);
 
-  group('shared pick countdown', () {
-    test('team and formation screens are 15 s each', () {
-      const FsOnlinePick p = FsOnlinePick(
-          team: 'club0', form: 0, opponentTeam: 'club1', players: <FsSidePlayer>[], onDone: _noDone, onBar: _noBar);
-      expect(p.teamSeconds, 15);
-      expect(p.formSeconds, 15);
-    });
-
-    testWidgets('an early team pick is logged and waits; both open the formation screen on the other side\'s pick',
+  // 2026-11-24: the online pre-match is the app's black-gold lobby (BermudaView._setupScreen) with one shared
+  // 30 s countdown; the reference-style FsOnlinePick screens are gone.
+  group('online lobby countdown', () {
+    testWidgets('READY sends the pick and waits; the opponent\'s pick starts the match for everyone',
         (WidgetTester tester) async {
       final _FakeNet net = await open(tester);
-      expect(find.byType(FsTeamSelect), findsOneWidget);
-      await tester.tap(find.text('آماده'));
+      expect(find.byKey(const ValueKey<String>('setup-ready')), findsOneWidget);
+      expect(find.byKey(const ValueKey<String>('online-opp-status')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey<String>('setup-ready')));
       await pumpFor(tester, 1);
-      // the team pick is logged at once, this phone waits on the team screen with the shared seconds left
-      expect(sentOf(net, 'tpick').length, 1);
-      expect(find.byKey(const ValueKey<String>('online-pick-wait')), findsOneWidget);
-      expect(find.text('منتظر انتخاب تیم حریف…'), findsOneWidget);
-      expect(find.byType(FsFormationSelect), findsNothing);
-      await pumpFor(tester, 5);
-      expect(find.byType(FsFormationSelect), findsNothing);
-      // the opponent's team pick arrives: formation screen now (same logged event on both phones)
-      net.deliver(1, <String, dynamic>{'a': 'tpick', 'team': 'club9'});
-      await tester.pump(const Duration(milliseconds: 300));
-      expect(find.byType(FsFormationSelect), findsOneWidget);
-      expect(find.byKey(const ValueKey<String>('online-pick-wait')), findsNothing);
-      // pick a formation early: the setup goes out and this phone waits for the others, no match yet
-      await tester.tap(find.text('انتخاب').first);
-      await pumpFor(tester, 2);
       expect(sentOf(net, 'setup').length, 1);
       expect(engineOf(tester), isNull);
-      expect(find.text('منتظر بقیه‌ی بازیکن‌ها…'), findsOneWidget);
-      // the opponent's setup arrives: everyone enters the match together
+      expect(find.byKey(const ValueKey<String>('online-wait')), findsOneWidget);
       net.deliver(1, _setup('club9', 4));
       await tester.pump(const Duration(milliseconds: 300));
       expect(engineOf(tester)!.sel, <String>[sentOf(net, 'setup').first['team'] as String, 'club9']);
-      expect(find.byType(FsOnlinePick), findsNothing);
       await close(tester);
     });
 
-    testWidgets('team pick replayed from the log is not a play move (no legacy room start)', (WidgetTester tester) async {
+    testWidgets('team pick replayed from the log (older app) is not a play move (no legacy room start)',
+        (WidgetTester tester) async {
       final _FakeNet net = await open(tester, seat: 1);
       net.deliver(0, <String, dynamic>{'a': 'tpick', 'team': 'club3'}, replay: true);
       await tester.pump(const Duration(milliseconds: 300));
       expect(engineOf(tester), isNull);
-      expect(find.byType(FsOnlinePick), findsOneWidget);
+      expect(find.byKey(const ValueKey<String>('setup-ready')), findsOneWidget);
       await close(tester);
     });
 
-    testWidgets('idle phones: 15 s team, 15 s formation, then a silent side is filled in so the match never hangs',
+    testWidgets('idle phones: the 30 s countdown sends the shown pick, then a silent side is filled in',
         (WidgetTester tester) async {
       final _FakeNet net = await open(tester, seat: 1);
-      await pumpFor(tester, 14);
-      expect(sentOf(net, 'tpick'), isEmpty);
-      await pumpFor(tester, 2); // team time over: the shown team is logged
-      expect(sentOf(net, 'tpick').length, 1);
-      expect(find.byType(FsFormationSelect), findsNothing); // waits for the other side's team (grace 3 s)
-      await pumpFor(tester, 3);
-      expect(find.byType(FsFormationSelect), findsOneWidget);
-      await pumpFor(tester, 16); // formation time over
+      await pumpFor(tester, 29);
+      expect(sentOf(net, 'setup'), isEmpty);
+      await pumpFor(tester, 2); // countdown over: the pick on screen goes out
       expect(sentOf(net, 'setup').where((Map<String, dynamic> d) => d['for'] == null).length, 1);
       expect(engineOf(tester), isNull);
-      await pumpFor(tester, 25 + 1);
-      final Map<String, dynamic> fill = net.sent.firstWhere((Map<String, dynamic> d) => d['for'] == 0);
-      net.deliver(1, fill);
+      await pumpFor(tester, 15); // watchdog (45 s) logs a default for the silent side
+      expect(net.sent.where((Map<String, dynamic> d) => d['for'] == 0), isNotEmpty);
       await tester.pump(const Duration(milliseconds: 300));
       expect(engineOf(tester), isNotNull);
       await close(tester);
@@ -280,9 +251,6 @@ void main() {
     });
   });
 }
-
-void _noDone(String t, int f) {}
-void _noBar() {}
 
 class _NoHooks implements BmHooks {
   @override

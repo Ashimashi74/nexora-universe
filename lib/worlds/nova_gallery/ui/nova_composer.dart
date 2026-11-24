@@ -12,6 +12,8 @@ import '../state/nova_controller.dart';
 import 'nova_visuals.dart';
 
 import '../../../core/ui2/anix_kit.dart';
+import '../../../core/ui2/luxe.dart';
+
 /// XP for a real published post (the profile's daily cap still applies).
 const int kNovaPostXp = 12;
 
@@ -91,8 +93,7 @@ class _ComposerSheetState extends ConsumerState<_ComposerSheet> {
       });
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(context.tx('آپلود عکس ممکن نشد.', 'Photo upload failed.'))));
+        luxeToast(context, context.tx('آپلود عکس ممکن نشد.', 'Photo upload failed.'));
       }
     } finally {
       if (mounted) setState(() => _uploading = false);
@@ -142,7 +143,7 @@ class _ComposerSheetState extends ConsumerState<_ComposerSheet> {
     final String msg = context.tx('منتشر شد! +${outcome.xp} XP', 'Published! +${outcome.xp} XP');
     final BuildContext rootCtx = navigator.context;
     navigator.pop();
-    messenger.showSnackBar(SnackBar(content: Text(msg)));
+    luxeToastState(messenger, msg);
     if (rootCtx.mounted) await showAwardOutcome(rootCtx, outcome);
   }
 
@@ -198,7 +199,7 @@ class _ComposerSheetState extends ConsumerState<_ComposerSheet> {
             ),
             ChoiceChip(
               avatar: const Icon(Icons.collections_rounded, size: 16),
-              label: Text(context.tx('هنر ANIX', 'ANIX art')),
+              label: Text(context.tx('هنر نیکسورا', 'NEXORA art')),
               selected: _kind == NovaVisualKind.asset,
               onSelected: (_) => _pickAsset(),
             ),
@@ -295,7 +296,7 @@ Future<ArtAsset?> showArtAssetPicker(BuildContext context) {
       child: DefaultTabController(
         length: ArtCategory.values.length,
         child: Column(children: <Widget>[
-          Text(c.tx('کتابخانه‌ی هنری ANIX', 'ANIX art library'),
+          Text(c.tx('کتابخانه‌ی هنری نیکسورا', 'NEXORA art library'),
               style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
           TabBar(
             isScrollable: true,

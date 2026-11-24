@@ -125,7 +125,7 @@ class LudoBoardPainter extends CustomPainter {
     required this.fancy,
     this.accent = const Color(0xFF2EE6D6),
     this.accentSecondary = const Color(0xFF9D6BFF),
-    this.surface = const Color(0xFF0A0F2C),
+    this.surface = const Color(0xFF14130F),
   });
 
   final List<Color?> cornerColors;
@@ -293,11 +293,11 @@ class LudoBoardPainter extends CustomPainter {
           centre,
           u * 0.9,
           Paint()
-            ..color = const Color(0xFFEAF6FF).withValues(alpha: 0.35)
+            ..color = const Color(0xFFF4EAD2).withValues(alpha: 0.35)
             ..maskFilter = MaskFilter.blur(BlurStyle.normal, u * 0.5));
     }
     canvas.drawCircle(
-        centre, u * 0.32, Paint()..color = const Color(0xFFEAF6FF));
+        centre, u * 0.32, Paint()..color = const Color(0xFFF4EAD2));
   }
 
   void _arrow(Canvas canvas, Offset c, double u, int corner, Color col) {
@@ -316,7 +316,7 @@ class LudoBoardPainter extends CustomPainter {
           (c - d * (u * 0.12) - n * (u * 0.18)).dy)
       ..close();
     canvas.drawPath(
-        p, Paint()..color = const Color(0xFF0A0F2C).withValues(alpha: 0.75));
+        p, Paint()..color = const Color(0xFF14130F).withValues(alpha: 0.75));
   }
 
   @override

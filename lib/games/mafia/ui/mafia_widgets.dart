@@ -155,7 +155,7 @@ class _Seat extends StatelessWidget {
     } else if (info.selectable) {
       glow = NxColors.turquoise;
     } else if (info.isYou) {
-      glow = NxColors.violet;
+      glow = NxColors.goldDeep;
     }
     return Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
       SizedBox(
@@ -357,7 +357,7 @@ Future<void> showMafiaLog(
                                     color: priv
                                         ? NxColors.gold
                                         : (e.night
-                                            ? NxColors.violet
+                                            ? NxColors.goldDeep
                                             : NxColors.turquoise)),
                                 const SizedBox(width: 8),
                                 Expanded(
@@ -438,7 +438,7 @@ Future<int?> pickPlayer(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(14),
                         color: const Color(0x1AFFFFFF),
-                        border: Border.all(color: NxColors.glassBorder),
+                        border: Border.all(color: NxColors.goldLine),
                       ),
                       child: Row(
                           mainAxisSize: MainAxisSize.min,

@@ -4,6 +4,8 @@ import 'dart:io' show Platform;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/widgets.dart';
 
+import 'audio_mix.dart';
+
 /// Looping menu music (assets/media/bgm_main.ogg).
 ///
 /// * Starts only after [start] (the launch intro calls it when it ends) and only when the user's
@@ -47,6 +49,9 @@ class MusicService with WidgetsBindingObserver {
     if (_started || _underTest) return;
     _started = true;
     WidgetsBinding.instance.addObserver(this);
+    NxAudioMix.primeGlobal();
+    // Menu music fades out for the length of a voice call (it would reach the other side through the mic).
+    NxAudioMix.voice.addListener(_sync);
     _sync();
   }
 
@@ -83,7 +88,7 @@ class MusicService with WidgetsBindingObserver {
   }
 
   double get _target =>
-      (_started && _enabled && _games == 0 && !_background) ? _volume : 0.0;
+      (_started && _enabled && _games == 0 && !_background && !NxAudioMix.voice.value) ? _volume : 0.0;
 
   void _sync() {
     if (!_started) return;
@@ -107,8 +112,7 @@ class MusicService with WidgetsBindingObserver {
     if (existing != null) return existing;
     final AudioPlayer p = AudioPlayer(playerId: 'nx_bgm');
     _player = p;
-    await p.setAudioContext(
-        AudioContextConfig(focus: AudioContextConfigFocus.mixWithOthers).build());
+    await NxAudioMix.apply(p);
     await p.setReleaseMode(ReleaseMode.loop);
     return p;
   }

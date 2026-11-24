@@ -19,6 +19,8 @@ import 'bracket_view.dart';
 import 't_common.dart';
 
 import '../../../core/ui2/anix_kit.dart';
+import '../../../core/ui2/luxe.dart';
+
 /// Tournament detail: rules, countdowns, prize pool, players, register / code / withdraw, live bracket or
 /// league table, my next match with the Ready button, match list and history.
 class TournamentDetailPage extends ConsumerStatefulWidget {
@@ -165,11 +167,9 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
   Future<void> _toast(TResult r, {String? okFa, String? okEn}) async {
     if (!mounted) return;
     final bool fa = ref.read(settingsProvider).isFa;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(r.ok
+    luxeToast(context, r.ok
           ? (fa ? (okFa ?? 'انجام شد') : (okEn ?? 'Done'))
-          : tErrorText(r.error, fa)),
-    ));
+          : tErrorText(r.error, fa));
   }
 
   Future<void> _register() async {
@@ -477,11 +477,11 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
                       NxPill(
                           label: '+$waitlist',
                           icon: Icons.hourglass_top_rounded,
-                          color: NxColors.violet),
+                          color: NxColors.goldDeep),
                     NxPill(
                         label: regModeName(context, t.regMode),
                         icon: Icons.how_to_reg_rounded,
-                        color: NxColors.turquoise),
+                        color: NxColors.champagne),
                   ]),
                 ]),
           ),
@@ -507,7 +507,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
                       NxPill(label: '$totalC 🪙', color: NxColors.gold),
                     if (totalG > 0) ...<Widget>[
                       const SizedBox(width: 6),
-                      NxPill(label: '$totalG 💎', color: NxColors.electricBlue)
+                      NxPill(label: '$totalG 💎', color: NxColors.gold)
                     ],
                   ]),
                   const SizedBox(height: 8),
@@ -588,6 +588,13 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
                           : context.tx(
                               'بهترین از: اولیه ${t.cfg('bo_early', 1)} · نیمه‌نهایی ${t.cfg('bo_semi', 1)} · فینال ${t.cfg('bo_final', 1)}',
                               'Best of: early ${t.cfg('bo_early', 1)} · semis ${t.cfg('bo_semi', 1)} · final ${t.cfg('bo_final', 1)}')),
+                  _rule(context, Icons.timer_rounded, matchLengthName(context, t)),
+                  _rule(
+                      context,
+                      Icons.schedule_rounded,
+                      context.tx(
+                          'فاصله‌ی دورها: ${t.cfg('round_minutes', 20)} دقیقه · سقف هر بازی: ${t.cfg('max_game_minutes', 30)} دقیقه',
+                          'Rounds every ${t.cfg('round_minutes', 20)} min · each game capped at ${t.cfg('max_game_minutes', 30)} min')),
                   _rule(
                       context,
                       Icons.sports_soccer_rounded,
@@ -647,7 +654,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
         child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Icon(icon, size: 16, color: NxColors.turquoise),
+              Icon(icon, size: 16, color: NxColors.champagne),
               const SizedBox(width: 8),
               Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
             ]),
@@ -671,7 +678,10 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
               child: Text(context.tx('انصراف', 'Withdraw'))),
       ]);
       // Check-in: opens 10 minutes before the start; only checked-in players enter the automatic draw.
-      if (me.status == 'approved' && t.cfgB('checkin', false) && (t.status == 'registering' || t.status == 'closed')) {
+      // Waitlisted players may check in too: they take places freed by approved players who do not show up.
+      if ((me.status == 'approved' || me.status == 'waitlist') &&
+          t.cfgB('checkin', false) &&
+          (t.status == 'registering' || t.status == 'closed')) {
         final DateTime opens = t.startAt.subtract(const Duration(minutes: 10));
         final bool open = DateTime.now().toUtc().isAfter(opens.toUtc());
         body = Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[
@@ -682,7 +692,11 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
               const Icon(Icons.verified_rounded, color: NxColors.success),
               const SizedBox(width: 8),
               Expanded(
-                  child: Text(context.tx('حضورت ثبت شد — منتظر قرعه‌کشی', 'Checked in — waiting for the draw'),
+                  child: Text(
+                      me.status == 'waitlist'
+                          ? context.tx('حضورت ثبت شد — اگر جایی خالی شود وارد می‌شوی',
+                              'Checked in — you get a place if one frees up')
+                          : context.tx('حضورت ثبت شد — منتظر قرعه‌کشی', 'Checked in — waiting for the draw'),
                       style: const TextStyle(fontWeight: FontWeight.w800, color: NxColors.success))),
             ])
           else
@@ -736,6 +750,12 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
                         const TextStyle(color: NxColors.textDim, fontSize: 12)),
               ),
           ]);
+    } else if (me != null && !me.active && me.status != 'withdrawn') {
+      // removed / disqualified / rejected / did not check in: say so instead of a generic "closed"
+      body = Text(
+        '${entryStatusName(context, me.status)}${(me.note ?? '').isNotEmpty && me.note != 'not_drawn' && me.note != 'no_checkin' ? ' · ${me.note}' : ''}',
+        style: const TextStyle(color: NxColors.danger, fontWeight: FontWeight.w800),
+      );
     } else {
       body = Text(
         t.status == 'scheduled'
@@ -792,7 +812,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
               FilledButton.icon(
                 style: FilledButton.styleFrom(
                   backgroundColor:
-                      meReady ? NxColors.navySoft : NxColors.success,
+                      meReady ? NxColors.panelWarm : NxColors.success,
                   minimumSize: const Size.fromHeight(54),
                 ),
                 onPressed: meReady || _busy ? null : () => _ready(m),
@@ -858,7 +878,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
             Row(children: <Widget>[
               TAvatar(
                   name: _names[_me] ?? 'Me',
-                  color: NxColors.turquoise,
+                  color: NxColors.champagne,
                   size: 34),
               const SizedBox(width: 8),
               Text(context.tx('تو', 'You'),
@@ -870,6 +890,8 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
                           ? context.tx('دو بازی', '2 legs')
                           : 'Bo${m.bestOf}')
                       : 'Bo1',
+                  style: const TextStyle(color: NxColors.textDim)),
+              Text(' · ${matchLengthShort(t)}',
                   style: const TextStyle(color: NxColors.textDim)),
               if (m.games > 0)
                 Text('  ${iAmP1 ? m.w1 : m.w2} - ${iAmP1 ? m.w2 : m.w1}',
@@ -962,14 +984,14 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
         fontWeight: bold ? FontWeight.w900 : FontWeight.w600,
         color: header
             ? NxColors.textDim
-            : (r?.userId == _me ? NxColors.turquoise : NxColors.iceWhite));
+            : (r?.userId == _me ? NxColors.gold : NxColors.ink));
     Widget c(String s, {double w = 28, bool bold = false}) => SizedBox(
         width: w, child: Text(s, textAlign: TextAlign.center, style: st(bold)));
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 6),
       decoration: BoxDecoration(
         border: header
-            ? const Border(bottom: BorderSide(color: NxColors.glassBorder))
+            ? const Border(bottom: BorderSide(color: NxColors.goldLine))
             : null,
         color: qualifies ? NxColors.success.withValues(alpha: 0.08) : null,
       ),
@@ -1031,7 +1053,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
           child: GlassPanel(
             blur: false,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            borderColor: m.involves(_me) ? NxColors.turquoise : null,
+            borderColor: m.involves(_me) ? NxColors.champagne : null,
             onTap: () => _matchSheet(context, t, m),
             child: Row(children: <Widget>[
               Expanded(
@@ -1071,7 +1093,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
         'pending' => (context.tx('منتظر', 'Waiting'), NxColors.textDim),
         'scheduled' => (
             context.tx('زمان‌بندی', 'Scheduled'),
-            NxColors.electricBlue
+            NxColors.gold
           ),
         'ready_check' => (
             context.tx('آمادگی', 'Ready check'),
@@ -1085,7 +1107,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
             m.isDraw ? context.tx('مساوی', 'Draw') : context.tx('تمام', 'Done'),
             NxColors.gold
           ),
-        'walkover' => (context.tx('واگذار', 'Walkover'), NxColors.violet),
+        'walkover' => (context.tx('واگذار', 'Walkover'), NxColors.goldDeep),
         'bye' => ('BYE', NxColors.textDim),
         'disputed' => (context.tx('اختلاف', 'Disputed'), NxColors.danger),
         'void' => (context.tx('باطل', 'Void'), NxColors.textDim),
@@ -1167,7 +1189,7 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
           dense: true,
           leading: TAvatar(
               name: e.username,
-              color: e.userId == _me ? NxColors.turquoise : tAccent(context)),
+              color: e.userId == _me ? NxColors.champagne : tAccent(context)),
           title: Text(e.username,
               style: const TextStyle(fontWeight: FontWeight.w800)),
           subtitle: Text(
@@ -1176,11 +1198,11 @@ class _TournamentDetailPageState extends ConsumerState<TournamentDetailPage>
           trailing: e.place != null
               ? NxPill(
                   label: '#${e.place}',
-                  color: e.place == 1 ? NxColors.gold : NxColors.electricBlue)
+                  color: e.place == 1 ? NxColors.gold : NxColors.gold)
               : (e.status == 'waitlist'
                   ? NxPill(
                       label: entryStatusName(context, e.status),
-                      color: NxColors.violet)
+                      color: NxColors.goldDeep)
                   : null),
         );
       },

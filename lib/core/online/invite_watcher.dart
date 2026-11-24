@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../games/game_registry.dart';
 import '../settings/app_settings.dart';
 import 'online_service.dart';
+import '../ui2/luxe.dart';
 
 /// Shows real-time game invitations from friends anywhere in the app.
 class InviteWatcher {
@@ -71,20 +72,19 @@ class InviteWatcher {
     final String gameName = g == null ? game : (fa ? g.nameFa : g.nameEn);
     final ScaffoldMessengerState? m = _messenger.currentState;
     if (m == null || code.isEmpty) return;
-    m.showSnackBar(SnackBar(
+    luxeToastState(
+      m,
+      fa ? '$from تو را به $gameName دعوت کرد' : '$from invited you to $gameName',
+      actionLabel: fa ? 'ورود' : 'Join',
+      onAction: () {
+        final SupabaseClient? c = _ref.read(onlineProvider).games;
+        if (c != null && id >= 0) {
+          unawaited(c.from('nx_invites').update(<String, dynamic>{'status': 'accepted'}).eq('id', id).then((_) {}, onError: (Object _) {}));
+        }
+        _open(game, code);
+      },
       duration: const Duration(seconds: 12),
-      content: Text(fa ? '$from تو را به $gameName دعوت کرد' : '$from invited you to $gameName'),
-      action: SnackBarAction(
-        label: fa ? 'ورود' : 'Join',
-        onPressed: () {
-          final SupabaseClient? c = _ref.read(onlineProvider).games;
-          if (c != null && id >= 0) {
-            unawaited(c.from('nx_invites').update(<String, dynamic>{'status': 'accepted'}).eq('id', id).then((_) {}, onError: (Object _) {}));
-          }
-          _open(game, code);
-        },
-      ),
-    ));
+    );
   }
 
   void _detach({bool disposing = false}) {

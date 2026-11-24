@@ -17,7 +17,11 @@ import '../economy/gem_shop.dart';
 /// * Inventory, achievements, stats, decor, theme: `nx_profiles.data` (merged on sign-in).
 /// * Works offline: the queue survives restarts and flushes on the next connection.
 class CloudProfileSync {
-  CloudProfileSync(this._online, this._profile, this._store);
+  CloudProfileSync(this._online, this._profile, this._store) {
+    current = this;
+  }
+
+  static CloudProfileSync? current;
 
   final OnlineService _online;
   final ProfileService _profile;
@@ -94,7 +98,9 @@ class CloudProfileSync {
         }
         _applyAvatarFromProfile(prof);
         if (otherAccount) {
-          _profile.applyCloudBlob(const <String, dynamic>{}, replace: true, serverName: prof?['username'] as String?);
+          final String? metaName = c.auth.currentUser?.userMetadata?['username'] as String?;
+          _profile.applyCloudBlob(const <String, dynamic>{},
+              replace: true, serverName: (prof?['username'] as String?) ?? metaName);
         }
         await _upload();
         if (_profile.username.isNotEmpty && !otherAccount) await _pushName(_profile.username);
@@ -248,6 +254,32 @@ class CloudProfileSync {
       'avatar_path': path,
     }).eq('id', uid);
     await _profile.setAvatarPhoto(url: url, path: path);
+  }
+
+  /// Upload the paid custom-team crest. It uses a stable user-scoped path so a replacement never leaves
+  /// abandoned public images behind, and the cache-busting query makes every player see the new crest.
+  Future<void> uploadCustomTeam(Uint8List bytes, {required String extension}) async {
+    final SupabaseClient? c = _c;
+    final String? uid = _online.uid;
+    if (c == null || uid == null) throw StateError('online_profile_required');
+    final String ext = extension.toLowerCase().replaceAll('.', '').isEmpty ? 'jpg' : extension.toLowerCase().replaceAll('.', '');
+    final String mime = ext == 'png' ? 'image/png' : (ext == 'webp' ? 'image/webp' : 'image/jpeg');
+    final String path = '$uid/custom_team.$ext';
+    await c.storage.from('nx-media').uploadBinary(path, bytes, fileOptions: FileOptions(contentType: mime, upsert: true));
+    final String url = '${c.storage.from('nx-media').getPublicUrl(path)}?v=${DateTime.now().millisecondsSinceEpoch}';
+    final Map<String, dynamic> blob = _profile.cloudBlob()
+      ..['customTeamUrl'] = url
+      ..['customTeamPath'] = path;
+    await c.from('nx_profiles').upsert(<String, dynamic>{
+      'id': uid,
+      'explorer_id': _profile.explorerId,
+      'avatar_core': _profile.avatarCore,
+      'data': blob,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    });
+    _profile.customTeamUrl = url;
+    _profile.customTeamPath = path;
+    await _profile.saveCustomTeam();
   }
 
   Future<void> _pushName(String name) async {

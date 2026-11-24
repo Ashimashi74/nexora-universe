@@ -1,7 +1,7 @@
 // Pure-Dart tournament structures (no Flutter imports).
 //
 // This is the client mirror of the server engine in
-// supabase/migrations/20261116000100_nx_tournaments_engine.sql: same seed order, same bye
+// supabase/games/migrations (20261117300000_g_games_core.sql and later): same seed order, same bye
 // handling, same double-elimination wiring, same round-robin circle method, same snake groups,
 // same swiss pairing and the same series / standings rules. The server is the authority (it
 // generates the real bracket at draw time); this file powers the admin wizard preview and the
@@ -81,6 +81,9 @@ class BMatch {
 class Bracket {
   final Map<String, BMatch> _m = <String, BMatch>{};
 
+  /// Players disqualified after the draw (nx_t_entries.status = 'removed').
+  final Set<int> removed = <int>{};
+
   Iterable<BMatch> get matches => _m.values;
   BMatch? operator [](String id) => _m[id];
   int get length => _m.length;
@@ -113,10 +116,37 @@ class Bracket {
   void _check(BMatch m) {
     if (m.status != 'pending' || !m.p1Set || !m.p2Set) return;
     if (m.p1 == null || m.p2 == null) {
-      complete(m.id, m.p1 ?? m.p2, null, status: 'bye');
+      // a disqualified player does not advance through a bye either
+      final int? only = m.p1 ?? m.p2;
+      complete(m.id, removed.contains(only) ? null : only, null, status: 'bye');
+      return;
+    }
+    // mirrors _nx_t_check: a disqualified player loses every match they are seated in by walkover
+    final bool d1 = removed.contains(m.p1);
+    final bool d2 = removed.contains(m.p2);
+    if (d1 && d2) {
+      complete(m.id, null, null, status: kElimBrackets.contains(m.bracket) ? 'walkover' : 'void');
+      return;
+    }
+    if (d1 || d2) {
+      complete(m.id, d1 ? m.p2 : m.p1, d1 ? m.p1 : m.p2, status: 'walkover');
       return;
     }
     m.status = 'scheduled';
+  }
+
+  /// Disqualify [player] (mirrors nx_t_remove_entry after the draw): every open match of theirs with both players
+  /// known becomes a walkover; later matches they would reach are walkovers via [_check].
+  void disqualify(int player) {
+    removed.add(player);
+    final List<BMatch> open = _m.values
+        .where((BMatch m) => !m.isFinal && m.p1 != null && m.p2 != null && (m.p1 == player || m.p2 == player))
+        .toList()
+      ..sort((BMatch a, BMatch b) => a.round != b.round ? a.round.compareTo(b.round) : a.idx.compareTo(b.idx));
+    for (final BMatch m in open) {
+      if (m.isFinal) continue;
+      complete(m.id, m.p1 == player ? m.p2 : m.p1, player, status: 'walkover');
+    }
   }
 
   /// Record a result and advance players (mirrors _nx_t_complete + _nx_t_propagate).
@@ -177,7 +207,8 @@ class BestOf {
   final bool twoLegs;
   final bool finalOneLeg;
 
-  static int _valid(int v) => const <int>{1, 2, 3, 5}.contains(v) ? v : 1;
+  /// Same range as the server (_nx_t_validate_cfg / _nx_t_bo): any best-of from 1 to 15.
+  static int _valid(int v) => v >= 1 && v <= 15 ? v : 1;
 
   int of(String kind) {
     if (twoLegs) return kind == 'final' && finalOneLeg ? 1 : 2;
@@ -483,7 +514,8 @@ class BracketGen {
         final int adv = gs.fold<int>(0, (int s, List<int> g) => s + (advance < g.length ? advance : g.length));
         return c + (adv >= 2 ? (1 << roundsFor(adv)) - 1 : 0);
       case TFormat.swiss:
-        return swissRounds(n, swissRoundsCfg) * (n ~/ 2);
+        // an odd field also gets one bye row per round (_nx_t_swiss_round stores it as a match)
+        return swissRounds(n, swissRoundsCfg) * (n ~/ 2 + (n.isOdd ? 1 : 0));
       case TFormat.custom:
         return 0;
     }

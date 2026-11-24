@@ -14,6 +14,8 @@ import '../../domain/bracket.dart';
 import '../t_common.dart';
 
 import '../../../../core/ui2/anix_kit.dart';
+import '../../../../core/ui2/luxe.dart';
+
 /// Organizer panel: controls (publish / draw / start / pause / cancel / finish), approval queue, players
 /// and seeds, invite codes, manual match tools (result / correction / replay / edit / add for custom), logs, staff.
 /// The UI only hides; every action is role-checked by the RPCs in Postgres.
@@ -34,6 +36,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
   List<TCode> _codes = <TCode>[];
   Map<String, dynamic> _logs = <String, dynamic>{};
   Map<String, String> _names = <String, String>{};
+  List<String> _runners = <String>[];
   bool _admin = false;
   bool _loading = true;
   bool _busy = false;
@@ -66,12 +69,23 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
         _repo.codes(t.id),
         _repo.logs(t.id),
         _repo.myRole(),
+        _repo.runners(t.id).catchError((Object _) => <String>[]),
       ]);
       final List<TEntry> entries = r[0] as List<TEntry>;
       final List<TMatch> matches = r[1] as List<TMatch>;
+      final List<String> runners = r[5] as List<String>;
       final Map<String, String> names = <String, String>{
         for (final TEntry e in entries) e.userId: e.username
       };
+      final List<String> missing = <String>{
+        ...runners,
+        for (final TMatch m in matches) ...<String>[if (m.p1 != null) m.p1!, if (m.p2 != null) m.p2!],
+      }.where((String id) => !names.containsKey(id)).toList();
+      if (missing.isNotEmpty) {
+        try {
+          names.addAll(await _repo.names(missing));
+        } catch (_) {}
+      }
       if (!mounted) return;
       setState(() {
         _t = t;
@@ -81,6 +95,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
         _logs = r[3] as Map<String, dynamic>;
         _admin = (r[4] as ({bool admin, bool organizer})).admin;
         _names = names;
+        _runners = runners;
         _loading = false;
       });
       _unwatch ??= _repo.watchTournament(t.id, () => unawaited(_load()));
@@ -97,11 +112,9 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
     if (!mounted) return;
     setState(() => _busy = false);
     final bool fa = ref.read(settingsProvider).isFa;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(r.ok
+    luxeToast(context, r.ok
           ? (fa ? (okFa ?? 'انجام شد') : (okEn ?? 'Done'))
-          : tErrorText(r.error, fa)),
-    ));
+          : tErrorText(r.error, fa));
     unawaited(_load());
   }
 
@@ -186,7 +199,8 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
         _matchesTab(context, t)
       ),
       (context.tx('گزارش‌ها', 'Logs'), _logsTab(context, t)),
-      if (_admin) (context.tx('نقش‌ها', 'Staff'), _staffTab(context, t)),
+      // the creator may add runners to their own tournament; global roles are admin-only
+      if (_admin || t.createdBy == _repo.uid) (context.tx('نقش‌ها', 'Staff'), _staffTab(context, t)),
     ];
     return DefaultTabController(
       length: tabs.length,
@@ -300,8 +314,9 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
               () async {
             if (await _confirm(
                 context.tx('قرعه‌کشی؟', 'Draw now?'),
-                context.tx('ثبت‌نام بسته می‌شود و براکت ساخته می‌شود.',
-                    'Registration closes and the bracket is generated.'))) {
+                context.tx(
+                    'ثبت‌نام بسته می‌شود و براکت با همه‌ی ثبت‌نام‌شده‌ها ساخته می‌شود (غایب‌ها در بازی اول باخت فنی می‌گیرند).',
+                    'Registration closes and the bracket is built with every registered player (no-shows lose their first match by walkover).'))) {
               await _run(() => _repo.admin(t.id, 'draw'));
             }
           }),
@@ -320,8 +335,17 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
               () async {
             if (await _confirm(
                 context.tx('شروع تورنمنت؟', 'Start the tournament?'),
-                context.tx('اگر قرعه انجام نشده، اول قرعه‌کشی می‌شود.',
-                    'If not drawn yet, the draw runs first.'))) {
+                t.cfgB('checkin', false) &&
+                        DateTime.now().toUtc().isBefore(t.startAt.toUtc().subtract(const Duration(minutes: 10)))
+                    ? context.tx(
+                        'اگر قرعه انجام نشده، اول قرعه‌کشی می‌شود. پنجره‌ی اعلام حضور هنوز باز نشده؛ همه‌ی ثبت‌نام‌شده‌ها بازی می‌کنند.',
+                        'If not drawn yet, the draw runs first. Check-in has not opened yet, so every registered player plays.')
+                    : t.cfgB('checkin', false) && t.status != 'drawn'
+                        ? context.tx(
+                            'اگر قرعه انجام نشده، اول قرعه‌کشی می‌شود. بازیکنانی که اعلام حضور نکرده‌اند حذف می‌شوند و ورودیه‌شان برمی‌گردد.',
+                            'If not drawn yet, the draw runs first. Players who have not checked in are removed and refunded.')
+                        : context.tx('اگر قرعه انجام نشده، اول قرعه‌کشی می‌شود.',
+                            'If not drawn yet, the draw runs first.'))) {
               await _run(() => _repo.admin(t.id, 'start'));
             }
           }, color: NxColors.success),
@@ -363,7 +387,12 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
             if (await _confirm(context.tx('حذف شود؟', 'Delete?'), t.title,
                 danger: true)) {
               final TResult r = await _repo.admin(t.id, 'delete');
-              if (r.ok && mounted) this.context.pop();
+              if (!mounted) return;
+              if (r.ok) {
+                this.context.pop();
+              } else {
+                luxeToast(this.context, tErrorText(r.error, ref.read(settingsProvider).isFa));
+              }
             }
           }, color: NxColors.danger),
       ],
@@ -481,9 +510,22 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
                     await _run(() => _repo.removeEntry(t.id, e.userId, note));
                   },
                 )
-              : (e.place != null
-                  ? NxPill(label: '#${e.place}', color: NxColors.gold)
-                  : null),
+              : (t.status == 'drawn' || t.status == 'live')
+                  ? IconButton(
+                      tooltip: context.tx('محروم کردن', 'Disqualify'),
+                      icon: const Icon(Icons.gavel_rounded, color: NxColors.danger),
+                      onPressed: () async {
+                        final String? note = await _ask(context.tx(
+                            'محروم کردن ${e.username}؟ همه‌ی بازی‌های باقی‌مانده‌اش واگذار می‌شود و ورودیه برنمی‌گردد. دلیل:',
+                            'Disqualify ${e.username}? All their remaining matches become walkovers and the fee is not refunded. Reason:'));
+                        if (note == null) return;
+                        await _run(() => _repo.removeEntry(t.id, e.userId, note),
+                            okFa: 'محروم شد', okEn: 'Disqualified');
+                      },
+                    )
+                  : (e.place != null
+                      ? NxPill(label: '#${e.place}', color: NxColors.gold)
+                      : null),
         );
       },
     );
@@ -537,8 +579,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
                   onPressed: () {
                     Clipboard.setData(
                         ClipboardData(text: 'nexora://t/${c.code}'));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('nexora://t/${c.code}')));
+                    luxeToast(context, 'nexora://t/${c.code}');
                   },
                 ),
                 if (!c.revoked)
@@ -706,7 +747,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
               .contains(m.status))
             ListTile(
               leading: const Icon(Icons.replay_rounded,
-                  color: NxColors.electricBlue),
+                  color: NxColors.gold),
               title: Text(ctx.tx('بازی دوباره (بازی فعلی باطل)',
                   'Replay (void the current game)')),
               onTap: () => Navigator.pop(ctx, 'replay'),
@@ -716,7 +757,7 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
               m.games == 0)
             ListTile(
               leading:
-                  const Icon(Icons.edit_rounded, color: NxColors.turquoise),
+                  const Icon(Icons.edit_rounded, color: NxColors.champagne),
               title: Text(
                   ctx.tx('تغییر بازیکن/زمان/Bo', 'Edit players / time / Bo')),
               onTap: () => Navigator.pop(ctx, 'edit'),
@@ -866,6 +907,55 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
   }
 
   Future<void> _editMatch(Tournament t, TMatch m) async {
+    final String? what = await showAnixSheet<String>(
+      context: context,
+      builder: (BuildContext ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: <Widget>[
+          ListTile(
+            leading: const Icon(Icons.people_alt_rounded),
+            title: Text(ctx.tx('تغییر بازیکن‌ها', 'Change players')),
+            onTap: () => Navigator.pop(ctx, 'players'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.schedule_rounded),
+            title: Text(ctx.tx('تغییر زمان', 'Change time')),
+            onTap: () => Navigator.pop(ctx, 'time'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.filter_9_plus_rounded),
+            title: Text(ctx.tx('تغییر تعداد بازی (Bo)', 'Change best-of')),
+            onTap: () => Navigator.pop(ctx, 'bo'),
+          ),
+        ]),
+      ),
+    );
+    if (what == null || !mounted) return;
+    if (what == 'time') {
+      final DateTime base = (m.scheduledAt ?? DateTime.now().toUtc()).toLocal();
+      final DateTime? d = await showDatePicker(
+        context: context,
+        initialDate: base.isBefore(DateTime.now()) ? DateTime.now() : base,
+        firstDate: DateTime.now().subtract(const Duration(days: 1)),
+        lastDate: DateTime.now().add(const Duration(days: 730)),
+      );
+      if (d == null || !mounted) return;
+      final TimeOfDay? tod = await showTimePicker(context: context, initialTime: TimeOfDay.fromDateTime(base));
+      if (tod == null) return;
+      final DateTime at = DateTime(d.year, d.month, d.day, tod.hour, tod.minute);
+      await _run(() => _repo.adminMatch(
+          m.id, 'edit', <String, dynamic>{'scheduled_at': at.toUtc().toIso8601String()}));
+      return;
+    }
+    if (what == 'bo') {
+      final String? v = await _ask(
+          ref.read(settingsProvider).isFa ? 'تعداد بازی (۱ تا ۱۵)' : 'Best of (1–15)',
+          hint: '${m.bestOf}');
+      final int? bo = int.tryParse(v ?? '');
+      if (bo == null || bo < 1 || bo > 15) return;
+      await _run(() => _repo.adminMatch(m.id, 'edit', <String, dynamic>{'best_of': bo}));
+      return;
+    }
+    if (!mounted) return;
     final bool fa = ref.read(settingsProvider).isFa;
     final String? p1 = await _pickPlayer(fa ? 'بازیکن اول' : 'Player 1');
     if (p1 == null || !mounted) return;
@@ -977,18 +1067,36 @@ class _TournamentManagePageState extends ConsumerState<TournamentManagePage>
               'افزودن همکار این تورنمنت', 'Add a runner to this tournament')),
         ),
         const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed: () => _staffAction(t, 'organizer'),
-          icon: const Icon(Icons.badge_rounded),
-          label:
-              Text(context.tx('دادن نقش برگزارکننده', 'Grant organizer role')),
-        ),
-        const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed: () => _staffAction(t, 'player'),
-          icon: const Icon(Icons.person_off_rounded),
-          label: Text(context.tx('گرفتن نقش', 'Revoke role')),
-        ),
+        if (_runners.isNotEmpty) ...<Widget>[
+          const SizedBox(height: 8),
+          Text(context.tx('همکاران این تورنمنت', 'Runners of this tournament'),
+              style: const TextStyle(fontWeight: FontWeight.w800)),
+          for (final String u in _runners)
+            ListTile(
+              dense: true,
+              leading: TAvatar(name: _names[u] ?? '?'),
+              title: Text(_names[u] ?? u),
+              trailing: IconButton(
+                tooltip: context.tx('حذف همکار', 'Remove runner'),
+                icon: const Icon(Icons.person_remove_rounded, color: NxColors.danger),
+                onPressed: () => _run(() => _repo.setRunner(t.id, u, false)),
+              ),
+            ),
+        ],
+        if (_admin) ...<Widget>[
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => _staffAction(t, 'organizer'),
+            icon: const Icon(Icons.badge_rounded),
+            label: Text(context.tx('دادن نقش برگزارکننده', 'Grant organizer role')),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton.icon(
+            onPressed: () => _staffAction(t, 'player'),
+            icon: const Icon(Icons.person_off_rounded),
+            label: Text(context.tx('گرفتن نقش', 'Revoke role')),
+          ),
+        ],
       ],
     );
   }

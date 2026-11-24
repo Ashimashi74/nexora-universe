@@ -9,7 +9,7 @@ import 'mini_golf/mini_golf_entry.dart';
 import 'basketball_battle/basketball_battle_entry.dart';
 import 'spy_mafia/spy_mafia_entry.dart';
 
-/// ANIX ARCADE expansion (redesign-2): 20 new games ADDED next to the original nine (none replaced).
+/// ANIX ARCADE expansion (redesign-2): 17 new games ADDED next to the original nine (none replaced).
 /// Multiplayer games: bots offline + online rooms / quick match / invites / tournaments on the games project.
 /// Solo games: quick start, daily challenge, server-validated global boards.
 final List<GameInfo> kArcadeGames = <GameInfo>[

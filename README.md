@@ -1,12 +1,14 @@
 <p align="center">
-  <img src="docs/media/banner.png" alt="ANIX — your universe, your identity, your experience" width="100%"/>
+  <img src="docs/media/banner.png" alt="NEXORA — your universe, your identity, your experience" width="100%"/>
 </p>
 
-<h1 align="center">ANIX</h1>
+<p align="center"><img src="docs/media/emblem.png" alt="NX" width="160"/></p>
+
+<h1 align="center">NEXORA · ANIX PRO</h1>
 
 <p align="center">
   <b>YOUR UNIVERSE. YOUR IDENTITY. YOUR EXPERIENCE.</b><br/>
-  A cosmic gaming + social universe for Android: <b>16 games</b> online and vs. bots, <b>voice rooms</b> where friends talk and then play together,
+  A cosmic gaming + social universe for Android: <b>26 games</b> online and vs. bots, <b>voice rooms</b> where friends talk and then play together,
   chat & calls, posts & stories, ranked ladders, tournaments — and ORACLE, a robot buddy with a (very) big personality.
 </p>
 
@@ -55,12 +57,12 @@ Every push to `main` is analysed, tested and built by CI; release builds are tag
 | | |
 |---|---|
 | 🎙️ **Rooms** | Voice stage + text chat + members. Unlimited speakers and listeners. The room manager picks a game, ticks the players, and everyone comes back to the room after the match. |
-| 🎮 **16 games** | 9 classics and 7 arcade games — offline vs. smart bots or online against real people, with reconnect & resync. |
+| 🎮 **26 games** | 9 classics, 7 multiplayer arcade games and 10 solo arcade games — offline vs. smart bots or online against real people, with reconnect & resync. |
 | ⚡ **Quick match** | One tap to find an opponent: fair first-come pairing, no ghost seats, safe re-queue and reconnect. |
 | 🏆 **Ranked & tournaments** | Per-game ELO ladders and global XP ranks, trophies, brackets up to 64 players with check-in, auto rounds and server-side prizes. |
 | 👤 **Accounts** | Username + password (email optional), stay signed in, profile photo from your gallery, follow / unfollow with follower counts. |
 | 💬 **Social** | 1:1 chats, groups and channels, voice & video calls, posts, 24 h stories, likes, comments. |
-| 🤖 **ORACLE** | A cheeky robot guide: tours, tutorials, reactions to your real wins and losses — famous for its «جاااااان!». |
+| 🤖 **ORACLE** | A cheeky robot buddy reacting to your real wins and losses — famous for its «جاااااان!». |
 | 🔊 **Sound** | Music, in-game sounds and UI effects with separate switches and volume sliders. |
 | 🌐 **Bilingual** | Full Persian (RTL) and English UI. |
 
@@ -70,7 +72,7 @@ Rooms are built around conversation:
 
 - **Voice stage** (LiveKit): managers and speakers talk, listeners listen; speaking rings light up live. Mute or promote anyone from the member list.
 - **Chat** with a scrolling history, realtime delivery and the input pinned to the bottom; **members** shown with small round avatars — tap anyone to see their card and follow them.
-- **Games tab**: the manager picks any online game and ticks who plays — up to **12** for Mafia and party games, up to **6** for team games like Finger Soccer.
+- **Games tab**: the manager picks any online game and ticks who plays. Capacity is the manager's choice, bounded by what each game's rules actually allow — up to **12** for Mafia, **8** for Spy, **6** (two equal sides) for team games like Finger Soccer, **4** for the group games, **2** for the duels.
 - **Pre-game line-up**: each picked player chooses a team and formation; the manager picks the pitch and the ball. Then the match starts for everyone at once, and when it ends **everyone is back in the room**.
 - No caps on the audience: speakers and listeners are unlimited.
 
@@ -78,31 +80,54 @@ Rooms are built around conversation:
 
 The flagship game: flick discs, bend shots, score.
 
-- **126 teams in three categories** — **Club** (40), **National** (31) and **Luxury** (55; every Luxury set is rated 10/10). Each team carries real **power** and **accuracy** stats that change how hard and how straight it shoots.
-- **36 pitches**, several balls, 6 formations; colliders match the artwork exactly.
-- **1v1, 2v2 and 3v3** online: seats alternate sides and turns **rotate between teammates** each time your side gets the ball.
-- Golden goal, timed or first-to-N matches, 15 s online turns, goal announcer and crowd.
+- **122 teams in seven categories** — **Clubs** (47), **Nations** (19), **NX** (12), **Cars** (24), **Sport** (12), **Elite** (6) and **Legends** (2), every crest a clean **round disc**. Each team carries real **power** and **accuracy** stats.
+- **🛡️ Your own team** *(new)* — buy the custom-team slot (1000 💎), upload a photo, it is cropped into a round crest and joins the shared **Custom Teams** list with every stat at **10**. You play it free forever; anyone else unlocks it for **250 💎**. Ownership and prices are enforced on the server.
+- **🖤 Black-gold lobby** *(new)* — one luxury pre-match screen for online and pass-and-play: shared 30 s pick timer, opponent status, locked teams bought in place.
+- **📐 Fair pitches** *(new)* — every pitch scaled to one standard, so discs, ball and goals are the same size everywhere; heavier discs and ball for smoother, weightier motion.
+- **✨ Colour trails & rematch** *(new)* — each disc leaves a team-coloured trail; after an online match, ask for a **rematch** and play again in one tap.
+- **4 NX balls**, 5 pitches, 9 formations; **1v1, 2v2, 3v3** online with turns rotating between teammates.
+- **🏆 Tournaments** — up to 64 players, check-in, auto rounds, match length shown up front, prizes paid by the server.
+- **🔊 Clean voice** *(new)* — game sound ducks under LiveKit voice instead of drowning it.
 
 ## 🎮 All games
 
 | | Game | Online | Highlights |
 |---|---|---|---|
-| ⚽ | **Finger Soccer** | 2–6 | Club / National / Luxury teams, 3v3 rotation, 36 pitches |
-| 🎯 | **Carrom** | 2–6 | Queen + cover rule, fouls, deterministic replay |
+| ⚽ | **Finger Soccer** | 2–6 | 122 teams + custom teams, 3v3 rotation, trails, rematch |
+| 🎯 | **Carrom** | 2 | Queen + cover rule, fouls, deterministic replay |
 | 🎱 | **Billiards** | 2 | Groups, ball-in-hand, cue skins |
 | 🎲 | **Backgammon (تخته‌نرد)** | 2 | Bar, bearing off, gammons & backgammons |
 | 🟡 | **Ludo** | 2–4 | Safe stars, captures, extra turn on 6 |
 | 🐍 | **Snakes & Ladders** | 2–4 | Exact 100 to win |
 | 🃏 | **NX Cards** (UNO-style) | 2–4 | Skip / reverse / +2 / wild, the **NX!** call |
-| ❓ | **Quiz** | 2–21 | Timed questions, speed bonus, Persian banks |
+| ❓ | **Quiz** | 2 | Timed questions, speed bonus, Persian banks |
 | 🕵️ | **Mafia** | 6–12 | Godfather, doctor, detective, sniper; narrator mode; smart bots |
 | 🏎️ | **Kart Racing** | 2–4 | Arcade racing |
 | 🏃 | **Obstacle Race** | 2–4 | Party run |
 | 💣 | **Bomb Arena** | 2–4 | Last one standing |
 | 🎱 | **Pool 8** | 2 | Quick 8-ball |
 | ⛳ | **Mini Golf** | 2–4 | Trick holes |
-| 🏀 | **Basketball Battle** | 2 | Shoot-out |
-| 🕶️ | **Spy Mafia** | 3–12 | Find the spy before they find the location |
+| 🏀 | **Basketball Battle** | 2–4 | Shoot-out |
+| 🕶️ | **Spy Mafia** | 4–8 | Find the spy before they find the location |
+
+The ten **solo arcade** games are single-player (no online seats) but share the arcade's medals, daily challenge and
+server-validated global score boards:
+
+| | Game | Controls | Highlights |
+|---|---|---|---|
+| 🏃 | **Endless Runner** | arrows | Three lanes; hop the barriers as the road speeds up |
+| 🔺 | **Geo Dash** | tap | Tap to jump, hold to fly; spikes and flying blocks |
+| 🚗 | **Traffic Racer** | arrows / swipe | Swap lanes and weave through traffic |
+| 🍉 | **Fruit Ninja** | drag | Drag across the fruit; a bomb ends the run |
+| 🔪 | **Knife Hit** | tap | Throw into the spinning log; it speeds up every 5 knives |
+| 🌀 | **Helix Jump** | drag | Spin the tower, fall through the gaps, avoid the red rings |
+| 🫧 | **Bubble Shooter** | drag | Match three or more to pop; clear the whole wall |
+| 🧱 | **Stack Tower** | tap | Perfect drops build a combo; a miss trims the tower |
+| 🔲 | **Tetris Rush** | arrows | Clear lines against an accelerating fall |
+| 🔢 | **NX 2048** | arrows | Slide to merge equal tiles; reach 2048 |
+
+Player counts are the game's real mechanics, mirrored by the server (`nx_game_bounds`) and re-checked there on every
+capacity change, pick and start — a modified client cannot widen them.
 
 ## 👤 Accounts
 
@@ -161,7 +186,7 @@ test/         unit + widget tests (games, rooms, auth rules, assets, ORACLE, tou
 
 <p align="center"><b>جهان تو. هویت تو. تجربه‌ی تو.</b></p>
 
-**ANIX** یک جهان کیهانی بازی و شبکه‌ی اجتماعی برای اندروید است: **۱۶ بازی** آنلاین و با ربات، **اتاق‌های صوتی** که دوستان اول در آن گپ می‌زنند و بعد با هم بازی می‌کنند، چت و تماس، پست و استوری، رده‌بندی و تورنمنت — و «اوراکل»، ربات شیطون و بامزه‌ای که همه‌جا همراهت است.
+**NEXORA** یک جهان کیهانی بازی و شبکه‌ی اجتماعی برای اندروید است: **۲۶ بازی** آنلاین و با ربات، **اتاق‌های صوتی** که دوستان اول در آن گپ می‌زنند و بعد با هم بازی می‌کنند، چت و تماس، پست و استوری، رده‌بندی و تورنمنت — و «اوراکل»، ربات شیطون و بامزه‌ای که همه‌جا همراهت است.
 
 ### 📥 دانلود
 
@@ -173,9 +198,9 @@ test/         unit + widget tests (games, rooms, auth rules, assets, ORACLE, tou
 
 ### ✨ امکانات
 
-- **🎙️ اتاق‌ها:** صحنه‌ی صدا، گفتگوی متنی با پیام‌های زنده و کادر نوشتن پایین صفحه، فهرست اعضا با آواتار گرد. سخنران و شنونده **بی‌محدودیت**. مدیر اتاق بازی را انتخاب می‌کند، بازیکن‌ها را تیک می‌زند؛ هر بازیکن تیم و چیدمانش را می‌چیند و مدیر زمین و توپ را؛ بعد از بازی همه به اتاق برمی‌گردند. مافیا و بازی‌های گروهی تا **۱۲ نفر**، بازی‌های تیمی مثل فوتبال انگشتی تا **۶ نفر**.
-- **⚽ فوتبال انگشتی (گل‌کوچیک):** ۱۲۶ تیم در سه دسته‌ی **باشگاهی** (۴۰)، **ملی** (۳۱) و **لوکس** (۵۵؛ همه با امتیاز ۱۰ از ۱۰) با آمار واقعی قدرت و دقت شوت؛ ۳۶ زمین، چند توپ و ۶ چیدمان؛ بازی **۱ به ۱، ۲ به ۲ و ۳ به ۳** با چرخش نوبت بین هم‌تیمی‌ها.
-- **🎮 ۱۶ بازی:** تخته‌نرد، کرم، بیلیارد، لودو، مار و پله، NX Cards، مسابقه‌ی اطلاعات عمومی، مافیا، و هفت بازی آرکید — آفلاین با ربات یا آنلاین با آدم‌های واقعی.
+- **🎙️ اتاق‌ها:** صحنه‌ی صدا، گفتگوی متنی با پیام‌های زنده و کادر نوشتن پایین صفحه، فهرست اعضا با آواتار گرد. سخنران و شنونده **بی‌محدودیت**. مدیر اتاق بازی را انتخاب می‌کند، بازیکن‌ها را تیک می‌زند؛ هر بازیکن تیم و چیدمانش را می‌چیند و مدیر زمین و توپ را؛ بعد از بازی همه به اتاق برمی‌گردند. ظرفیت دست مدیر است و از قواعد واقعی هر بازی بیرون نمی‌زند: مافیا تا **۱۲ نفر**، جاسوس و مافیا تا **۸ نفر**، بازی‌های تیمی مثل فوتبال انگشتی تا **۶ نفر** (دو طرف برابر)، بازی‌های گروهی تا **۴ نفر** و دوئل‌ها **۲ نفر**.
+- **⚽ فوتبال انگشتی (گل‌کوچیک):** ۱۲۲ تیم در هفت دسته‌ی **باشگاهی** (۴۷)، **ملی** (۱۹)، **نیکسورا** (۱۲)، **خودرو** (۲۴)، **ورزشی** (۱۲)، **ویژه** (۶) و **افسانه‌ای** (۲) با آمار قدرت و دقت شوت؛ لوگوی گرد برای همه‌ی تیم‌ها؛ **تیم اختصاصی خودت** (خرید با ۱۰۰۰ الماس، عکس خودت روی مهره، همه‌ی آمار ۱۰، برای بقیه ۲۵۰ الماس)؛ لابی مشکی‌طلایی؛ اندازه‌ی یکسان زمین و مهره در همه‌ی زمین‌ها؛ رد رنگی پشت مهره‌ها و **بازی مجدد** آنلاین؛ ۵ زمین، ۴ توپ NX و ۹ چیدمان؛ بازی **۱ به ۱، ۲ به ۲ و ۳ به ۳** با چرخش نوبت بین هم‌تیمی‌ها.
+- **🎮 ۲۶ بازی:** ۹ بازی اصلی (فوتبال انگشتی، کارم، بیلیارد، تخته‌نرد، لودو، مار و پله، NX Cards، کوییز و مافیا)، ۷ بازی چندنفره‌ی آرکید (مسابقه‌ی کارت، مسابقه‌ی موانع، میدان بمب، بیلیارد ۸ توپ، مینی گلف، نبرد بسکتبال و جاسوس و مافیا) و ۱۰ بازی تک‌نفره‌ی آرکید (دونده‌ی بی‌پایان، جئو دش، مسابقه‌ی ترافیک، میوه‌بُر، چاقو زدن، پرش مارپیچ، حباب‌زن، برج بلوک، تتریس راش و ۲۰۴۸) — آفلاین با ربات یا آنلاین با آدم‌های واقعی.
 - **⚡ بازی سریع:** پیدا کردن حریف با یک لمس؛ جفت‌شدن منصفانه، بدون صندلی‌های «روح»، اتصال دوباره‌ی امن.
 - **🏆 رده‌بندی و تورنمنت:** امتیاز ELO برای هر بازی، رتبه‌ی کلی، جام‌ها، تورنمنت تا ۶۴ نفر با جایزه‌ی سمت سرور.
 - **👤 حساب کاربری:** ثبت‌نام با **نام کاربری و رمز** (ایمیل اختیاری)، ورود با نام کاربری یا ایمیل — **بدون کد**؛ ورود ماندگار، به‌خاطر سپردن آخرین نام کاربری و پر شدن خودکار رمز. عکس پروفایل از گالری و **دنبال کردن / لغو دنبال** با شمار دنبال‌کننده‌ها.

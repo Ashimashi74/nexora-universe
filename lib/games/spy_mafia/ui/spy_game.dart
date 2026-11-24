@@ -49,7 +49,7 @@ class _SpyGameViewState extends ArcadeLoopState<SpyGameView> {
 
   GameLaunch get l => widget.launch;
   int get me => l.mySeat;
-  int get seats => l.net?.seatCount ?? l.playerCount.clamp(4, 8);
+  int get seats => (l.net?.seatCount ?? l.playerCount).clamp(4, 8);
   bool _isBot(int s) => !l.online && s != me;
   double get _skill => botSkillFor(l.daily ? BotDifficulty.hard : l.difficulty);
 
@@ -94,8 +94,12 @@ class _SpyGameViewState extends ArcadeLoopState<SpyGameView> {
     if (m.isForfeit) {
       g.leave((m.data['seat'] as num?)?.toInt() ?? m.seat);
     } else if (m.isTimeout) {
-      if (g.phase == SpyPhase.clues) g.giveClue(g.turn, 0);
-      if (g.phase == SpyPhase.guess) g.guess(-1);
+      if (m.data['a'] == 'vote') {
+        if (g.phase == SpyPhase.vote) g.vote(m.seat, -1);
+      } else {
+        if (g.phase == SpyPhase.clues) g.giveClue(g.turn, 0);
+        if (g.phase == SpyPhase.guess) g.guess(-1);
+      }
     } else {
       final String a = '${m.data['a']}';
       final int v = (m.data['v'] as num?)?.toInt() ?? 0;
@@ -158,7 +162,8 @@ class _SpyGameViewState extends ArcadeLoopState<SpyGameView> {
       _phaseT = 0;
       for (final int s in g.activeSeats) {
         if (!g.votes.containsKey(s) && s != me) {
-          unawaited(t.send(<String, dynamic>{'a': 'vote', 'v': -1}, asSeat: s));
+          // Filed as a 'timeout' row: the server only accepts ordinary moves for the sender's own seat.
+          unawaited(t.net.send(<String, dynamic>{'a': 'vote', 'v': -1}, kind: 'timeout', asSeat: s));
           g.vote(s, -1);
         }
       }

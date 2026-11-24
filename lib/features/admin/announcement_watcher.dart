@@ -62,10 +62,10 @@ class AnnouncementWatcher {
     if (m == null) return;
     _markSeen(id);
     m.showMaterialBanner(MaterialBanner(
-      backgroundColor: NxColors.navySoft,
+      backgroundColor: NxColors.panelWarm,
       leading: const Icon(Icons.campaign_rounded, color: NxColors.gold),
       content: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: <Widget>[
-        Text('${r['title'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w900, color: NxColors.iceWhite)),
+        Text('${r['title'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w900, color: NxColors.ink)),
         if ('${r['body'] ?? ''}'.isNotEmpty)
           Text('${r['body']}', style: const TextStyle(color: NxColors.textDim)),
       ]),

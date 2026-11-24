@@ -431,7 +431,7 @@ class _MafiaVsBotViewState extends State<MafiaVsBotView> {
           if (mates.isNotEmpty) _mateLine(mates),
           if (_m.humanRole == MafiaRole.detective && _e.detectiveResults.isNotEmpty)
             MafiaPanel(
-              accent: NxColors.electricBlue,
+              accent: NxColors.gold,
               child: Column(children: <Widget>[
                 for (final MapEntry<int, bool> r in _e.detectiveResults.entries)
                   Text('${_name(r.key)}: ${r.value ? _t('مافیا', 'MAFIA') : _t('بی‌گناه', 'innocent')}',
@@ -509,7 +509,7 @@ class _MafiaVsBotViewState extends State<MafiaVsBotView> {
               GlowButton(
                 label: _t('شروع شب اول', 'Begin the first night'),
                 icon: Icons.nightlight_round,
-                color: NxColors.violet,
+                color: NxColors.goldDeep,
                 onTap: _flipped ? _beginNight : null,
               ),
             ]),
@@ -558,7 +558,7 @@ class _MafiaVsBotViewState extends State<MafiaVsBotView> {
           NxPill(
             label: night ? _t('شب ${_e.day}', 'Night ${_e.day}') : _t('روز ${_e.day}', 'Day ${_e.day}'),
             icon: night ? Icons.nightlight_round : Icons.wb_sunny,
-            color: night ? NxColors.violet : NxColors.gold,
+            color: night ? NxColors.goldDeep : NxColors.gold,
           ),
           const SizedBox(width: 8),
           NxPill(label: '${_e.aliveCount}/${_e.playerCount}', icon: Icons.people_alt, color: NxColors.turquoise),
@@ -571,7 +571,7 @@ class _MafiaVsBotViewState extends State<MafiaVsBotView> {
           IconButton(
             tooltip: _t('گزارش', 'Log'),
             onPressed: () => showMafiaLog(context, _e.logFor(MafiaMatch.humanId), _fa),
-            icon: const Icon(Icons.receipt_long, color: NxColors.iceWhite),
+            icon: const Icon(Icons.receipt_long, color: NxColors.ink),
           ),
           const SizedBox(width: 4),
         ]),
@@ -596,7 +596,7 @@ class _MafiaVsBotViewState extends State<MafiaVsBotView> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(10, 4, 10, 10),
           child: MafiaPanel(
-            accent: _e.isNight ? NxColors.violet : NxColors.gold,
+            accent: _e.isNight ? NxColors.goldDeep : NxColors.gold,
             child: AnimatedSwitcher(
               duration: _fx ? const Duration(milliseconds: 350) : Duration.zero,
               child: KeyedSubtree(key: ValueKey<_Stage>(_stage), child: _panel()),
@@ -614,7 +614,7 @@ class _MafiaVsBotViewState extends State<MafiaVsBotView> {
         Icon(night ? Icons.nightlight_round : Icons.wb_sunny,
             color: night ? MafiaStyle.moon : NxColors.gold,
             size: 30,
-            shadows: <Shadow>[Shadow(color: night ? NxColors.violet : NxColors.gold, blurRadius: 18)]),
+            shadows: <Shadow>[Shadow(color: night ? NxColors.goldDeep : NxColors.gold, blurRadius: 18)]),
         const SizedBox(height: 4),
         Text('${_t('مافیا', 'Mafia')} ${_e.config.revealRoleOnDeath ? _e.mafiaAlive : '?'} · ${_t('شهر', 'Town')} ${_e.config.revealRoleOnDeath ? _e.townAlive : '?'}',
             style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
@@ -633,7 +633,7 @@ class _MafiaVsBotViewState extends State<MafiaVsBotView> {
             title: _t('شب ${_e.day}', 'NIGHT ${_e.day}'),
             subtitle: _t('همه چشم‌ها را می‌بندند...', 'Everyone closes their eyes...'),
             icon: Icons.nightlight_round,
-            color: NxColors.violet,
+            color: NxColors.goldDeep,
             animate: _fx,
           ),
         );
@@ -645,7 +645,7 @@ class _MafiaVsBotViewState extends State<MafiaVsBotView> {
                 ? _t('نقش‌های شب در حال انجام کارشان هستند.', 'The night roles are at work.')
                 : _t('تو تماشاگری.', 'You are spectating.'),
             icon: Icons.bedtime,
-            color: NxColors.electricBlue,
+            color: NxColors.gold,
             animate: _fx,
           ),
         );
@@ -770,7 +770,7 @@ class _MafiaVsBotViewState extends State<MafiaVsBotView> {
       if (_m.humanRole == MafiaRole.detective && r.checkedId != null && r.checkedIsMafia != null) {
         rows.add(const SizedBox(height: 6));
         rows.add(MafiaPanel(
-          accent: NxColors.electricBlue,
+          accent: NxColors.gold,
           padding: const EdgeInsets.all(8),
           child: Text(
             '${_t('استعلام خصوصی', 'Private result')}: ${_name(r.checkedId!)} ${r.checkedIsMafia! ? _t('مافیاست!', 'is MAFIA!') : _t('بی‌گناه است.', 'appears innocent.')}',
@@ -855,7 +855,7 @@ class _MafiaVsBotViewState extends State<MafiaVsBotView> {
           hue: _hue(s.speaker),
           emblem: _emblem(s.speaker),
           mine: mine,
-          accent: mine ? NxColors.violet : accent,
+          accent: mine ? NxColors.goldDeep : accent,
         );
       },
     );
@@ -885,7 +885,7 @@ class _MafiaVsBotViewState extends State<MafiaVsBotView> {
             const SizedBox(width: 6),
             GhostButton(label: _t('اعلام نقش', 'Claim role'), icon: Icons.badge, color: NxColors.gold, onTap: canTalk ? () => _qcClaim() : null),
             const SizedBox(width: 6),
-            GhostButton(label: _t('گزارش استعلام', 'Report check'), icon: Icons.search, color: NxColors.electricBlue, onTap: canTalk ? _qcReport : null),
+            GhostButton(label: _t('گزارش استعلام', 'Report check'), icon: Icons.search, color: NxColors.gold, onTap: canTalk ? _qcReport : null),
           ]),
         ),
       if (_m.humanAlive) const SizedBox(height: 8),
@@ -982,7 +982,7 @@ class _MafiaVsBotViewState extends State<MafiaVsBotView> {
       ],
       if (_tallyDone && !_tallyFinal && _defendants.isEmpty && _m.humanAlive) ...<Widget>[
         const SizedBox(height: 8),
-        GlowButton(label: _t('شب فرا می‌رسد', 'Night falls'), icon: Icons.nightlight_round, color: NxColors.violet, onTap: _endDay),
+        GlowButton(label: _t('شب فرا می‌رسد', 'Night falls'), icon: Icons.nightlight_round, color: NxColors.goldDeep, onTap: _endDay),
       ],
     ]);
   }
@@ -1085,7 +1085,7 @@ class _MafiaVsBotViewState extends State<MafiaVsBotView> {
     children.add(GlowButton(
       label: _m.isOver ? _t('پایان بازی', 'Game over') : _t('شب فرا می‌رسد', 'Night falls'),
       icon: _m.isOver ? Icons.flag : Icons.nightlight_round,
-      color: _m.isOver ? NxColors.gold : NxColors.violet,
+      color: _m.isOver ? NxColors.gold : NxColors.goldDeep,
       onTap: _afterVerdict,
     ));
     return SingleChildScrollView(child: Column(children: children));

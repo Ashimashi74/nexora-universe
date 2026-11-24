@@ -22,10 +22,10 @@ class NovaGradientStyle {
 const List<NovaGradientStyle> kNovaGradients = <NovaGradientStyle>[
   NovaGradientStyle('سحابی صورتی', 'Pink Nebula', <Color>[Color(0xFFFF6FB5), Color(0xFF7B3FF2), Color(0xFF1A0B2E)]),
   NovaGradientStyle('شفق طلایی', 'Golden Aurora', <Color>[Color(0xFFFFC857), Color(0xFFFF6FB5), Color(0xFF5A1E4F)]),
-  NovaGradientStyle('افق یخی', 'Ice Horizon', <Color>[Color(0xFF2EE6D6), Color(0xFF00C2FF), Color(0xFF0A0F2C)]),
+  NovaGradientStyle('افق یخی', 'Ice Horizon', <Color>[Color(0xFF2EE6D6), Color(0xFF00C2FF), Color(0xFF14130F)]),
   NovaGradientStyle('ابرنواختر', 'Supernova', <Color>[Color(0xFFFF4F6E), Color(0xFFFFB020), Color(0xFF2A0B3A)]),
   NovaGradientStyle('کهکشان بنفش', 'Violet Galaxy', <Color>[Color(0xFF9D7BFF), Color(0xFF7B3FF2), Color(0xFF0B0820)]),
-  NovaGradientStyle('سیاه‌چاله', 'Black Hole', <Color>[Color(0xFF050818), Color(0xFF141B45), Color(0xFFFF6FB5)]),
+  NovaGradientStyle('سیاه‌چاله', 'Black Hole', <Color>[Color(0xFF07080C), Color(0xFF1D1B15), Color(0xFFFF6FB5)]),
   NovaGradientStyle('زمرد کیهانی', 'Cosmic Emerald', <Color>[Color(0xFF7CFF8A), Color(0xFF2EE6D6), Color(0xFF04141F)]),
   NovaGradientStyle('طلوع مریخ', 'Mars Dawn', <Color>[Color(0xFFFF8A5B), Color(0xFFFF4FA3), Color(0xFF3B1450)]),
 ];
@@ -58,7 +58,7 @@ class NovaAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final String initial = name.trim().isEmpty ? '?' : name.trim().characters.first.toUpperCase();
     final List<Color> colors =
-        official ? const <Color>[NxColors.electricBlue, NxColors.violet] : novaGradient(name.hashCode).colors.take(2).toList();
+        official ? const <Color>[NxColors.gold, NxColors.goldDeep] : novaGradient(name.hashCode).colors.take(2).toList();
     return Container(
       width: size,
       height: size,
@@ -128,7 +128,7 @@ class _NovaRichTextState extends State<NovaRichText> {
   @override
   Widget build(BuildContext context) {
     _clear();
-    final base = widget.style ?? const TextStyle(fontSize: 15, height: 1.5, color: NxColors.iceWhite);
+    final base = widget.style ?? const TextStyle(fontSize: 15, height: 1.5, color: NxColors.ink);
     final spans = <InlineSpan>[];
     for (final t in NovaText.parse(widget.text)) {
       switch (t.kind) {
@@ -376,7 +376,7 @@ class NovaEmptyState extends StatelessWidget {
           const SizedBox(height: 12),
           GlassPanel(
             child: Text(context.tx(fa, en),
-                textAlign: TextAlign.center, style: const TextStyle(color: NxColors.iceWhite, height: 1.5)),
+                textAlign: TextAlign.center, style: const TextStyle(color: NxColors.ink, height: 1.5)),
           ),
           if (action != null) ...<Widget>[const SizedBox(height: 14), action!],
         ]),

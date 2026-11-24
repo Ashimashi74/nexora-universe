@@ -134,12 +134,14 @@ void main() {
     expect(bmClockRed(0, 0), 0); // no clock (goal-limit matches)
   });
 
-  testWidgets('score banner: scores on the plates, clock in the middle', (WidgetTester tester) async {
+  testWidgets('v9 clock pill: the clock text, turn bar only while a turn clock runs', (WidgetTester tester) async {
     await tester.pumpWidget(const MaterialApp(
-        home: Scaffold(body: Center(child: BmScoreBanner(left: '۲', right: '۱', clock: '۰۴:۰۰', red: 1)))));
-    expect(find.text('۲'), findsOneWidget);
-    expect(find.text('۱'), findsOneWidget);
+        home: Scaffold(body: Center(child: FsClockPill(clock: '۰۴:۰۰', red: 1, turn: .5, turnMine: true)))));
     expect(find.text('۰۴:۰۰'), findsOneWidget);
+    expect(find.byType(FractionallySizedBox), findsOneWidget);
+    await tester.pumpWidget(const MaterialApp(
+        home: Scaffold(body: Center(child: FsClockPill(clock: '۰۴:۰۰', red: 0, turn: -1, turnMine: true)))));
+    expect(find.byType(FractionallySizedBox), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -150,7 +152,7 @@ void main() {
     await tester.pumpWidget(host(_launch(mode: GameMode.vsBot, onFinish: (GameResult r) => got = r), autoStart: true));
     await pumpFor(tester, 1);
     final BmEngine e = stateOf(tester).matchEngine as BmEngine;
-    expect(find.byType(BmScoreBanner), findsOneWidget);
+    expect(find.byType(FsMatchTopBar), findsOneWidget); // v9: no HUD score banner, the score is on the pitch
     expect(find.textContaining(RegExp('^۰۰:۰[۰-۲]\$')), findsOneWidget); // count-up from zero, Persian digits
     expect(find.text('یک دقیقه تا پایان بازی'), findsNothing);
     e.mleft = 60.5;

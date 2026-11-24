@@ -12,18 +12,17 @@ import '../../../core/widgets/nx_widgets.dart';
 import '../core/challenge_store.dart';
 import '../core/challenges.dart';
 import 'po_common.dart';
+import '../../../core/ui2/luxe.dart';
 
 /// Missions: daily reward with streak + daily / weekly challenges with real progress.
 class MissionsTab extends ConsumerWidget {
   const MissionsTab({super.key});
 
   void _celebrate(BuildContext context, AwardOutcome o) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(poDigits(
+    luxeToast(context, poDigits(
           context,
           context.tx('+${o.xp} XP  •  +${o.coins} سکه',
-              '+${o.xp} XP  •  +${o.coins} coins'))),
-    ));
+              '+${o.xp} XP  •  +${o.coins} coins')));
     showAwardOutcome(context, o);
   }
 
@@ -92,8 +91,8 @@ class MissionsTab extends ConsumerWidget {
           padding: const EdgeInsets.only(top: NxSpace.sm),
           child: Text(
             context.tx(
-                'پیشرفت فقط از فعالیت واقعی تو در دنیاهای ANIX محاسبه می‌شود. هفته از شنبه شروع می‌شود.',
-                'Progress counts only your real activity in ANIX worlds. Weeks start on Saturday.'),
+                'پیشرفت فقط از فعالیت واقعی تو در دنیاهای نیکسورا محاسبه می‌شود. هفته از شنبه شروع می‌شود.',
+                'Progress counts only your real activity in NEXORA worlds. Weeks start on Saturday.'),
             style: TextStyle(color: PoColors.inkDim(context), fontSize: 12),
             textAlign: TextAlign.center,
           ),

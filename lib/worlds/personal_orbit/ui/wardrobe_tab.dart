@@ -8,6 +8,7 @@ import '../../../core/settings/app_settings.dart';
 import '../../../core/theme/nx_theme.dart';
 import 'avatar_view.dart';
 import 'po_common.dart';
+import '../../../core/ui2/luxe.dart';
 
 /// Wardrobe: avatar gear grouped by slot + holo frames. Owned items equip /
 /// unequip; unowned ones are shown locked and lead to the Exchange.
@@ -29,17 +30,11 @@ class WardrobeTab extends ConsumerWidget {
   }
 
   void _openShop(BuildContext context, CatalogItem item) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(poDigits(
+    luxeToast(context, poDigits(
           context,
           context.tx(
               '«${item.nameFa}» را می‌توانی با ${item.price} سکه از Exchange بخری.',
-              '"${item.nameEn}" is available in the Exchange for ${item.price} coins.'))),
-      action: SnackBarAction(
-        label: context.tx('رفتن به Exchange', 'Open Exchange'),
-        onPressed: () => context.push('/world/nexora_exchange'),
-      ),
-    ));
+              '"${item.nameEn}" is available in the Exchange for ${item.price} coins.')), actionLabel: context.tx('رفتن به Exchange', 'Open Exchange'), onAction: () => context.push('/world/nexora_exchange'));
   }
 
   @override

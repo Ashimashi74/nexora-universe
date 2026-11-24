@@ -17,6 +17,8 @@ import '../../features/admin/admin_access.dart';
 import 'account_page.dart';
 
 import '../../core/ui2/anix_kit.dart';
+import '../../core/ui2/luxe.dart';
+
 /// Settings (STEP_12, P13, P16, P27, P28).
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -93,12 +95,18 @@ class SettingsPage extends ConsumerWidget {
           GlassPanel(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // Light mode repaints Material chrome and the theme extension. The rest of the
+              // app (the whole Station Luxe art direction) is dark-only, so this is labelled as
+              // a Material-chrome option instead of implying a full light redesign.
               AnixSwitchTile(
                 contentPadding: EdgeInsets.zero,
                 value: s.appearanceMode == NxAppearanceMode.light,
                 onChanged: (v) => s.appearanceMode =
                     v ? NxAppearanceMode.light : NxAppearanceMode.dark,
+                secondary: const Icon(Icons.contrast_rounded, color: NxColors.gold),
                 title: Text(context.tx('نمایش روشن', 'Light appearance')),
+                subtitle: Text(context.tx('روشن‌کردن فیلدها و دیالوگ‌های سیستم',
+                    'Lighter Material fields, dialogs and menus')),
               ),
               Text(context.tx('کیفیت گرافیک', 'Graphics quality'),
                   style: const TextStyle(fontWeight: FontWeight.w700)),
@@ -152,7 +160,7 @@ class SettingsPage extends ConsumerWidget {
               ),
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.tour_rounded, color: Color(0xFF8FF3FF)),
+                leading: const Icon(Icons.tour_rounded, color: Color(0xFFF6E7BD)),
                 title: Text(context.tx('دیدن دوباره‌ی تور اوراکل', 'Replay ORACLE tour')),
                 subtitle: Text(context.tx('راهنمای قدم‌به‌قدم هر بخش دوباره نشان داده می‌شود',
                     'Every section shows its step-by-step guide again')),
@@ -202,13 +210,18 @@ class SettingsPage extends ConsumerWidget {
                 label: Text(context.tx('حذف هویت و همه‌ی داده‌ها',
                     'Delete identity and all data')),
                 onPressed: () async {
+                  final bool online = ref.read(onlineProvider).isOnline;
                   final ok = await showDialog<bool>(
                     context: context,
                     builder: (ctx) => AnixDialog(
                       title: Text(ctx.tx('مطمئنی؟', 'Are you sure?')),
-                      content: Text(ctx.tx(
-                          'همه‌ی پیشرفت، آیتم‌ها و پست‌ها پاک می‌شوند. قابل بازگشت نیست.',
-                          'All progress, items and posts will be erased. This cannot be undone.')),
+                      content: Text(online
+                          ? ctx.tx(
+                              'تمام داده‌های این دستگاه پاک می‌شوند. حذف کامل از سرور هنوز فعال نشده، پس داده‌های همگانی‌شده ممکن است همچنان در سرور بمانی. این کار قابل بازگشت نیست.',
+                              'All data on this device will be erased. Full deletion from the server is not enabled yet, so data you synced may remain on the server. This cannot be undone.')
+                          : ctx.tx(
+                              'همه‌ی پیشرفت، آیتم‌ها و پست‌ها روی همین دستگاه پاک می‌شوند. قابل بازگشت نیست.',
+                              'All progress, items and posts on this device will be erased. This cannot be undone.')),
                       actions: [
                         TextButton(
                             onPressed: () => Navigator.pop(ctx, false),
@@ -234,7 +247,7 @@ class SettingsPage extends ConsumerWidget {
               ),
             ]),
           ),
-          _section(context, context.tx('درباره‌ی ANIX', 'About ANIX')),
+          _section(context, context.tx('درباره‌ی نیکسورا ۲', 'About NEXORA 2')),
           GlassPanel(
             key: const ValueKey<String>('about_anix'),
             child: Column(children: <Widget>[
@@ -247,16 +260,29 @@ class SettingsPage extends ConsumerWidget {
                   style: TextStyle(color: visual.muted, fontSize: 12, fontWeight: FontWeight.w700)),
               const SizedBox(height: 6),
               Text(
-                  context.tx('بازی‌های آنلاین، چت و تماس، پست و استوری، تورنمنت‌ها و ORACLE — همه در ANIX.',
-                      'Online games, chat & calls, posts & stories, tournaments and ORACLE — all in ANIX.'),
+                  context.tx('بازی‌های آنلاین، چت و تماس، پست و استوری، تورنمنت‌ها و ORACLE — همه در نیکسورا.',
+                      'Online games, chat & calls, posts & stories, tournaments and ORACLE — all in NEXORA.'),
                   textAlign: TextAlign.center,
                   style: TextStyle(color: visual.text, fontSize: 12.5, height: 1.4)),
+              const SizedBox(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.movie_creation_rounded, color: Color(0xFFF6E7BD)),
+                title: Text(context.tx('دیدن دوباره‌ی فیلم افتتاحیه', 'Replay intro cinematic')),
+                subtitle: Text(context.tx(
+                    'رسیدن به ایستگاه و هفت دنیا را دوباره تماشا کن',
+                    'Watch the arrival at the station and the seven worlds again')),
+                onTap: () {
+                  ref.read(settingsProvider).introSeen = false;
+                  context.push('/intro?next=/hub');
+                },
+              ),
             ]),
           ),
           const SizedBox(height: NxSpace.xl),
           Center(
             child: Text(
-                'ANIX · YOUR UNIVERSE. YOUR IDENTITY. YOUR EXPERIENCE.',
+                'NEXORA · YOUR UNIVERSE. YOUR IDENTITY. YOUR EXPERIENCE.',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                     color: NxColors.textDim.withValues(alpha: 0.6),
@@ -287,7 +313,7 @@ class _AdminInviteTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => ListTile(
         contentPadding: EdgeInsets.zero,
-        leading: const Icon(Icons.vpn_key_rounded, color: Color(0xFF8FF3FF)),
+        leading: const Icon(Icons.vpn_key_rounded, color: Color(0xFFF6E7BD)),
         title: Text(context.tx('ورود کد دعوت ادمین', 'Redeem admin invitation code')),
         subtitle: Text(context.tx('کد را از مدیر اصلی بگیر', 'Use a code issued by the main admin')),
         onTap: () async {
@@ -313,11 +339,9 @@ class _AdminInviteTile extends ConsumerWidget {
           final Map<String, dynamic> result = await AdminApi(ref.read(onlineProvider)).redeemAdminCode(value);
           if (!context.mounted) return;
           final bool fa = context.isFa;
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(result['ok'] == true
+          luxeToast(context, result['ok'] == true
                 ? (fa ? 'دسترسی ساخت تورنمنت فعال شد ✓' : 'Tournament-admin access enabled ✓')
-                : adminErrorText(result['error'] as String?, fa)),
-          ));
+                : adminErrorText(result['error'] as String?, fa));
           if (result['ok'] == true) await ref.read(adminAccessProvider).refresh();
         },
       );

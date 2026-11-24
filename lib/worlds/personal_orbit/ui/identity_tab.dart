@@ -15,6 +15,8 @@ import 'avatar_view.dart';
 import 'po_common.dart';
 
 import '../../../core/ui2/anix_kit.dart';
+import '../../../core/ui2/luxe.dart';
+
 /// Identity: avatar, name, Explorer ID, bio, rank, XP, join date.
 class IdentityTab extends ConsumerWidget {
   const IdentityTab({super.key});
@@ -151,11 +153,11 @@ class IdentityTab extends ConsumerWidget {
             ],
           ),
           child: DefaultTextStyle.merge(
-            style: const TextStyle(color: NxColors.iceWhite),
+            style: const TextStyle(color: NxColors.ink),
             child: Theme(
               data: ThemeData.dark(useMaterial3: true),
               child: DefaultTextStyle.merge(
-                style: const TextStyle(color: NxColors.iceWhite),
+                style: const TextStyle(color: NxColors.ink),
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: <Widget>[
@@ -226,7 +228,7 @@ class IdentityTab extends ConsumerWidget {
         Wrap(spacing: 8, runSpacing: 8, children: <Widget>[
           ActionChip(
             avatar: const Icon(Icons.storefront_rounded, size: 18),
-            label: Text(context.tx('ANIX Exchange', 'ANIX Exchange')),
+            label: Text(context.tx('NEXORA Exchange', 'NEXORA Exchange')),
             onPressed: () => context.push('/world/nexora_exchange'),
           ),
           ActionChip(
@@ -246,7 +248,7 @@ class IdentityTab extends ConsumerWidget {
           data: ThemeData.dark(useMaterial3: true),
           child: Container(
             decoration: BoxDecoration(
-                color: NxColors.navy,
+                color: NxColors.panel,
                 borderRadius: BorderRadius.circular(NxRadius.lg)),
             child: ref.watch(onlineProvider).isOnline
                 ? ListTile(
@@ -281,8 +283,7 @@ class _ProfileAvatarPickerState extends ConsumerState<_ProfileAvatarPicker> {
   Future<void> _pick() async {
     final online = ref.read(onlineProvider);
     if (!online.isOnline || online.isGuest) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(context.tx('برای عکس پروفایل وارد حساب شو.', 'Sign in to set a profile photo.'))));
+      luxeToast(context, context.tx('برای عکس پروفایل وارد حساب شو.', 'Sign in to set a profile photo.'));
       return;
     }
     final XFile? file = await ImagePicker().pickImage(
@@ -294,13 +295,11 @@ class _ProfileAvatarPickerState extends ConsumerState<_ProfileAvatarPicker> {
       final String ext = name.contains('.') ? name.split('.').last : 'jpg';
       await ref.read(cloudSyncProvider).uploadAvatar(await file.readAsBytes(), extension: ext);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(context.tx('عکس پروفایل ذخیره شد.', 'Profile photo saved.'))));
+        luxeToast(context, context.tx('عکس پروفایل ذخیره شد.', 'Profile photo saved.'));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(context.tx('آپلود عکس ناموفق بود.', 'Profile photo upload failed.'))));
+        luxeToast(context, context.tx('آپلود عکس ناموفق بود.', 'Profile photo upload failed.'));
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -361,11 +360,7 @@ class _ExplorerIdChip extends StatelessWidget {
         onTap: () async {
           await Clipboard.setData(ClipboardData(text: id));
           if (!context.mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content: Text(
-                    context.tx('Explorer ID کپی شد', 'Explorer ID copied'))),
-          );
+          luxeToast(context, context.tx('Explorer ID کپی شد', 'Explorer ID copied'));
         },
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),

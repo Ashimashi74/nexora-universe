@@ -71,7 +71,9 @@ Widget _host(GameInfo g) =>
     GameHostPage(game: g, mode: GameMode.vsBot, difficulty: BotDifficulty.normal, players: g.defaultPlayers);
 
 void main() {
-  const List<String> reportedGames = <String>['finger_soccer', 'pool8', 'mini_golf', 'basketball_battle', 'spy_mafia'];
+  // Every registered game is launched here: a game that cannot build its first frames is a
+  // broken game, and this test is the only automated gate that proves each one runs.
+  final List<String> reportedGames = kGames.map((GameInfo g) => g.id).toList();
 
   final Map<String, (Widget Function(), Type)> screens = <String, (Widget Function(), Type)>{
     'main menu (hub)': (() => const HubPage(), HubPage),

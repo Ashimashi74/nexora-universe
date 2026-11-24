@@ -459,9 +459,9 @@ class NovaNotificationsTab extends ConsumerWidget {
       case NovaNotifKind.like:
         return const Color(0xFFFF4F8B);
       case NovaNotifKind.comment:
-        return NxColors.turquoise;
+        return NxColors.champagne;
       case NovaNotifKind.share:
-        return NxColors.electricBlue;
+        return NxColors.gold;
       case NovaNotifKind.story:
         return NxColors.gold;
       default:
@@ -670,7 +670,7 @@ class _GridTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: const Color(0x22FFFFFF),
               borderRadius: BorderRadius.circular(NxRadius.sm),
-              border: Border.all(color: NxColors.glassBorder),
+              border: Border.all(color: NxColors.goldLine),
             ),
             padding: const EdgeInsets.all(8),
             child: Text(text, maxLines: 5, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 11)),

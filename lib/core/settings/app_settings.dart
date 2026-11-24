@@ -32,17 +32,19 @@ class AppSettings extends ChangeNotifier {
     _sfxVolume = (_store.getInt(_kSfxVol) ?? 80).clamp(0, 100) / 100.0;
     _sound = _store.getBool(_kSound) ?? true;
     _haptics = _store.getBool(_kHaptics) ?? true;
-    _journeySeen = _store.getBool(_kJourney) ?? false;
     _onboarded = _store.getBool(_kOnboarded) ?? false;
     _authMode = _store.getString(_kAuthMode) ?? '';
     _oracleBuddy = _store.getBool(_kOracleBuddy) ?? true;
     _oracleTalk = _store.getBool(_kOracleTalk) ?? true;
+    _introSeen = _store.getBool(_kIntroSeen) ?? false;
   }
 
   static const _kOracleBuddy = 'settings.oracle_buddy';
   static const _kOracleTalk = 'settings.oracle_talk';
+  static const _kIntroSeen = 'settings.intro_seen';
   late bool _oracleBuddy;
   late bool _oracleTalk;
+  late bool _introSeen;
 
   /// The mischievous corner ORACLE outside games (off = hidden everywhere).
   bool get oracleBuddy => _oracleBuddy;
@@ -62,6 +64,16 @@ class AppSettings extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// True once the full cinematic intro has been watched (or skipped) at least once, so returning users are not
+  /// forced through it on every launch. Replayable from Settings.
+  bool get introSeen => _introSeen;
+
+  set introSeen(bool v) {
+    _introSeen = v;
+    _store.setBool(_kIntroSeen, v);
+    notifyListeners();
+  }
+
   final LocalStore _store;
   static const _kQuality = 'settings.quality';
   static const _kReduced = 'settings.reduced_motion';
@@ -69,7 +81,6 @@ class AppSettings extends ChangeNotifier {
   static const _kVisualTheme = 'settings.visual_theme';
   static const _kSound = 'settings.sound';
   static const _kHaptics = 'settings.haptics';
-  static const _kJourney = 'settings.journey_seen';
   static const _kOnboarded = 'settings.onboarded';
   static const _kAuthMode = 'settings.auth_mode';
   static const _kMusic = 'settings.music';
@@ -84,7 +95,6 @@ class AppSettings extends ChangeNotifier {
   late NxAppearanceMode _appearanceMode;
   late bool _sound;
   late bool _haptics;
-  late bool _journeySeen;
   late bool _onboarded;
   late String _authMode;
   late bool _music;
@@ -127,7 +137,6 @@ class AppSettings extends ChangeNotifier {
   Locale get locale => Locale(_languageCode);
   bool get sound => _sound;
   bool get haptics => _haptics;
-  bool get journeySeen => _journeySeen;
   bool get onboarded => _onboarded;
 
   /// '', 'email' or 'guest'. Guest is deliberately local-only.
@@ -194,12 +203,6 @@ class AppSettings extends ChangeNotifier {
   set haptics(bool v) {
     _haptics = v;
     _store.setBool(_kHaptics, v);
-    notifyListeners();
-  }
-
-  void markJourneySeen() {
-    _journeySeen = true;
-    _store.setBool(_kJourney, true);
     notifyListeners();
   }
 

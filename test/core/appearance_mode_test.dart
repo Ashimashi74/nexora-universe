@@ -42,7 +42,7 @@ void main() {
     expect(light.brightness, Brightness.light);
     expect(light.colorScheme.brightness, Brightness.light);
     expect(light.extension<NxThemeColors>()?.background,
-        NxThemeColors.neonLight.background);
+        NxThemeColors.goldLight.background);
     expect(dark.brightness, Brightness.dark);
     expect(dark.colorScheme.brightness, Brightness.dark);
     expect(dark.extension<NxThemeColors>()?.background,

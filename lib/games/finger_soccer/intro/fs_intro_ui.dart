@@ -373,6 +373,9 @@ class FsLoadBar extends StatelessWidget {
 }
 
 /// Collapsed game bar ("نوار بازی") handle at the bottom-left: chevron, player count, muted mic.
+/// Size of the game bar handle (bottom-left pill); the in-match formation button sits right beside it.
+const double kFsBarHandleWidth = 97, kFsBarHandleHeight = 40;
+
 class FsBarHandle extends StatelessWidget {
   const FsBarHandle({super.key, required this.players, required this.onTap, this.micOff = true});
   final int players;
@@ -382,8 +385,8 @@ class FsBarHandle extends StatelessWidget {
   Widget build(BuildContext context) => FsPress(
         onTap: onTap,
         child: Container(
-          width: 97,
-          height: 40,
+          width: kFsBarHandleWidth,
+          height: kFsBarHandleHeight,
           decoration: const BoxDecoration(
             color: Color(0xFF1B1F3B),
             borderRadius: BorderRadius.horizontal(right: Radius.circular(20)),
@@ -467,9 +470,10 @@ class FsOutlined extends StatelessWidget {
 
 /// A team disc as the reference shows it on the team picker: the crest art on a thick silver cylinder.
 class FsDisc3D extends StatelessWidget {
-  const FsDisc3D({super.key, required this.asset, required this.r, this.depth = 9});
+  const FsDisc3D({super.key, required this.asset, required this.r, this.depth = 9, this.networkUrl});
   final String asset;
   final double r, depth;
+  final String? networkUrl;
   @override
   Widget build(BuildContext context) => SizedBox(
         width: r * 2 + 6,
@@ -505,7 +509,17 @@ class FsDisc3D extends StatelessWidget {
               width: r * 2,
               height: r * 2,
               decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFFDADDE1)),
-              child: ClipOval(child: Image.asset(asset, fit: BoxFit.cover, gaplessPlayback: true, errorBuilder: (_, __, ___) => const SizedBox())),
+              child: ClipOval(
+                child: Transform.scale(
+                  // Generated badges place their rim at radius 120 in a 128px sprite.
+                  scale: 128 / 120,
+                  child: networkUrl != null && networkUrl!.isNotEmpty
+                      ? Image.network(networkUrl!, fit: BoxFit.cover, gaplessPlayback: true,
+                          errorBuilder: (_, __, ___) => Image.asset(asset, fit: BoxFit.cover, gaplessPlayback: true))
+                      : Image.asset(asset, fit: BoxFit.cover, gaplessPlayback: true,
+                          errorBuilder: (_, __, ___) => const SizedBox()),
+                ),
+              ),
             ),
           ),
         ]),

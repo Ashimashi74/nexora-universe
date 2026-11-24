@@ -150,7 +150,7 @@ class _DiePainter extends CustomPainter {
         text: TextSpan(
           text: '?',
           style: TextStyle(
-              color: const Color(0xFF0A0F2C),
+              color: const Color(0xFF14130F),
               fontSize: s * 0.5,
               fontWeight: FontWeight.w900),
         ),
@@ -162,7 +162,7 @@ class _DiePainter extends CustomPainter {
     final double pr = s * 0.085;
     for (final Offset o in ludoPips(face)) {
       final Offset c = Offset(o.dx * s, o.dy * s);
-      canvas.drawCircle(c, pr, Paint()..color = const Color(0xFF0A0F2C));
+      canvas.drawCircle(c, pr, Paint()..color = const Color(0xFF14130F));
       canvas.drawCircle(c.translate(-pr * 0.3, -pr * 0.3), pr * 0.35,
           Paint()..color = color.withValues(alpha: 0.8));
     }

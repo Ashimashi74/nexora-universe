@@ -7,6 +7,7 @@ import 'package:nexora/core/theme/nx_theme.dart';
 import 'package:nexora/games/finger_soccer/core/bm_engine.dart';
 import 'package:nexora/games/finger_soccer/ui/bm_painter.dart';
 import 'package:nexora/games/finger_soccer/ui/bm_view.dart';
+import 'package:nexora/games/finger_soccer/ui/fs_flame.dart';
 import 'package:nexora/games/game_registry.dart';
 import 'package:nexora/worlds/arcade/game_host_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -70,8 +71,9 @@ void main() {
     await _run(tester, 10500);
     // Mid-match: flick one of our discs at the ball the way a finger would (drag back, release),
     // then catch the ball while it is rolling (rotating ball sprite frames) a moment later.
-    final BmPainter p = tester.widget<CustomPaint>(find.byWidgetPredicate(
-            (Widget w) => w is CustomPaint && w.painter is BmPainter)).painter! as BmPainter;
+    // v9: the playfield is a Flame scene (FsFlameGame); its layers share the view's BmPainter.
+    final dynamic hostState = tester.state(find.byType(BermudaView));
+    final BmPainter p = (hostState.flameGame as FsFlameGame).painter;
     for (int i = 0; i < 300 && !(p.e.phase == 'aim' && p.e.turn == 0); i++) {
       await tester.pump(const Duration(milliseconds: 16));
     }

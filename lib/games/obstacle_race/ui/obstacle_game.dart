@@ -49,7 +49,7 @@ class _ObstacleGameState extends ArcadeLoopState<ObstacleGame> {
 
   GameLaunch get l => widget.launch;
   int get me => l.mySeat;
-  int get seats => l.net?.seatCount ?? l.playerCount.clamp(2, 4);
+  int get seats => (l.net?.seatCount ?? l.playerCount).clamp(2, 4);
 
   @override
   void initState() {

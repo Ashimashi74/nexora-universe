@@ -218,7 +218,7 @@ class _OracleMascotState extends ConsumerState<OracleMascot>
       cacheWidth: (s * 2.2).round(),
       gaplessPlayback: true,
       errorBuilder: (_, __, ___) =>
-          Icon(Icons.smart_toy_rounded, size: s * 0.7, color: const Color(0xFF35D6FF)),
+          Icon(Icons.smart_toy_rounded, size: s * 0.7, color: const Color(0xFFD9B872)),
     );
     final Widget body = AnimatedBuilder(
       animation: Listenable.merge(<Listenable>[_loop, _react]),
@@ -255,7 +255,7 @@ class _OracleMascotState extends ConsumerState<OracleMascot>
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.all(Radius.elliptical(s, s * 0.2)),
                     gradient: RadialGradient(colors: <Color>[
-                      const Color(0xFF35D6FF).withValues(alpha: 0.35 + 0.3 * pulse),
+                      const Color(0xFFD9B872).withValues(alpha: 0.35 + 0.3 * pulse),
                       const Color(0x0035D6FF),
                     ]),
                   ),

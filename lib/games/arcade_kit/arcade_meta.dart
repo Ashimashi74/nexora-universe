@@ -48,6 +48,11 @@ class ArcadeDef {
 }
 
 /// Multiplayer games (bot opponents offline, online rooms / invites / tournaments).
+///
+/// Every id here is a real, playable game registered in `kGames`. The list used to carry
+/// `stickman_arena`, `ludo_battle` and `chess_blitz` as well; those never had more than a
+/// medal table and an icon, so they advertised "16 games" while shipping 16 playable
+/// ones only by accident. They are gone: the arcade is exactly the games in `kGames`.
 const List<String> kArcadeMultiIds = <String>[
   'kart_racing',
   'obstacle_race',
@@ -56,9 +61,6 @@ const List<String> kArcadeMultiIds = <String>[
   'mini_golf',
   'basketball_battle',
   'spy_mafia',
-  'stickman_arena',
-  'ludo_battle',
-  'chess_blitz',
 ];
 
 /// Single-player competitive games.
@@ -97,9 +99,6 @@ const Map<String, ArcadeDef> kArcadeDefs = <String, ArcadeDef>{
   'mini_golf': ArcadeDef(id: 'mini_golf', unitFa: 'امتیاز', unitEn: 'pts', bronze: 1, silver: 3, gold: 5, daily: 1, multiplayer: true),
   'basketball_battle': ArcadeDef(id: 'basketball_battle', unitFa: 'امتیاز', unitEn: 'pts', bronze: 1, silver: 3, gold: 5, daily: 1, multiplayer: true),
   'spy_mafia': ArcadeDef(id: 'spy_mafia', unitFa: 'امتیاز', unitEn: 'pts', bronze: 1, silver: 3, gold: 5, daily: 1, multiplayer: true),
-  'stickman_arena': ArcadeDef(id: 'stickman_arena', unitFa: 'امتیاز', unitEn: 'pts', bronze: 1, silver: 3, gold: 5, daily: 1, multiplayer: true),
-  'ludo_battle': ArcadeDef(id: 'ludo_battle', unitFa: 'امتیاز', unitEn: 'pts', bronze: 1, silver: 3, gold: 5, daily: 1, multiplayer: true),
-  'chess_blitz': ArcadeDef(id: 'chess_blitz', unitFa: 'امتیاز', unitEn: 'pts', bronze: 1, silver: 3, gold: 5, daily: 1, multiplayer: true),
 };
 
 /// Today's challenge (UTC day, identical on every phone).

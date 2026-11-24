@@ -22,7 +22,7 @@ class AnixLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
-        label: 'ANIX',
+        label: 'NEXORA',
         image: true,
         child: Image.asset(
           markOnly ? AnixBrand.mark : AnixBrand.logo,
@@ -32,7 +32,7 @@ class AnixLogo extends StatelessWidget {
           errorBuilder: (BuildContext c, Object e, StackTrace? s) => SizedBox(
             height: height,
             child: Center(
-              child: Text('ANIX',
+              child: Text('NEXORA',
                   style: TextStyle(
                       color: const Color(0xFFF4C860), fontWeight: FontWeight.w900, fontSize: height * .3, letterSpacing: 2)),
             ),

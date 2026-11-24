@@ -19,6 +19,10 @@ import '../profile/profile_service.dart';
 import 'oracle_lines.dart';
 
 /// App-wide events the corner ORACLE reacts to (wins, losses, purchases…).
+/// v13: ORACLE guided tours (home / dock / ...) are switched off for good (owner request 2026-11-24).
+// ignore: prefer_const_declarations
+final bool kOracleToursDisabled = true;
+
 class OracleBus {
   OracleBus._();
   static final StreamController<String> _c = StreamController<String>.broadcast();
@@ -137,6 +141,8 @@ class _OracleBuddyState extends ConsumerState<OracleBuddy> with TickerProviderSt
   }
 
   void _maybeTour(String path, {String? section}) {
+    // v13 (owner request 2026-11-24): ORACLE's guided tours are removed entirely; they never start.
+    if (kOracleToursDisabled) return;
     if (!mounted || MusicService.instance.inGame || path != _path) return;
     final String? sec = section ?? OraclePersonaTour.sectionForPath(path);
     if (sec == null || OracleTourStore.seen(_uid).contains(sec)) return;
@@ -431,7 +437,7 @@ class _OracleBuddyState extends ConsumerState<OracleBuddy> with TickerProviderSt
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: const RadialGradient(colors: <Color>[Color(0xFF6FE8FF), Color(0xFF1B3D8F)]),
-          boxShadow: <BoxShadow>[BoxShadow(color: const Color(0xFF39E6FF).withValues(alpha: .6), blurRadius: 14)],
+          boxShadow: <BoxShadow>[BoxShadow(color: const Color(0xFFD9B872).withValues(alpha: .6), blurRadius: 14)],
         ),
         child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 24),
       );
@@ -451,7 +457,7 @@ class _OracleBuddyState extends ConsumerState<OracleBuddy> with TickerProviderSt
           BuddyMood.sulk => const Color(0xFFFF5A5A),
           BuddyMood.sleep => const Color(0xFF7A7CFF),
           BuddyMood.excited || BuddyMood.laugh => const Color(0xFFFFC857),
-          _ => const Color(0xFF39E6FF),
+          _ => const Color(0xFFD9B872),
         };
         return Stack(clipBehavior: Clip.none, alignment: Alignment.center, children: <Widget>[
           // glow
@@ -561,7 +567,7 @@ class _Bubble extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             gradient: const LinearGradient(colors: <Color>[Color(0xF2182A5E), Color(0xF22A1556)]),
-            border: Border.all(color: apology ? const Color(0xFFFF7A7A) : const Color(0xFF39E6FF), width: 1),
+            border: Border.all(color: apology ? const Color(0xFFFF7A7A) : const Color(0xFFD9B872), width: 1),
             boxShadow: const <BoxShadow>[BoxShadow(color: Color(0x5539E6FF), blurRadius: 14)],
           ),
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: <Widget>[

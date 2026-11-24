@@ -6,6 +6,7 @@ import 'package:livekit_client/livekit_client.dart' as lk;
 import '../settings/app_settings.dart' show NxTx;
 import '../ui2/nx2_widgets.dart' show Nx2;
 import 'online_config.dart';
+import 'voice_connect.dart';
 
 /// Turns every incoming (remote) audio track of [room] on or off: the room's "speaker" switch.
 /// Off = this phone hears nobody (the server stops forwarding the audio and the local track is muted too).
@@ -40,7 +41,8 @@ class GameVoice extends ChangeNotifier {
   static final GameVoice instance = GameVoice._();
 
   /// Grant provider (set by the app: SupabaseBackend.liveKitGameGrant). Returns {url, token, room} or {error}.
-  Future<Map<String, dynamic>?> Function(String id, {bool match})? grant;
+  /// It caches grants (15 min tokens) per user; `fresh: true` skips the cache.
+  Future<Map<String, dynamic>?> Function(String id, {bool match, bool fresh})? grant;
 
   lk.Room? _room;
   lk.EventsListener<lk.RoomEvent>? _events;
@@ -67,6 +69,14 @@ class GameVoice extends ChangeNotifier {
     return false;
   }
 
+  /// Fetches (or reuses) the grant for this room in the background and warms the LiveKit connection, so the
+  /// "join voice" tap only has to do the WebRTC handshake. Called when a lobby / match page opens.
+  void prefetch(String id, {bool match = false}) {
+    final Future<Map<String, dynamic>?> Function(String id, {bool match, bool fresh})? g = grant;
+    if (g == null || _room != null) return;
+    unawaited(g(id, match: match).then((_) {}, onError: (Object _) {}));
+  }
+
   void acquire(String key) {
     _release?.cancel();
     _holders++;
@@ -87,34 +97,75 @@ class GameVoice extends ChangeNotifier {
   }
 
   Future<void> join(String id, {bool match = false}) async {
-    final Future<Map<String, dynamic>?> Function(String id, {bool match})? g = grant;
+    final Future<Map<String, dynamic>?> Function(String id, {bool match, bool fresh})? g = grant;
     if (busy || g == null) return;
     busy = true;
     error = null;
     notifyListeners();
+    lk.Room? room;
+    lk.EventsListener<lk.RoomEvent>? ev;
+    // Open the mic in parallel with the grant fetch + handshake (only when the user wants to talk).
+    final Future<lk.LocalAudioTrack?>? micF = mic && _room == null ? openMic() : null;
+    lk.LocalAudioTrack? micTrack;
     try {
+      // Warm DNS/TLS to LiveKit while the grant is fetched (no-op cost if the grant is cached).
+      room = lk.Room(roomOptions: voiceRoomOptions());
+      warmVoice(room, OnlineConfig.liveKitUrl);
       final Map<String, dynamic>? r = await g(id, match: match);
       final String? token = r?['token'] as String?;
       if (token == null) throw StateError('${r?['error'] ?? 'no_token'}');
       final String name = '${r?['room'] ?? ''}';
-      if (_room != null && name == _lkName) return; // already in this call (lobby -> match)
+      if (_room != null && name == _lkName) {
+        // already in this call (lobby -> match)
+        if (micF != null) unawaited(micF.then(dropMic));
+        await disposeVoice(room);
+        room = null;
+        return;
+      }
       await leave(keepKey: true);
-      final lk.Room room = lk.Room(roomOptions: const lk.RoomOptions(adaptiveStream: true, dynacast: true));
       room.addListener(_changed);
-      final lk.EventsListener<lk.RoomEvent> ev = room.createListener();
-      ev.on<lk.TrackSubscribedEvent>((lk.TrackSubscribedEvent e) async {
-        if (!speaker) await setRoomIncomingAudio(room, false);
-        _changed();
-      });
-      await room.connect('${r?['url'] ?? OnlineConfig.liveKitUrl}', token);
-      _room = room;
+      ev = room.createListener();
+      final lk.Room live = room;
+      ev
+        ..on<lk.TrackSubscribedEvent>((lk.TrackSubscribedEvent e) async {
+          if (!speaker) await setRoomIncomingAudio(live, false);
+          _changed();
+        })
+        ..on<lk.RoomDisconnectedEvent>((lk.RoomDisconnectedEvent e) {
+          // The SDK already retried (resume + full reconnect) before giving up: drop the dead room instead of
+          // looking connected, and do not auto-rejoin (no reconnect loops).
+          if (identical(_room, live)) {
+            unawaited(leave(keepKey: true));
+          }
+        });
+      final String url = '${r?['url'] ?? OnlineConfig.liveKitUrl}';
+      micTrack = await micF;
+      if (micF != null && micTrack == null) {
+        mic = false; // mic unavailable (permission): join listening only
+      }
+      try {
+        await connectVoice(live, url, token, micTrack: micTrack);
+      } catch (_) {
+        // Never reuse a grant that failed: the next tap fetches a fresh one. No automatic retry loop.
+        unawaited(g(id, match: match, fresh: true).then((_) {}, onError: (Object _) {}));
+        rethrow;
+      }
+      micTrack = null; // owned by the room now
+      _room = live;
       _events = ev;
       _lkName = name;
-      await setRoomIncomingAudio(room, speaker);
-      if (mic) await room.localParticipant?.setMicrophoneEnabled(true);
+      room = null;
+      ev = null;
+      unawaited(setRoomIncomingAudio(live, speaker));
     } catch (e) {
       error = '$e';
     } finally {
+      if (micF != null && micTrack == null && room != null) unawaited(micF.then(dropMic));
+      if (micTrack != null) unawaited(dropMic(micTrack));
+      if (room != null) {
+        room.removeListener(_changed);
+        unawaited(disposeVoice(room, ev));
+      }
       busy = false;
       notifyListeners();
     }
@@ -129,11 +180,7 @@ class GameVoice extends ChangeNotifier {
     if (!keepKey) _key = null;
     if (r != null) {
       r.removeListener(_changed);
-      try {
-        await ev?.dispose();
-        await r.disconnect();
-        await r.dispose();
-      } catch (_) {}
+      await disposeVoice(r, ev);
     }
     notifyListeners();
   }
@@ -183,6 +230,7 @@ class _RoomVoiceBarState extends State<RoomVoiceBar> {
     super.initState();
     v.acquire(_k);
     v.addListener(_on);
+    v.prefetch(widget.id, match: widget.match);
   }
 
   @override

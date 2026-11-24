@@ -29,7 +29,7 @@ class _H implements BmHooks {
 BmEngine _eng({String mode = 'local', bool mirror = false, int seed = 1}) => BmEngine(_H(), rng: math.Random(seed))
   ..startMatch(BmConfig(
       mode: mode,
-      teams: const <String>['lux0', 'lux1'],
+      teams: const <String>['nx_frost', 'club0'],
       form: const <int>[0, 0],
       names: const <String>['A', 'B'],
       field: 0,
@@ -39,10 +39,10 @@ BmEngine _eng({String mode = 'local', bool mirror = false, int seed = 1}) => BmE
 
 /// Power-10 disc fired at a resting ball (straight up the pitch, nothing else on it); returns the ball's ON-SCREEN
 /// speed averaged over its first 0.2 s, in playing widths per second (the unit of docs/FS_V6_CALIBRATION.md).
-double _ball02(double pull, {String team = 'lux0'}) {
+double _ball02(double pull, {String team = 'nx_frost'}) {
   final BmEngine e = BmEngine(_H(), rng: math.Random(1))
     ..startMatch(BmConfig(
-        mode: 'local', teams: <String>[team, 'lux1'], form: const <int>[0, 0], names: const <String>['A', 'B'], field: 0, ball: 0));
+        mode: 'local', teams: <String>[team, 'club0'], form: const <int>[0, 0], names: const <String>['A', 'B'], field: 0, ball: 0));
   final BmBody d = e.bodies.firstWhere((BmBody x) => x.team == 0 && x != e.ball);
   final BmBody bl = e.ball!;
   for (final BmBody o in e.bodies) {
@@ -105,19 +105,15 @@ void main() {
       return math.sqrt(b.vx * b.vx + b.vy * b.vy) / BmEngine.powerShare(b.power);
     }
 
-    expect(launch('club38'), closeTo(launch('lux0'), 1e-6));
-    expect(launch('nat30'), closeTo(launch('lux0'), 1e-6));
+    expect(launch('nx_core'), closeTo(launch('nx_frost'), 1e-6));
+    expect(launch('nx_cyan'), closeTo(launch('nx_frost'), 1e-6));
   });
 
-  test('v6 classic ball: default match ball, art in the assets, no sprite sheet', () {
-    expect(kBmDefaultBall, kBmClassicBallIndex);
-    expect(kBmBallN[kBmClassicBallIndex], 'Classic');
+  test('v6 classic ball is gone (v9: the owner art is the only ball set); a Classic art ball exists', () {
+    expect(kBmBallN.contains('Classic'), isTrue);
     expect(kBmBallFa.length, NB);
-    expect(kBmAnimBalls.containsKey(kBmClassicBallIndex), isFalse);
-    expect(File(kBmClassicBall).existsSync(), isTrue);
-    expect(bmBallThumb(kBmClassicBallIndex), kBmClassicBall);
-    expect(bmBallThumb(0), kBmAnimBalls[0]!.thumb);
-    expect(kBmBallPref, 'bm.ball.v6');
+    expect(File(bmBallArt(kBmBallN.indexOf('Classic'))).existsSync(), isTrue);
+    expect(kBmBallPref, 'bm.ball.v9');
   });
 
   test('v6 goal: banner hold, then the pieces glide home (render only) before the kickoff turn', () {
@@ -182,8 +178,8 @@ void main() {
         body: FsScoreTable(
           seconds: 16,
           rows: <FsScoreRow>[
-            FsScoreRow(name: 'ORGIFANS', score: 3, crest: 'assets/games/bermuda/discs/germany.webp', winner: true),
-            FsScoreRow(name: 'Arefe', score: 1, crest: 'assets/games/bermuda/discs/germany.webp'),
+            FsScoreRow(name: 'ORGIFANS', score: 3, crest: 'assets/games/bermuda/discs/v9/nx_core.webp', winner: true),
+            FsScoreRow(name: 'Arefe', score: 1, crest: 'assets/games/bermuda/discs/v9/nx_core.webp'),
           ],
         ),
       ),

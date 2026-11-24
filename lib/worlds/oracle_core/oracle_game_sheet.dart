@@ -6,8 +6,6 @@ import '../../core/backend/supabase_backend.dart';
 import '../../core/ui2/oracle_mascot.dart';
 import '../../games/game_registry.dart';
 import 'persona/oracle_persona.dart';
-import 'persona/oracle_persona_store.dart';
-import 'persona/oracle_persona_widgets.dart';
 
 /// In-game ORACLE: rules, a hint, coaching and free questions about the current game (nx-oracle, mode=game).
 /// Offline / no session → the game's bundled rules text.
@@ -74,21 +72,6 @@ class _OracleGameSheetState extends ConsumerState<OracleGameSheet> {
     });
   }
 
-  /// Replays ORACLE's funny tutorials for this game (local, always accurate to the real controls).
-  void _tutorials() {
-    final List<OracleTutorial> all = OraclePersona.instance.tutorials(widget.game.id);
-    setState(() {
-      if (all.isEmpty) {
-        _msgs.add(<String, String>{'role': 'assistant', 'content': widget.game.rulesFa});
-        return;
-      }
-      for (final OracleTutorial t in all) {
-        _msgs.add(<String, String>{'role': 'assistant', 'content': '${t.title}\n${t.line}\n${t.how}'});
-        OraclePersonaStore.markTutorial(t);
-      }
-    });
-  }
-
   @override
   void dispose() {
     _input.dispose();
@@ -117,7 +100,7 @@ class _OracleGameSheetState extends ConsumerState<OracleGameSheet> {
           gradient: LinearGradient(
               begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: <Color>[Color(0xFF13204A), Color(0xFF0A0F26)]),
           boxShadow: <BoxShadow>[BoxShadow(color: Color(0x5539E6FF), blurRadius: 30)],
-          border: Border(top: BorderSide(color: Color(0xFF39E6FF), width: 1.2)),
+          border: Border(top: BorderSide(color: Color(0xFFD9B872), width: 1.2)),
         ),
         child: Column(children: <Widget>[
           const SizedBox(height: 8),
@@ -129,26 +112,11 @@ class _OracleGameSheetState extends ConsumerState<OracleGameSheet> {
               child: Text('ORACLE · ${_fa ? widget.game.nameFa : widget.game.nameEn}',
                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
             ),
-            TextButton.icon(
-              onPressed: () => showGameTutorial(context, widget.game.id),
-              icon: const Icon(Icons.help_outline_rounded, color: Color(0xFFFFD86B), size: 18),
-              label: Text(_fa ? 'راهنما' : 'Guide', style: const TextStyle(color: Color(0xFFFFD86B))),
-            ),
             IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded, color: Colors.white70)),
           ]),
           SizedBox(
             height: 44,
             child: ListView(scrollDirection: Axis.horizontal, padding: const EdgeInsets.symmetric(horizontal: 12), children: <Widget>[
-              Padding(
-                padding: const EdgeInsetsDirectional.only(end: 8),
-                child: ActionChip(
-                  label: Text(_fa ? 'آموزش ORACLE 😂' : 'ORACLE tutorial'),
-                  onPressed: _busy ? null : _tutorials,
-                  backgroundColor: const Color(0xFF3A1F63),
-                  labelStyle: const TextStyle(color: Color(0xFFFFD27A)),
-                  side: const BorderSide(color: Color(0x66FFC857)),
-                ),
-              ),
               for (final (String l, String q) in quick)
                 Padding(
                   padding: const EdgeInsetsDirectional.only(end: 8),
@@ -156,8 +124,8 @@ class _OracleGameSheetState extends ConsumerState<OracleGameSheet> {
                     label: Text(l),
                     onPressed: _busy ? null : () => _ask(q),
                     backgroundColor: const Color(0xFF1C2D63),
-                    labelStyle: const TextStyle(color: Color(0xFF8FF3FF)),
-                    side: const BorderSide(color: Color(0x6639E6FF)),
+                    labelStyle: const TextStyle(color: Color(0xFFF6E7BD)),
+                    side: const BorderSide(color: Color(0x66D9B872)),
                   ),
                 ),
             ]),
@@ -184,7 +152,7 @@ class _OracleGameSheetState extends ConsumerState<OracleGameSheet> {
                     decoration: BoxDecoration(
                       color: me ? const Color(0xFF2B1F5C) : const Color(0xFF12305A),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: me ? const Color(0x66B57CFF) : const Color(0x6639E6FF)),
+                      border: Border.all(color: me ? const Color(0x66F6E7BD) : const Color(0x66D9B872)),
                     ),
                     child: Text(m['content'] ?? '', style: const TextStyle(color: Colors.white, height: 1.45)),
                   ),

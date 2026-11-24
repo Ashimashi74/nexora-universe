@@ -97,7 +97,10 @@ class _AuthPageState extends ConsumerState<AuthPage> {
     ref.read(cloudSyncProvider).start();
     unawaited(online.gamesHello(force: true));
     if (!mounted) return;
-    context.go(ref.read(profileProvider).hasIdentity ? '/hub' : '/onboarding');
+    // The username chosen at sign-up is the digital identity: adopt it so the identity page is not asked again.
+    final bool ready = ref.read(profileProvider).adoptAccountName(online.accountUsername ?? (_signUp ? OnlineService.normalizeUsername(_user.text) : null));
+    if (ready) ref.read(settingsProvider).markOnboarded();
+    context.go(ready ? '/hub' : '/onboarding');
   }
 
   String _friendly(String? value) {
@@ -169,7 +172,7 @@ class _AuthPageState extends ConsumerState<AuthPage> {
                     children: <Widget>[
                       const AnixLogo(height: 118),
                       const SizedBox(height: 14),
-                      Text(_signUp ? context.tx('ساخت حساب ANIX', 'Create your ANIX account') : context.tx('ورود به ANIX', 'Log in to ANIX'),
+                      Text(_signUp ? context.tx('ساخت حساب نیکسورا', 'Create your NEXORA account') : context.tx('ورود به نیکسورا', 'Log in to NEXORA'),
                           textAlign: TextAlign.center,
                           style: TextStyle(color: visual.text, fontSize: 26, fontWeight: FontWeight.w900)),
                       const SizedBox(height: 14),

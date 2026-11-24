@@ -323,7 +323,7 @@ class _MafiaOnlineViewState extends State<MafiaOnlineView> {
     };
     return Row(children: <Widget>[
       Icon(_stage == _Stage.night ? Icons.nightlight_round : Icons.wb_sunny_rounded,
-          color: _stage == _Stage.night ? NxColors.violet : NxColors.gold),
+          color: _stage == _Stage.night ? NxColors.goldDeep : NxColors.gold),
       const SizedBox(width: 8),
       Expanded(child: Text(phase, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900))),
       NxPill(label: '${_e.aliveCount}/${_e.playerCount}', icon: Icons.people_alt_rounded, color: NxColors.turquoise),
@@ -517,7 +517,7 @@ class _MafiaOnlineViewState extends State<MafiaOnlineView> {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
                 color: p.alive ? NxColors.glass : Colors.black26,
-                border: Border.all(color: p.id == _me ? NxColors.gold : NxColors.glassBorder),
+                border: Border.all(color: p.id == _me ? NxColors.gold : NxColors.goldLine),
               ),
               child: Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
                 Container(
@@ -529,7 +529,7 @@ class _MafiaOnlineViewState extends State<MafiaOnlineView> {
                 Text(p.name,
                     style: TextStyle(
                         decoration: p.alive ? null : TextDecoration.lineThrough,
-                        color: p.alive ? NxColors.iceWhite : NxColors.textDim,
+                        color: p.alive ? NxColors.ink : NxColors.textDim,
                         fontWeight: FontWeight.w700)),
                 if (role != null && p.id != _me) ...<Widget>[
                   const SizedBox(width: 4),
@@ -558,7 +558,7 @@ class _MafiaOnlineViewState extends State<MafiaOnlineView> {
                     fontSize: 12,
                     color: e.kind == LogKind.death
                         ? NxColors.danger
-                        : (e.visibleTo != null ? NxColors.gold : NxColors.iceWhite))),
+                        : (e.visibleTo != null ? NxColors.gold : NxColors.ink))),
           ),
       ]),
     );

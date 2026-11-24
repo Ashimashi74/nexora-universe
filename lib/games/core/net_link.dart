@@ -18,6 +18,11 @@ import 'package:flutter/foundation.dart';
 ///  * [hashOf] gives a stable FNV-1a hash of a state string (platform independent).
 /// =====================================================================
 
+/// Data key marking an order-independent move (pre-match picks such as a team / formation setup): when another
+/// phone's move wins its seq in the log, the link delivers that move and re-posts this one at the next free seq
+/// instead of forcing a full resync. Only for moves whose meaning does not depend on their position in the log.
+const String kNetFloat = 'fl';
+
 class NetMove {
   const NetMove({
     required this.seq,

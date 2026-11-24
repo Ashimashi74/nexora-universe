@@ -14,7 +14,7 @@ Future<void> main() async {
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
-    systemNavigationBarColor: Color(0xFF050818),
+    systemNavigationBarColor: Color(0xFF07080C),
   ));
   runApp(const ProviderScope(child: NexoraApp()));
 }

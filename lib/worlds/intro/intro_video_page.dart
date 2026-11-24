@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:video_player/video_player.dart';
 
@@ -10,18 +11,19 @@ import '../../core/ui2/nx2_widgets.dart';
 
 /// Launch intro: the owner's 10 s video, full screen (cover), with its own sound.
 /// Skip appears after ~1 s; when it ends (or fails to load) the app continues to [next]
-/// and the menu music starts.
-class IntroVideoPage extends StatefulWidget {
+/// and the menu music starts. Watching (or skipping) once is remembered, so the full
+/// cinematic is not replayed on every launch; it can be replayed from Settings.
+class IntroVideoPage extends ConsumerStatefulWidget {
   const IntroVideoPage({super.key, required this.next});
   final String next;
 
   static const String asset = 'assets/media/intro_app.mp4';
 
   @override
-  State<IntroVideoPage> createState() => _IntroVideoPageState();
+  ConsumerState<IntroVideoPage> createState() => _IntroVideoPageState();
 }
 
-class _IntroVideoPageState extends State<IntroVideoPage> {
+class _IntroVideoPageState extends ConsumerState<IntroVideoPage> {
   VideoPlayerController? _c;
   bool _ready = false;
   bool _skip = false;
@@ -76,6 +78,8 @@ class _IntroVideoPageState extends State<IntroVideoPage> {
     if (_left || !mounted) return;
     _left = true;
     _c?.pause();
+    // Remember that the cinematic was seen (watched or skipped) so it is not forced on the next launch.
+    ref.read(settingsProvider).introSeen = true;
     MusicService.instance.start();
     context.go(widget.next);
   }

@@ -13,6 +13,8 @@ import 'avatar_view.dart';
 import 'po_common.dart';
 
 import '../../../core/ui2/anix_kit.dart';
+import '../../../core/ui2/luxe.dart';
+
 /// Background gradient (top → bottom) of the room for each orbit theme.
 List<Color> orbitThemeColors(String theme) {
   switch (theme) {
@@ -376,17 +378,11 @@ class _SpaceTabState extends ConsumerState<SpaceTab> {
                 if (ownedThemes.contains(t)) {
                   p.setOrbitTheme(_themeId(t.id));
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text(poDigits(
+                  luxeToast(context, poDigits(
                         context,
                         context.tx(
                             'این تم را با ${t.price} سکه از Exchange بگیر.',
-                            'Get this theme in the Exchange for ${t.price} coins.'))),
-                    action: SnackBarAction(
-                      label: context.tx('Exchange', 'Exchange'),
-                      onPressed: () => context.push('/world/nexora_exchange'),
-                    ),
-                  ));
+                            'Get this theme in the Exchange for ${t.price} coins.')), actionLabel: context.tx('Exchange', 'Exchange'), onAction: () => context.push('/world/nexora_exchange'));
                 }
               },
             ),

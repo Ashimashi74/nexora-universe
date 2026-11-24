@@ -664,7 +664,7 @@ class CommunityAboutTab extends ConsumerWidget {
       GlassPanel(
         onTap: () => context.push('/world/orbit_network'),
         child: Row(children: <Widget>[
-          const Icon(Icons.chat_bubble_rounded, color: NxColors.turquoise),
+          const Icon(Icons.chat_bubble_rounded, color: NxColors.champagne),
           const SizedBox(width: 12),
           Expanded(
             child: Text(

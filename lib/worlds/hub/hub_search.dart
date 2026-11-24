@@ -35,7 +35,7 @@ class HubSearchDelegate extends SearchDelegate<void> {
           isFa ? 'تنظیمات' : 'Settings',
           isFa ? 'کیفیت، کاهش حرکت، زبان' : 'Quality, reduced motion, language',
           Icons.settings_rounded,
-          NxColors.iceWhite,
+          NxColors.ink,
           '/settings'),
       _Hit(
           isFa ? 'جایزه‌ی روزانه و چالش‌ها' : 'Daily reward & challenges',
@@ -53,7 +53,7 @@ class HubSearchDelegate extends SearchDelegate<void> {
           isFa ? 'صندوق مسابقات' : 'Tournament inbox',
           isFa ? 'دعوت‌ها و اعلان‌های مسابقات' : 'Invites and tournament alerts',
           Icons.inbox_rounded,
-          NxColors.electricBlue,
+          NxColors.gold,
           '/tournaments/inbox'),
     ];
     return hits;

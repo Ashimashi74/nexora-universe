@@ -30,8 +30,8 @@ Future<void> showOrbitOnlineOnly(BuildContext context,
         OnlineOnlyNotice(featureFa: fa, featureEn: en),
         const SizedBox(height: 10),
         Text(
-          c.tx('تماس‌ها از طریق LiveKit و سرور ANIX برقرار می‌شوند؛ تا آن زمان هیچ تماسی شبیه‌سازی نمی‌شود.',
-              'Calls run through LiveKit and the ANIX server; until then no call is simulated.'),
+          c.tx('تماس‌ها از طریق LiveKit و سرور نیکسورا برقرار می‌شوند؛ تا آن زمان هیچ تماسی شبیه‌سازی نمی‌شود.',
+              'Calls run through LiveKit and the NEXORA server; until then no call is simulated.'),
           textAlign: TextAlign.center,
           style: const TextStyle(color: NxColors.textDim, fontSize: 12),
         ),
@@ -51,7 +51,7 @@ class OrbitChatAvatar extends StatelessWidget {
     final pal = WorldPalette.orbit;
     Widget inner;
     if (chat.isSaved) {
-      inner = Icon(Icons.bookmark_rounded, color: NxColors.navyDeep, size: size * 0.5);
+      inner = Icon(Icons.bookmark_rounded, color: NxColors.luxeBg, size: size * 0.5);
     } else if (chat.badgeId.isNotEmpty) {
       inner = Padding(
         padding: EdgeInsets.all(size * 0.08),
@@ -99,7 +99,7 @@ class OrbitDeliveryIcon extends StatelessWidget {
       case OrbitDelivery.delivered:
         return const Icon(Icons.done_all_rounded, size: 14, color: NxColors.textDim);
       case OrbitDelivery.read:
-        return const Icon(Icons.done_all_rounded, size: 14, color: NxColors.turquoise);
+        return const Icon(Icons.done_all_rounded, size: 14, color: NxColors.champagne);
     }
   }
 }
@@ -318,7 +318,7 @@ class _OrbitMediaBody extends StatelessWidget {
   }
 
   Widget _fallback(IconData icon, String name) => Row(mainAxisSize: MainAxisSize.min, children: <Widget>[
-        Icon(icon, color: NxColors.turquoise, size: 28),
+        Icon(icon, color: NxColors.champagne, size: 28),
         const SizedBox(width: 8),
         Flexible(child: Text(name.isEmpty ? 'Attachment' : name, maxLines: 2, overflow: TextOverflow.ellipsis)),
       ]);
@@ -337,7 +337,7 @@ class OrbitSharedCard extends StatelessWidget {
     if (item.type == SharedItem.gameInvite) return OrbitInviteCard(gameId: item.gameId ?? '', note: item.text);
     final bool nova = item.type == SharedItem.novaPost;
     final bool community = item.type == SharedItem.communityInvite;
-    final Color accent = nova ? WorldPalette.nova.primary : (community ? WorldPalette.social.primary : NxColors.electricBlue);
+    final Color accent = nova ? WorldPalette.nova.primary : (community ? WorldPalette.social.primary : NxColors.gold);
     NovaVisual visual = NovaVisual.none;
     if (nova) {
       final String vk = '${item.extra['visual'] ?? 'none'}';
@@ -365,7 +365,7 @@ class OrbitSharedCard extends StatelessWidget {
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                nova ? 'NOVA GALLERY' : (community ? 'SOCIAL STATION' : 'ANIX'),
+                nova ? 'NOVA GALLERY' : (community ? 'SOCIAL STATION' : 'NEXORA'),
                 style: TextStyle(color: accent, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.2),
               ),
             ),
@@ -418,7 +418,7 @@ class OrbitInviteCard extends StatelessWidget {
         Row(children: <Widget>[
           Icon(Icons.sports_esports_rounded, color: accent, size: 18),
           const SizedBox(width: 6),
-          Text('ANIX ARCADE', style: TextStyle(color: accent, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.2)),
+          Text('NEXORA ARCADE', style: TextStyle(color: accent, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1.2)),
         ]),
         const SizedBox(height: 6),
         if (g != null)

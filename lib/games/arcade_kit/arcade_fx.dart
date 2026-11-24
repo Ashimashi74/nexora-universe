@@ -362,3 +362,33 @@ Color shade(Color c, double dl) {
   final HSLColor h = HSLColor.fromColor(c);
   return h.withLightness((h.lightness + dl).clamp(0.0, 1.0)).toColor();
 }
+
+/// Smooth tapered motion trail for balls, karts, and projectiles.
+void paintTrail(Canvas canvas, List<Offset> points, Color color, double maxWidth, {double alpha = 0.55}) {
+  if (points.length < 2) return;
+  for (int i = 1; i < points.length; i++) {
+    final double t = i / (points.length - 1);
+    canvas.drawLine(
+      points[i - 1],
+      points[i],
+      Paint()
+        ..color = color.withValues(alpha: alpha * t * t)
+        ..strokeWidth = (maxWidth * t).clamp(0.8, maxWidth)
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+}
+
+/// Expanding neon pulse ring (for goals, boosts, explosions, and pickups).
+void paintPulseRing(Canvas canvas, Offset center, double radius, Color color, double progress) {
+  final double a = (1.0 - progress).clamp(0.0, 1.0);
+  if (a <= 0.01) return;
+  canvas.drawCircle(
+    center,
+    radius * (0.6 + 0.8 * progress),
+    Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = (3.5 * a).clamp(0.8, 3.5)
+      ..color = color.withValues(alpha: a * 0.7),
+  );
+}

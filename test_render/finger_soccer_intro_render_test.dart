@@ -71,7 +71,7 @@ void main() {
     await shot(
         tester,
         FsFormationSelect(
-            discAsset: 'assets/games/bermuda/discs/germany.webp', initial: 0, onDone: (_) {}, onBar: () {}, freezeAt: .76),
+            discAsset: 'assets/games/bermuda/discs/v9/nx_core.webp', initial: 0, onDone: (_) {}, onBar: () {}, freezeAt: .76),
         'formation_select');
     expect(tester.takeException(), isNull);
   });
@@ -119,8 +119,8 @@ void main() {
     await shot(
         tester,
         const FsScoreTable(seconds: 16, topLane: 50, rows: <FsScoreRow>[
-          FsScoreRow(name: 'HIIS', score: 3, crest: 'assets/games/bermuda/discs/germany.webp', winner: true, avatar: '07-star-fox'),
-          FsScoreRow(name: 'ربات', score: 1, crest: 'assets/games/bermuda/discs/germany.webp', avatar: '04-iron-warden'),
+          FsScoreRow(name: 'HIIS', score: 3, crest: 'assets/games/bermuda/discs/v9/nx_core.webp', winner: true, avatar: '07-star-fox'),
+          FsScoreRow(name: 'ربات', score: 1, crest: 'assets/games/bermuda/discs/v9/nx_core.webp', avatar: '04-iron-warden'),
         ]),
         'score_table');
     expect(find.text('جدول امتیازات'), findsOneWidget);

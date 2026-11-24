@@ -92,7 +92,7 @@ class _NexoraAppState extends ConsumerState<NexoraApp> {
         .configure(enabled: settings.music, volume: settings.musicVolume);
     NxSfx.instance.configure(enabled: settings.sound, volume: settings.sfxVolume);
     return MaterialApp.router(
-      title: 'ANIX',
+      title: 'NEXORA',
       debugShowCheckedModeBanner: false,
       theme: buildNxTheme(settings.visualTheme),
       locale: settings.locale,

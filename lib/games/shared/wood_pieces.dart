@@ -1,7 +1,7 @@
 import 'package:nexora/core/storage/local_store.dart';
 
 /// The owner's ANIX wooden pucks (black / green / oak, six carvings). They are Carrom men and Backgammon checkers,
-/// never finger-soccer discs. Sprites are 256 px with the rim at radius 120 (see tool/build_fs_assets.py).
+/// never finger-soccer discs. Sprites are 256 px with the rim at radius 120 (the same convention as tool/build_fs_v9_assets.py).
 class WoodPieceSet {
   const WoodPieceSet(this.id, this.nameFa, this.nameEn);
   final String id, nameFa, nameEn;

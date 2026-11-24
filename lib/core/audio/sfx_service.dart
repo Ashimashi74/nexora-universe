@@ -4,6 +4,8 @@ import 'dart:io' show Platform;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
+import 'audio_mix.dart';
+
 /// Short UI / game-flow sound effects (assets/sfx/ui/*.mp3): button tick, chat, join, leave, ready, win, lose.
 /// Follows the Sound effects switch and volume in Settings; never throws into the UI.
 class NxSfx {
@@ -43,12 +45,14 @@ class NxSfx {
     try {
       final AudioPlayer p = _players.putIfAbsent(name, () {
         final AudioPlayer a = AudioPlayer();
+        // Mix, never request audio focus (a lobby "join" tick used to take focus from the voice call).
+        unawaited(NxAudioMix.apply(a).then((_) {}, onError: (Object _) {}));
         unawaited(a.setPlayerMode(PlayerMode.lowLatency).then((_) {}, onError: (Object _) {}));
         unawaited(a.setReleaseMode(ReleaseMode.stop).then((_) {}, onError: (Object _) {}));
         return a;
       });
       await p.stop();
-      await p.setVolume(vol);
+      await p.setVolume((vol * NxAudioMix.gain).clamp(0.0, 1.0).toDouble());
       await p.play(AssetSource('sfx/ui/$name.mp3'));
     } catch (e) {
       debugPrint('sfx $name: $e');

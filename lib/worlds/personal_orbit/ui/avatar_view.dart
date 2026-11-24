@@ -116,7 +116,7 @@ class _OrbitAvatarState extends ConsumerState<OrbitAvatar>
       fit: BoxFit.contain,
       errorBuilder: (BuildContext _, Object __, StackTrace? ___) =>
           fallback ??
-          Icon(Icons.auto_awesome, size: w * 0.6, color: NxColors.violet),
+          Icon(Icons.auto_awesome, size: w * 0.6, color: NxColors.goldDeep),
     );
   }
 

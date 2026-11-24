@@ -630,7 +630,7 @@ class CrController extends ChangeNotifier {
       fx.burst(im.x, im.y,
           count: 3 + (k * 9).round(),
           speed: 110 + 300 * k,
-          color: im.wall ? const Color(0xFFFFD98A) : const Color(0xFFEAF6FF),
+          color: im.wall ? const Color(0xFFFFD98A) : const Color(0xFFF4EAD2),
           size: 3 + 3 * k,
           life: 0.3 + 0.25 * k);
       if (s > 1300) fx.shake(2 + 6 * k);

@@ -99,7 +99,7 @@ class RouteNotFoundPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final NxThemeColors visual = NxThemeColors.of(context);
     return NxWorldScaffold(
-      title: 'ANIX',
+      title: 'NEXORA',
       palette: WorldPalette.hub,
       showWallet: false,
       body: Center(

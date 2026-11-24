@@ -12,6 +12,8 @@ import '../../orbit_network/models/arcade_refs.dart';
 import '../models/social_models.dart';
 
 import '../../../core/ui2/anix_kit.dart';
+import '../../../core/ui2/luxe.dart';
+
 const WorldPalette kSocialPalette = WorldPalette.social;
 
 /// The current explorer acting in SOCIAL STATION.
@@ -62,9 +64,9 @@ Color kindColor(CommunityKind k) {
     case CommunityKind.public:
       return kSocialPalette.primary;
     case CommunityKind.private:
-      return NxColors.violet;
+      return NxColors.goldDeep;
     case CommunityKind.topic:
-      return NxColors.turquoise;
+      return NxColors.champagne;
     case CommunityKind.game:
       return kSocialPalette.secondary;
     case CommunityKind.tournament:
@@ -92,7 +94,7 @@ Color roleColor(CommunityRole r) {
     case CommunityRole.admin:
       return NxColors.pink;
     case CommunityRole.moderator:
-      return NxColors.turquoise;
+      return NxColors.champagne;
     case CommunityRole.member:
       return NxColors.textDim;
   }
@@ -254,7 +256,7 @@ class SocialSectionTitle extends StatelessWidget {
 }
 
 void socialSnack(BuildContext context, String fa, String en) {
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tx(fa, en))));
+  luxeToast(context, context.tx(fa, en));
 }
 
 /// Asks for a single line of text.

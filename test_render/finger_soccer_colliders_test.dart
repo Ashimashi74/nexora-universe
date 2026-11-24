@@ -49,11 +49,11 @@ void main() {
       final BmEngine e = BmEngine(_Hooks(), rng: math.Random(1));
       e.startMatch(BmConfig(
           mode: 'local',
-          teams: const <String>['club0', 'lux3'],
+          teams: const <String>['club0', 'club1'],
           form: const <int>[0, 3],
           names: const <String>['A', 'B'],
           field: fi,
-          ball: fi % kBmAnimBalls.length));
+          ball: fi % kBmBallN.length));
       // Contact scene: ball touching the top-left post of the top goal; a team-0 disc touching the ball from below.
       final BmGoal g = e.GOALS[0];
       final BmBody ball = e.ball!;
@@ -70,17 +70,23 @@ void main() {
       c
         ..x = e.Fr - c.r
         ..y = e.Fb - math.max(e.RC, c.r) - 40;
+      // v11: a two-digit score on the art's side displays (left = bottom side 12, right = top side 07), so the
+      // render also shows the live digits sitting in the printed digit cells
+      e.score[0] = 12;
+      e.score[1] = 7;
       final BmImages im = BmImages();
       await tester.runAsync(() async {
         im.field = await _load(f.asset);
         if (!f.builtInGoals) im.goal = await _load('assets/games/bermuda/goals/${f.gs}.webp');
         im.team[0] = await _load(bmTeam('club0').asset, w: 192);
-        im.team[1] = await _load(bmTeam('lux3').asset, w: 192);
-        im.ballSheet = await _load(kBmAnimBalls[fi % kBmAnimBalls.length]!.sheet);
-        im.ballFrames = 16;
+        im.team[1] = await _load(bmTeam('club1').asset, w: 192);
+        // v9: every ball is one still art rolled by the painter (no sprite sheets any more)
+        im.ball = await _load(bmBallArt(fi % kBmBallN.length));
       });
       final BmView view = BmView();
       final ValueNotifier<int> rp = ValueNotifier<int>(0);
+      // v9: the match draws through the Flame layers (FsFlameGame); BmPainter is still a CustomPainter whose paint()
+      // runs the same phases in the same order, so the audit keeps drawing it directly with the colliders on top.
       await tester.pumpWidget(MaterialApp(
         debugShowCheckedModeBanner: false,
         home: RepaintBoundary(

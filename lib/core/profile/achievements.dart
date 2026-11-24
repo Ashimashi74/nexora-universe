@@ -46,9 +46,12 @@ bool _arcadeAll(ProfileService p) => _arcadeTried(p) >= kArcadeIds.length;
 bool _arcadeGold(ProfileService p) => p.counter('arcade.medal.gold') >= 1;
 bool _arcadeDaily(ProfileService p) => p.counter('arcade.daily.done') >= 5;
 bool _racer(ProfileService p) => (p.stats['kart_racing']?.won ?? 0) >= 3;
-bool _grandmaster(ProfileService p) => (p.stats['chess_blitz']?.won ?? 0) >= 5;
+// Achievements only ever look at games that exist in the registry: the old chess_blitz
+// and stickman_arena conditions could never be satisfied because those games were never
+// playable.
+bool _grandmaster(ProfileService p) => (p.stats['backgammon']?.won ?? 0) >= 5;
 bool _survivor(ProfileService p) =>
-    (p.stats['obstacle_race']?.won ?? 0) + (p.stats['bomb_arena']?.won ?? 0) + (p.stats['stickman_arena']?.won ?? 0) >= 10;
+    (p.stats['obstacle_race']?.won ?? 0) + (p.stats['bomb_arena']?.won ?? 0) >= 10;
 
 const kAchievements = <AchievementDef>[
   AchievementDef(id: 'identity', asset: 'badge_explorer', nameFa: 'اکتشافگر', nameEn: 'Explorer',
@@ -64,7 +67,7 @@ const kAchievements = <AchievementDef>[
   AchievementDef(id: 'star_elite', asset: 'badge_star_elite', nameFa: 'نخبه‌ی ستاره', nameEn: 'Star Elite',
       descFa: 'در ۵ بازی مختلف ببر', descEn: 'Win in 5 different games', check: _starElite, coinReward: 200),
   AchievementDef(id: 'all_games', asset: 'trophy_wings', nameFa: 'بال‌های آرکید', nameEn: 'Arcade Wings',
-      descFa: 'هر ۹ بازی را امتحان کن', descEn: 'Try all 9 games', check: _wings, coinReward: 250),
+      descFa: '۹ بازی مختلف را امتحان کن', descEn: 'Try 9 different games', check: _wings, coinReward: 250),
   AchievementDef(id: 'explorer', asset: 'badge_planet', nameFa: 'جهان‌گرد', nameEn: 'World Traveler',
       descFa: 'به هر ۷ دنیا سر بزن', descEn: 'Visit all 7 worlds', check: _explorer, coinReward: 120),
   AchievementDef(id: 'daily', asset: 'badge_daily', nameFa: 'وفادار', nameEn: 'Loyal',
@@ -89,7 +92,7 @@ const kAchievements = <AchievementDef>[
   AchievementDef(id: 'arcade_rookie', asset: 'badge_gamer', nameFa: 'تازه‌نفس آرکید', nameEn: 'Arcade Rookie',
       descFa: '۵ بازی جدید آرکید را امتحان کن', descEn: 'Try 5 of the new arcade games', check: _arcadeRookie, coinReward: 120),
   AchievementDef(id: 'arcade_all', asset: 'trophy_wings', nameFa: 'استاد آرکید', nameEn: 'Arcade Master',
-      descFa: 'هر ۲۰ بازی جدید را بازی کن', descEn: 'Play all 20 new arcade games', check: _arcadeAll, coinReward: 400),
+      descFa: 'هر ۱۷ بازی جدید آرکید را بازی کن', descEn: 'Play all 17 new arcade games', check: _arcadeAll, coinReward: 400),
   AchievementDef(id: 'arcade_gold', asset: 'trophy_crown', nameFa: 'مدال طلا', nameEn: 'Gold Medal',
       descFa: 'در یک بازی تک‌نفره مدال طلا بگیر', descEn: 'Earn a gold medal in a solo game', check: _arcadeGold, coinReward: 200),
   AchievementDef(id: 'arcade_daily', asset: 'badge_daily', nameFa: 'چالش‌باز', nameEn: 'Challenger',

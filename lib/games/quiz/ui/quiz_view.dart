@@ -224,7 +224,8 @@ class _QuizViewState extends State<QuizView> with TickerProviderStateMixin {
     if (_engine.submit(player, choice, ms)) {
       if (_online) {
         _l.net!.send(
-            <String, dynamic>{'a': 'ans', 'r': round, 'c': choice, 'ms': ms});
+            // answers are keyed by round: order-independent, so a seq race re-posts instead of a full resync
+            <String, dynamic>{'a': 'ans', 'r': round, 'c': choice, 'ms': ms, kNetFloat: true});
       }
       _haptic();
       _afterAnswer();
@@ -249,7 +250,8 @@ class _QuizViewState extends State<QuizView> with TickerProviderStateMixin {
           'a': 'ans',
           'r': _engine.roundIndex,
           'c': -1,
-          'ms': QuizEngine.timeLimitMs
+          'ms': QuizEngine.timeLimitMs,
+          kNetFloat: true
         });
       }
       _afterAnswer();
@@ -331,7 +333,7 @@ class _QuizViewState extends State<QuizView> with TickerProviderStateMixin {
       ? (_l.netName(_other) ?? 'Pilot')
       : (_local
           ? _l.tx('بازیکن ۲', 'Player 2')
-          : _l.tx('ربات انیکس', 'NX Bot'));
+          : _l.tx('ربات نیکسورا', 'NX Bot'));
 
   String _roundLabel() => _l.tx(
       'سؤال ${_engine.roundIndex + 1} از ${_engine.totalRounds}',
@@ -398,10 +400,10 @@ class _QuizViewState extends State<QuizView> with TickerProviderStateMixin {
           AnimatedBuilder(
             animation: _pulse,
             builder: (BuildContext context, Widget? child) => Text(
-              _l.tx('کوییز انیکس', 'ANIX Quiz'),
+              _l.tx('کوییز نیکسورا', 'NEXORA Quiz'),
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: NxColors.iceWhite,
+                color: NxColors.ink,
                 fontSize: 28,
                 fontWeight: FontWeight.w900,
                 letterSpacing: 1.2,
@@ -759,7 +761,7 @@ class _QuizViewState extends State<QuizView> with TickerProviderStateMixin {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style:
-                      const TextStyle(color: NxColors.iceWhite, fontSize: 12)),
+                      const TextStyle(color: NxColors.ink, fontSize: 12)),
             ),
             _mark(a, NxColors.turquoise),
             const SizedBox(width: 6),
@@ -842,7 +844,7 @@ class _QuizViewState extends State<QuizView> with TickerProviderStateMixin {
             child: FilledButton.icon(
               style: FilledButton.styleFrom(
                 backgroundColor: NxColors.turquoise,
-                foregroundColor: NxColors.navyDeep,
+                foregroundColor: NxColors.luxeBg,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(NxRadius.md)),
               ),

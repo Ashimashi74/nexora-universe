@@ -187,7 +187,7 @@ class CrPainter extends CustomPainter {
         CrKind.white => const Color(0xFFF3E3C3),
         CrKind.black => const Color(0xFF22252E),
         CrKind.queen => const Color(0xFFE0243C),
-        CrKind.striker => const Color(0xFFEAF6FF),
+        CrKind.striker => const Color(0xFFF4EAD2),
       };
 
   void _paintDisc(
